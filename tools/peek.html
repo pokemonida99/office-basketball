@@ -24,7 +24,7 @@ gs.forEach((g, i) => {
   g.scene.updateMatrixWorld(true);
   const box = new THREE.Box3().setFromObject(g.scene), s = 1 / (box.max.y - box.min.y);
   const grp = new THREE.Group(); grp.add(g.scene); g.scene.scale.multiplyScalar(s); g.scene.position.y = -box.min.y * s;
-  grp.position.x = (i - (gs.length - 1) / 2) * 0.9; sc.add(grp);
+  grp.position.x = (i - (gs.length - 1) / 2) * 0.9; grp.rotation.y = (+q.get('rot') || 0) * Math.PI / 180; sc.add(grp);   // &rot=90：每個轉成側面看（看往前伸的動作）
   if (g.animations[0] && q.get('anim')) { const m = new THREE.AnimationMixer(g.scene); const a = m.clipAction(g.animations[0]).play(); const ts = (q.get('ts') || '').split(',').filter(Boolean); const tt = ts.length ? +ts[i] : q.get('t'); if (tt != null && tt !== '') { a.time = +tt; m.update(0); a.paused = true; } mixers.push(m); }
   window.info.push({ f: files[i], anims: g.animations.map(a => a.name + ' ' + a.duration.toFixed(2) + 's ' + a.tracks.length), box: [box.min.toArray(), box.max.toArray()] });
 });

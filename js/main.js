@@ -1,13 +1,13 @@
 // 上班啟示錄：午休鬥牛 2v2 —— 頂樓半場籃球。玩家挑兩個同事，電腦控制隊友和對手；每個人都有自己的大招
 import * as THREE from 'three';
-import { scene, render, updateCamera, cam, camera, CAMS, camMode, labelSprite, V, quality, setQuality, setQualityPref, canvasTex, FONT, sphere, mat } from './world.js?v=0.4.1';
-import { loadKind, loadClip, makeActor, addJog, updateActor, turnTo } from './assets.js?v=0.4.1';
-import * as fx from './fx.js?v=0.4.1';
-import { buildCourt, animateCourt, swishNet, C, COURT, HOOP, ARC_R, CORNER_X, TOP, WALL, isThree, hoopDist } from './court.js?v=0.4.1';
-import { music, musicStart, musicStop, musicTick, musicTheme, musicPause } from './music.js?v=0.4.1';
-import { openOP, replayOP, seekOP } from './op.js?v=0.4.1';
+import { scene, render, updateCamera, cam, camera, CAMS, camMode, labelSprite, V, quality, setQuality, setQualityPref, canvasTex, FONT, sphere, mat } from './world.js?v=0.4.2';
+import { loadKind, loadClip, makeActor, addJog, updateActor, turnTo } from './assets.js?v=0.4.2';
+import * as fx from './fx.js?v=0.4.2';
+import { buildCourt, animateCourt, swishNet, C, COURT, HOOP, ARC_R, CORNER_X, TOP, WALL, isThree, hoopDist } from './court.js?v=0.4.2';
+import { music, musicStart, musicStop, musicTick, musicTheme, musicPause } from './music.js?v=0.4.2';
+import { openOP, replayOP, seekOP } from './op.js?v=0.4.2';
 
-const VERSION = '0.4.1';
+const VERSION = '0.4.2';
 document.getElementById('ver').textContent = 'v' + VERSION;
 
 // ---------- 數值（調手感只改這裡） ----------
@@ -27,20 +27,20 @@ const CFG = {
 
 // ---------- 角色 ----------
 const CHARS = {
-  kui: { name: '小葵', role: '新人實習生', skill: { name: '快步切入', kind: 'dash' }, model: 'kui_walk2', jog: 'kui_jog', color: '#ff9f43', spd: 1.08, sht: 0.98, stl: 1.0, blk: 0.9,
-    stat: '速度 ★★★★★　投籃 ★★★', quote: '我會努力的！☕',
+  kui: { name: '小葵', role: '新人實習生・後衛', skill: { name: '快步切入', kind: 'dash' }, model: 'kui_walk2', jog: 'kui_jog', color: '#ff9f43', spd: 1.16, sht: 0.98, stl: 1.3, blk: 0.85, str: 0.85,
+    stat: '速度 ★★★★★　抄截 ★★★★★', quote: '我會努力的！☕',
     sp: { name: '咖啡衝刺', desc: '全隊 6 秒加速，傳球秒到不會被抄、抄截變強', need: false } },
-  jie: { name: '阿傑', role: '資深設計師', skill: { name: '背身強打', kind: 'power' }, model: 'jie_walk', jog: 'jie_jog', color: '#8e5cf0', spd: 0.96, sht: 1.04, stl: 0.9, blk: 1.15,
-    stat: '籃下 ★★★★★　蓋帽 ★★★★', quote: '這稿我一次就過。',
+  jie: { name: '阿傑', role: '資深設計師・中鋒', skill: { name: '背身強打', kind: 'power' }, model: 'jie_walk', jog: 'jie_jog', color: '#8e5cf0', spd: 0.95, sht: 1.0, stl: 0.9, blk: 1.35, str: 1.5, reb: 1.45, reach: 1.3, inside: 1.25, three: 0.6,
+    stat: '籃下 ★★★★★　籃板 ★★★★★', quote: '這稿我一次就過。',
     sp: { name: '設計稿灌籃', desc: '從哪裡起跳都必進的飛天灌籃，三分線外起跳算 3 分', need: true } },
-  mi: { name: '小米', role: '總機客服', skill: { name: '換手運球', kind: 'dodge' }, model: 'mi_walk', color: '#b46bff', spd: 1.02, sht: 1.0, stl: 1.15, blk: 0.85,
-    stat: '抄截 ★★★★★　速度 ★★★★', quote: '您好，這裡是總機～📞',
+  mi: { name: '小米', role: '總機客服・射手', skill: { name: '換手運球', kind: 'dodge' }, model: 'mi_walk', color: '#b46bff', spd: 1.02, sht: 1.0, stl: 1.05, blk: 0.85, three: 1.5,
+    stat: '三分 ★★★★★　速度 ★★★★', quote: '您好，這裡是總機～📞',
     sp: { name: '總機干擾', desc: '對手電話狂響暈 3 秒，趁空檔輕鬆出手', need: false } },
-  vivi: { name: 'Vivi', role: '老闆', skill: { name: '轉身過人', kind: 'spin' }, model: 'vivi_walk', color: '#ff4fa0', spd: 0.92, sht: 0.92, stl: 0.9, blk: 0.8, h: 1.02,
-    stat: '又貴又沒用　大招 ★★★★★', quote: '辛苦了！（沒有加薪）',
+  vivi: { name: 'Vivi', role: '老闆・顏值擔當', skill: { name: '轉身過人', kind: 'spin' }, model: 'vivi_walk', color: '#ff4fa0', spd: 0.92, sht: 0.92, stl: 0.9, blk: 0.8, h: 1.02, pretty: true,
+    stat: '顏值 ★★★★★　大招 ★★★★★', quote: '辛苦了！（沒有加薪）',
     sp: { name: '老闆說了算', desc: '籃框變超大金框 8 秒，下一球不管哪裡投都算 3 分', need: false } },
-  kevin: { name: 'Kevin', role: '特助', skill: { name: '後撤步', kind: 'stepback' }, model: 'kevin_walk', color: '#3f7fd9', spd: 1.0, sht: 1.06, stl: 0.95, blk: 1.0,
-    stat: '投籃 ★★★★★　防守 ★★★', quote: '這個用 AI 就好了。',
+  kevin: { name: 'Kevin', role: '特助・干擾', skill: { name: '後撤步', kind: 'stepback' }, model: 'kevin_walk', color: '#3f7fd9', spd: 1.0, sht: 1.0, stl: 0.95, blk: 1.0, nag: true,
+    stat: '碎念干擾 ★★★★★　投籃 ★★★', quote: '這個用 AI 就好了。',
     sp: { name: '用 AI 就好', desc: 'AI 鎖定籃框，站在哪裡投都必進', need: true } },
   yan: { name: '小燕', role: 'PM', skill: { name: '換手運球', kind: 'dodge' }, model: 'yan_walk', color: '#36b37e', spd: 1.04, sht: 1.0, stl: 1.0, blk: 0.9,
     stat: '傳球 ★★★★★　速度 ★★★★', quote: '這個今天要喔！📋',
@@ -62,14 +62,14 @@ const CHARS = {
     stat: '抄截 ★★★★★　速度 ★★★★', quote: '這張發票有問題。🔍',
     sp: { name: '現場稽核', desc: '衝去盤查守著持球隊友的防守者，對手愣住 2.5 秒', need: false } },
   // 香香籃球隊（使用者給的照片只當服裝參考，GPT 原創三視圖 → Tripo 3D）。str 力量（卡位、撞停）、reb 籃板範圍、reach 蓋帽距離
-  lin: { name: '林語彤', role: '香香籃球隊・後衛', skill: { name: '閃身步', kind: 'dodge', big: true }, model: 'lin_walk', jog: 'lin_jog', color: '#1f8a5b', spd: 1.2, sht: 0.98, stl: 1.12, blk: 0.8, str: 0.8,
-    stat: '速度 ★★★★★　過人 ★★★★★', quote: '跟得上我再說。',
+  lin: { name: '林語彤', role: '香香籃球隊・後衛', skill: { name: '閃身步', kind: 'dodge', big: true }, model: 'lin_walk', jog: 'lin_jog', color: '#1f8a5b', spd: 1.2, sht: 0.98, stl: 1.3, blk: 0.8, str: 0.8,
+    stat: '速度 ★★★★★　抄截 ★★★★★', quote: '跟得上我再說。',
     sp: { name: '瞬影閃身', desc: '連續閃身過掉每一個防守者（對手全被晃倒），直接上籃得分', need: true } },
-  yuan: { name: '元小雨', role: '香香籃球隊・中鋒', skill: { name: '強力突破', kind: 'power' }, model: 'yuan_walk', jog: 'yuan_jog', color: '#283d8f', spd: 0.95, sht: 0.96, stl: 0.95, blk: 1.45, str: 1.6, reb: 1.6, reach: 1.45,
+  yuan: { name: '元小雨', role: '香香籃球隊・中鋒', skill: { name: '強力突破', kind: 'power' }, model: 'yuan_walk', jog: 'yuan_jog', color: '#283d8f', spd: 0.95, sht: 0.98, stl: 0.95, blk: 1.45, str: 1.6, reb: 1.6, reach: 1.45, inside: 1.25, three: 0.6,
     stat: '籃板 ★★★★★　火鍋 ★★★★★', quote: '籃下是我的。',
     sp: { name: '禁區女王', desc: '8 秒內對手的投籃她都飛過去蓋掉，籃板球自動被她吸走', need: false } },
-  hu: { name: '胡姬', role: '香香籃球隊・前鋒', skill: { name: '多元進攻', kind: 'combo' }, model: 'hu_walk', jog: 'hu_jog', color: '#e86aa6', spd: 1.04, sht: 1.1, stl: 1.0, blk: 0.9, str: 0.95,
-    stat: '投籃 ★★★★★　招式 ★★★★★', quote: '想猜我出什麼招？',
+  hu: { name: '胡姬', role: '香香籃球隊・射手', skill: { name: '多元進攻', kind: 'combo' }, model: 'hu_walk', jog: 'hu_jog', color: '#e86aa6', spd: 1.04, sht: 1.04, stl: 1.0, blk: 0.9, str: 0.95, three: 1.45,
+    stat: '三分 ★★★★★　招式 ★★★★★', quote: '想猜我出什麼招？',
     sp: { name: '千變萬化', desc: '假動作騙起所有防守者（全部跳起來落空），再來一記必進後仰跳投', need: true } },
 };
 const KEYS = Object.keys(CHARS);
@@ -89,7 +89,8 @@ const TEAM_COLOR = ['#ff7a45', '#3f7fd9'];
 // ---------- 載入 ----------
 const K = {}, FACE = {}, SIG = {}, MOVES = {};
 // 共用的細部動作（綁在小米身上一次，再套給每個人；高度交給遊戲物理）。窗口＝只播的那一段（秒）
-const MOVE_WIN = { dodge: [0.1, 0.9], spin: [0.1, 1.1], stepback: [0.1, 1.0], push: [0.2, 1.3], stumble: [0.2, 1.4], rebound: [0.6, 1.5], block: [0.5, 1.4], slam: [0.2, 0.8] };
+const MOVE_WIN = { dodge: [0.1, 0.9], spin: [0.1, 1.1], stepback: [0.1, 1.0], push: [0.2, 1.3], stumble: [0.2, 1.4], rebound: [0.6, 1.5], block: [0.5, 1.4], slam: [0.2, 0.8],
+  reach: [1.55, 2.2], sprint: [0, 0.6], knock: [0.5, 2.0], flop: [0.1, 1.6] };   // reach 抄截往前撲、sprint 持球衝刺、knock 被蓋倒、flop 撞人倒地
 async function loadAll(progress) {
   const jogs = KEYS.filter(k => CHARS[k].jog).map(k => [k + 'Jog', CHARS[k].jog, 7]);
   const list = [...KEYS.map(k => [k, CHARS[k].model]), ...jogs, ['npcM', 'npc_m_walk'], ['npcF', 'npc_f_walk'], ['caishen', 'caishen_sit']];
@@ -123,7 +124,7 @@ const st = (p, k, d = 1) => p.def[k] ?? d;   // 角色數值（沒寫就用預�
 const ART_ACTS = ['dunk', 'three', 'fade', 'steal'];
 const SP_ART = { kui: 'coffee', jie: 'dunk', mi: 'phone', vivi: 'boss', kevin: 'ai', lin: 'cross', yuan: 'block', hu: 'fade' };
 const hasArt = (k) => k in SP_ART;
-const artUrl = (k, a) => `art/${k}_${a}.webp?v=0.4.1`;
+const artUrl = (k, a) => `art/${k}_${a}.webp?v=0.4.2`;
 function preloadArt(keys) { for (const k of keys) if (hasArt(k)) for (const a of [...ART_ACTS, SP_ART[k]]) { const im = new Image(); im.src = artUrl(k, a); } }
 let flashUntil = 0, flashTimer = 0;
 // 動作立繪從旁邊滑進來一下（我方在左、對手在右），2 秒內只跳一次
@@ -154,6 +155,28 @@ function playMove(p, name, { speed = 1, dur } = {}) {
   p.sigT = dur ?? (w1 - w0) / speed;
 }
 function stopSig(p) { p.sigT = 0; if (p.actor.sig) p.actor.sigOn = false; }
+// 一直重複播一段（持球衝刺的前傾跑），停下來時用 stopSig 收掉
+function playLoop(p, name, speed = 1) {
+  const clip = MOVES[name]; if (!clip) return;
+  const a = p.actor, act = a.mixer.clipAction(clip);
+  if (a.sig && a.sig !== act) a.sig.stop();
+  act.reset(); act.setLoop(THREE.LoopRepeat); act.time = MOVE_WIN[name][0]; act.timeScale = speed; act.setEffectiveWeight(a.sigW || 0); act.play();
+  a.sig = act; a.sigOn = true; a.sigW = a.sigW || 0; p.sigT = 99;
+}
+// 倒地動作的臀部高度（原動作每 0.1 秒、相對站立）：共用動作拿掉了臀部位移，倒下時照這條曲線把整個人往下放
+const MOVE_DROP = {
+  knock: [0.92, 0.92, 0.92, 0.94, 0.95, 0.92, 0.86, 0.81, 0.79, 0.77, 0.79, 0.87, 0.82, 0.67, 0.44, 0.14, -0.08, -0.05, 0.02, 0.03, -0.01, -0.05, -0.09, -0.08, -0.08, -0.1],
+  flop: [0.94, 0.93, 1.01, 1.28, 1.58, 1.72, 1.7, 1.52, 1.21, 0.77, 0.16, 0.02, 0.1, 0.15, 0.14, 0.08, 0.01, 0.03, 0.01, 0.01],
+};
+function dropOf(p) {
+  const act = p.actor.sig, w = p.actor.sigW || 0; if (!act || w < 0.01) return 0;
+  for (const k in MOVE_DROP) if (act.getClip() === MOVES[k]) {
+    const c = MOVE_DROP[k], i = Math.min(c.length - 1, act.time / 0.1), i0 = Math.floor(i), v = c[i0] + (c[Math.min(c.length - 1, i0 + 1)] - c[i0]) * (i - i0);
+    return Math.max(-0.95, v / c[0] - 1) * p.hipH * w;
+  }
+  return 0;
+}
+const playingMove = (p, name) => !!MOVES[name] && p.actor.sig?.getClip() === MOVES[name] && p.sigT > 0;
 // 頭像：用 3D 模型直接拍大頭照（不另外畫圖，七個人風格一致）
 function makePortraits() {
   const r = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
@@ -249,7 +272,7 @@ const teamOf = (t) => players.filter(p => p.team === t);
 const oppsOf = (p) => players.filter(q => q.team !== p.team);
 const dist2 = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const rand = (a, b) => a + Math.random() * (b - a);
-const BUSY = { shoot: 1, lay: 1, block: 1, steal: 1, jdunk: 1, ai: 1, alley: 1, lob: 1, audit: 1, sig: 1, skill: 1, fake: 1, shadow: 1, mirage: 1 };
+const BUSY = { down: 1, shoot: 1, lay: 1, block: 1, steal: 1, jdunk: 1, ai: 1, alley: 1, lob: 1, audit: 1, sig: 1, skill: 1, fake: 1, shadow: 1, mirage: 1 };
 const busy = (p) => p.act && BUSY[p.act.type];
 const holding = (p) => B.mode === 'held' && B.owner === p;
 
@@ -261,7 +284,9 @@ function makePlayer(key, team) {
   const ring = new THREE.Mesh(new THREE.RingGeometry(0.36, 0.48, 32), new THREE.MeshBasicMaterial({ color: TEAM_COLOR[team], transparent: true, opacity: 0.85, depthWrite: false }));
   ring.rotation.x = -Math.PI / 2; ring.renderOrder = 2; scene.add(ring);
   const label = labelSprite(def.name, { bg: TEAM_COLOR[team], size: 0.24 }); label.renderOrder = 12; label.material.depthTest = false; scene.add(label);
-  return { key, def, team, actor, ring, label, ...rigOf(actor), x: 0, z: 0, y: 0, vy: 0, vx: 0, vz: 0, dvx: 0, dvz: 0, face: Math.PI,
+  const rig = rigOf(actor); actor.root.updateMatrixWorld(true);
+  const hipH = rig.bones.Hips ? rig.bones.Hips.getWorldPosition(new THREE.Vector3()).y : 0.7;   // 站著時臀部離地多高（倒地時往下放）
+  return { key, def, team, actor, ring, label, ...rig, hipH, x: 0, z: 0, y: 0, vy: 0, vx: 0, vz: 0, dvx: 0, dvz: 0, face: Math.PI,
     act: null, stun: 0, stunIcon: null, gauge: CFG.gStart, pts: 0, stealCd: 0, pickCd: 0, aiT: 0, aiT2: 0, spot: null, goal: null, holdT: 0, blockIn: -1, cheer: 0, man: null, spWait: 0, icons: [] };
 }
 function clearPlayers() {
@@ -453,6 +478,8 @@ function shotProb(p, x = p.x, z = p.z, lay = false) {
   b -= contest(p, x, z) * (lay ? 0.5 : 0.38);
   if (!lay && Math.hypot(p.vx, p.vz) > 2.5) b -= 0.06;
   b *= p.def.sht * (p.team === 1 ? dif().shot : 1);
+  b *= three ? st(p, 'three') : lay || d < 3 ? st(p, 'inside') : 1;   // 射手三分準、中鋒籃下強三分差
+  if (oppsOf(p).some(q => q.def.nag && q.stun <= 0 && Math.hypot(q.x - x, q.z - z) < 2.6)) b *= 0.75;   // Kevin 在旁邊碎念「用 AI 就好」
   if (S.buff[p.team].vivi > 0) b += 0.35;
   return THREE.MathUtils.clamp(b, 0.04, 0.97);
 }
@@ -535,6 +562,7 @@ function releaseShot(p, opt = {}) {
       const dx = p.x - HOOP.x, dz = p.z - HOOP.z, l = Math.hypot(dx, dz) || 1;
       handsPos(p, B.pos); loseBall(V(dx / l * 4 + rand(-1.5, 1.5), 2.5, dz / l * 4));
       log(`block ${q.key}`); fx.sfx.block(); fx.floatText(V(q.x, q.y + 2.2, q.z), '蓋火鍋！', '#3f7fd9', 1.1); fx.camKick(0.6); cam.shake = 0.2;
+      if (Math.random() < 0.28 * st(q, 'str') / st(p, 'str')) knockDown(p, 'knock', '被蓋倒！', q);   // 力氣大的（中鋒）蓋下去會連人帶球蓋倒
       addGauge(q, CFG.gBlock); slow(0.35, 0.5);
       return;
     }
@@ -596,6 +624,7 @@ function startSteal(p) {
   p.stealCd = CFG.stealCd; p.act = { type: 'steal', t: 0, done: false };
   const h = B.mode === 'held' ? B.owner : null;
   if (h && h.team !== p.team) p.face = Math.atan2(h.x - p.x, h.z - p.z);
+  playMove(p, 'reach', { dur: 0.42 });   // 往前撲、手伸直去掏球
 }
 function resolveSteal(p) {
   const h = B.mode === 'held' ? B.owner : null, coffee = S.buff[p.team].coffee > 0;
@@ -649,6 +678,44 @@ function doSkill(p, as = null) {   // as：指定招式（胡姬的連招用）
   playMove(p, M.move, { dur: M.dur + 0.15 });
   fx.floatText(V(p.x, 2.2, p.z), p.def.skill.name, p.def.color, 0.7); fx.sfx.whiff();
   return p.act;
+}
+// 倒地：球掉出去、1.5 秒後爬起來（clip：knock 往後倒、flop 撞人後仰天倒）
+function knockDown(p, clip, text, by) {
+  if (holding(p)) { const [fx_, fz_] = fwdOf(p); handsPos(p, B.pos); loseBall(V(fx_ * 2.2 + rand(-1, 1), 2.4, fz_ * 2.2 + rand(-1, 1))); }
+  p.act = { type: 'down', t: 0, dur: 1.5 }; p.driving = false; p.driveT = 0; p.pickCd = 1.2; p.vx *= 0.3; p.vz *= 0.3;
+  playMove(p, clip, { dur: 1.5 });
+  fx.floatText(V(p.x, 2.3, p.z), text, by ? TEAM_COLOR[by.team] : '#e0413b', 1.1); fx.puff(V(p.x, 0.1, p.z), 0xffffff); log(`down ${p.key} ${clip}`);
+}
+// 持球往籃框衝：推著搖桿直直衝向籃框 0.3 秒就開始「衝刺切入」（前傾跑、變快）；撞上擺好防守架式的人會被撞倒
+function updateDrive(p, dt) {
+  const sp = Math.hypot(p.vx, p.vz), hx = HOOP.x - p.x, hz = HOOP.z - p.z, hl = Math.hypot(hx, hz) || 1;
+  const ok = holding(p) && !busy(p) && p.stun <= 0 && !(p.stopT > 0) && p.y <= 0 && S.phase === 'play' && !S.cut && hl > 1.7
+    && sp > speedOf(p) / (p.driving ? 1.3 : 1) * 0.6 && (p.vx * hx + p.vz * hz) / (sp * hl || 1) > 0.55;
+  p.driveT = ok ? (p.driveT || 0) + dt : 0;
+  const was = p.driving; p.driving = p.driveT > 0.3;
+  if (p.driving && !was) { playLoop(p, 'sprint', 1.2); fx.sfx.pass(); }
+  else if (!p.driving && was && playingMove(p, 'sprint')) stopSig(p);
+  if (!p.driving) return;
+  if (Math.random() < 0.5) fx.puff(V(p.x - p.vx * 0.05, 0.1, p.z - p.vz * 0.05), 0xffffff);
+  for (const q of oppsOf(p)) {
+    if (q.stun > 0 || q.y > 0.1 || busy(q) || !q.guard) continue;
+    const dx = q.x - p.x, dz = q.z - p.z, d = Math.hypot(dx, dz);
+    if (d > 0.85 || (dx * p.vx + dz * p.vz) / (d * sp || 1) < 0.5) continue;
+    p.driveT = 0; p.driving = false; stopSig(p); fx.sfx.block(); fx.camKick(0.5);
+    const ratio = st(q, 'str') / st(p, 'str'), base = q === S.ctrl && !G.auto ? 0.65 : 0.35;   // 你按住防守擺好架式最容易撞倒人
+    if (Math.random() < base * ratio) knockDown(p, 'flop', '撞倒！進攻犯規', q);
+    else { p.stopT = 0.6; playMove(p, 'stumble', { dur: 0.6 }); fx.floatText(V(p.x, 2.3, p.z), '撞停！', TEAM_COLOR[q.team], 1); }
+    break;
+  }
+}
+// Kevin 防守時一直碎念「用 AI 就好」：附近持球的人命中率下降（shotProb）
+const NAG = ['這個用 AI 就好…', 'AI 算過你投不進', '要不要先問一下 AI？', '命中率只有 12% 喔', '我用 GPT 模擬過了', '這球交給 AI 比較準'];
+function updateNag(p, dt) {
+  const h = B.mode === 'held' && B.owner.team !== p.team ? B.owner : null;
+  if (!h || p.stun > 0 || dist2(p, h) > 2.6 || S.phase !== 'play') return;
+  if ((p.nagT = (p.nagT || 0) - dt) > 0) return;
+  p.nagT = rand(1.1, 1.6);
+  fx.floatText(V(p.x + rand(-0.3, 0.3), 2.5, p.z), '🤖 ' + NAG[Math.floor(Math.random() * NAG.length)], '#3f7fd9', 1.05);
 }
 // 突破判定（動作做到一半）：防守者貼身防守、力氣大可以「撞停」；沒擋住就被晃倒或撞開
 function resolveSkill(p, a) {
@@ -1041,7 +1108,7 @@ function goTo(p, x, z, mul = 1) {
   p.dvx = dx / d * sp; p.dvz = dz / d * sp; return false;
 }
 function speedOf(p) {
-  return CFG.speed * p.def.spd * (p.dashT > 0 ? 1.55 : 1) * (p.guard ? 0.85 : 1) * (S.buff[p.team].coffee > 0 ? 1.45 : 1) * (S.buff[p.team].slow > 0 ? 0.55 : 1) * (holding(p) ? CFG.handler : 1) * (p.team === 1 ? dif().speed : 1);
+  return CFG.speed * p.def.spd * (p.dashT > 0 ? 1.55 : 1) * (p.driving ? 1.3 : 1) * (p.guard ? 0.85 : 1) * (S.buff[p.team].coffee > 0 ? 1.45 : 1) * (S.buff[p.team].slow > 0 ? 0.55 : 1) * (holding(p) ? CFG.handler : 1) * (p.team === 1 ? dif().speed : 1);
 }
 function think(p, dt) {
   p.dvx = p.dvz = 0;
@@ -1248,11 +1315,12 @@ function updateAct(p, dt) {
     }
     case 'block': if (a.t > 0.15 && p.y <= 0) p.act = null; break;
     case 'steal':
-      if (a.t < 0.2) { p.x += Math.sin(p.face) * dt * 2.6; p.z += Math.cos(p.face) * dt * 2.6; }
-      if (!a.done && a.t >= 0.12) { a.done = true; resolveSteal(p); }
-      if (a.t > 0.32) p.act = null;
+      if (a.t < 0.22) { const v = 4.6 * (1 - a.t / 0.22); p.x += Math.sin(p.face) * dt * v; p.z += Math.cos(p.face) * dt * v; }   // 往前衝一步撲過去
+      if (!a.done && a.t >= 0.14) { a.done = true; resolveSteal(p); }
+      if (a.t > 0.4) p.act = null;
       break;
     case 'pass': if (a.t > 0.25) p.act = null; break;
+    case 'down': if (a.t > a.dur) p.act = null; break;   // 倒在地上，爬起來之前不能動
     case 'jdunk': {
       if (a.t < 0.3 || !holding(p)) { a.t = Math.min(a.t, 0.3); if (!holding(p) && B.mode !== 'pass') { p.act = null; break; } p.face = Math.atan2(HOOP.x - p.x, HOOP.z - p.z); break; }
       const k = Math.min(1, (a.t - 0.3) / 0.85), e = k * k * (3 - 2 * k);
@@ -1459,6 +1527,9 @@ function updatePlayers(dt, t) {
     if (p.blockIn > 0) { p.blockIn -= dt; if (p.blockIn <= 0 && p.stun <= 0 && !busy(p) && p.y <= 0) startBlock(p); }
     if (p.cheer > 0) p.cheer -= dt;
     if (p.sigT > 0) { p.sigT -= dt; if (p.sigT <= 0) stopSig(p); }
+    updateDrive(p, dt);
+    if (p.def.nag) updateNag(p, dt);
+    if (p.def.pretty && Math.random() < dt * 2.5) fx.sparkle(V(p.x + rand(-0.4, 0.4), p.y + rand(0.9, 1.7), p.z + rand(-0.3, 0.3)), 0xffc6e6, 0.28);   // 老闆：漂漂亮亮
     for (const k of ['skillCd', 'dashT', 'openT', 'stopT', 'fakeCd', 'boxedT']) if (p[k] > 0) p[k] = Math.max(0, p[k] - dt);
     if (p.y <= 0 && !busy(p)) { p.bitten = false; p.blockBoost = 0; }
     // 貼身防守（按住技能鍵，電腦則是盯球的人自動）、卡位（球在空中時）
@@ -1470,7 +1541,7 @@ function updatePlayers(dt, t) {
     const a = p.act, scripted = a && (a.type === 'lay' || a.type === 'jdunk' || a.type === 'alley' || a.type === 'skill' || a.type === 'shadow');
     if (p.hang > 0) { p.hang -= dt; p.vx = p.vz = 0; if (p.hang <= 0) p.vy = 0; }
     else if (!scripted) {
-      const locked = a && ((a.type === 'shoot' && !a.fade) || a.type === 'block' || a.type === 'ai' || a.type === 'lob' || a.type === 'fake') || p.stopT > 0;
+      const locked = a && ((a.type === 'shoot' && !a.fade) || a.type === 'down' || a.type === 'block' || a.type === 'ai' || a.type === 'lob' || a.type === 'fake') || p.stopT > 0;
       const k = Math.min(1, dt * CFG.accel);
       if (locked || p.stun > 0) { p.vx *= Math.exp(-dt * 8); p.vz *= Math.exp(-dt * 8); }
       else { p.vx += (p.dvx - p.vx) * k; p.vz += (p.dvz - p.vz) * k; }
@@ -1512,6 +1583,7 @@ function updatePlayers(dt, t) {
     p.actor.animMul = 1;
     resetBones(p);
     updateActor(p.actor, dt, t);
+    r.position.y += dropOf(p);
     // 蹲下起跳、落地的壓扁
     const crouch = a && a.type === 'jdunk' && a.t < 0.3 ? 0.82 : 1;
     p.actor.model.scale.y *= crouch;
@@ -2033,6 +2105,7 @@ const G = window.G = {
   toSelect, finish, seekOP,
   prac(key = 'kui') { S.practice = true; S.size = 1; S.pick = [key]; startMatch(); },   // 練習場
   pracOpp: (m) => setPracOpp(m),
+  inp, knock: (k, clip = 'flop') => knockDown(G.pl(k), clip, '測試倒地'),
 };
 
 // ---------- 開始 ----------

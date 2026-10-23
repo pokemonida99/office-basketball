@@ -1,6 +1,6 @@
 // 球場：辦公室頂樓的半場籃球場（木地板＋白線＋白板籃板），後面是落地窗和城市
 import * as THREE from 'three';
-import { scene, rbox, box, cyl, sphere, mat, canvasTex, roundRect, FONT, labelSprite } from './world.js?v=0.4.1';
+import { scene, rbox, box, cyl, sphere, mat, canvasTex, roundRect, FONT, labelSprite } from './world.js?v=0.4.2';
 
 // 尺寸（1 單位 ≈ 角色身高的 0.8）
 export const COURT = { x: 6, z0: 0, z1: 10.5 };            // x 從 -6 到 6，底線 z=0，半場線 z=10.5
