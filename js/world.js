@@ -39,7 +39,7 @@ Object.assign(sun.shadow.camera, { left: -10, right: 10, top: 10, bottom: -10, n
 sun.position.set(-5, 14, 12); sun.target.position.set(0, 0, 4);
 scene.add(sun, sun.target);
 
-export const camera = new THREE.PerspectiveCamera(36, innerWidth / innerHeight, 0.1, 200);
+export const camera = new THREE.PerspectiveCamera(36, (innerWidth / innerHeight) || 1, 0.1, 200);
 
 // 後製：柔光（發光的東西會暈開）＋飽和度／對比／暗角
 const composer = new EffectComposer(renderer);
@@ -61,11 +61,20 @@ composer.addPass(grade);
 composer.addPass(new OutputPass());
 export const post = { composer, bloom, grade, on: true };
 // 視窗被縮到 0（分頁藏起來、預覽窗格收合）時不要畫，不然 WebGL 會一直報 framebuffer 大小為 0
-export function render() { if (!innerWidth || !innerHeight) return; if (post.on) composer.render(); else renderer.render(scene, camera); }
+// 每次畫之前確認畫布大小跟視窗一樣：分頁在背景開、App 內建瀏覽器一開始是 0×0、漏掉 resize 事件時，畫面才不會一直空白
+let fitW = 0, fitH = 0;
+function fitSize() {
+  if (innerWidth === fitW && innerHeight === fitH) return;
+  fitW = innerWidth; fitH = innerHeight;
+  camera.aspect = fitW / fitH; camera.updateProjectionMatrix();
+  renderer.setSize(fitW, fitH); composer.setSize(fitW, fitH);
+  bloom.resolution.set(fitW / 2, fitH / 2);
+}
+export function render() { if (!innerWidth || !innerHeight) return; fitSize(); if (post.on) composer.render(); else renderer.render(scene, camera); }
 export function setQuality(level) {
   quality.level = level; const low = level === 'low';
-  renderer.setPixelRatio(Math.min(devicePixelRatio, low ? 1.25 : 2)); renderer.setSize(innerWidth, innerHeight);
-  composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(innerWidth, innerHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, low ? 1.25 : 2)); composer.setPixelRatio(renderer.getPixelRatio());
+  fitW = fitH = 0; if (innerWidth && innerHeight) fitSize();   // 換解析度：重新套一次大小
   post.on = !low;
   const m = low ? 1024 : 2048; sun.shadow.mapSize.set(m, m); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; }
 }
@@ -75,12 +84,7 @@ export function setQualityPref(pref) {
 }
 setQuality(quality.level);
 
-addEventListener('resize', () => {
-  if (!innerWidth || !innerHeight) return;
-  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight);
-  bloom.resolution.set(innerWidth / 2, innerHeight / 2);
-});
+addEventListener('resize', () => { if (innerWidth && innerHeight) fitSize(); });
 
 // 鏡頭：從半場線後方往籃框看。橫式看整個半場寬，直式手機看窄一點、跟著球左右移
 export const cam = { target: new THREE.Vector3(), kick: 0, shake: 0, zoom: 1 };
