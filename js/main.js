@@ -1,12 +1,12 @@
 // 上班啟示錄：午休鬥牛 2v2 —— 頂樓半場籃球。玩家挑兩個同事，電腦控制隊友和對手；每個人都有自己的大招
 import * as THREE from 'three';
-import { scene, render, updateCamera, cam, camera, labelSprite, V, quality, setQuality, setQualityPref, canvasTex, FONT, sphere, mat } from './world.js?v=0.2.0';
-import { loadKind, loadClip, makeActor, addJog, updateActor, turnTo } from './assets.js?v=0.2.0';
-import * as fx from './fx.js?v=0.2.0';
-import { buildCourt, animateCourt, swishNet, C, COURT, HOOP, ARC_R, CORNER_X, TOP, WALL, isThree, hoopDist } from './court.js?v=0.2.0';
-import { music, musicStart, musicStop, musicTick } from './music.js?v=0.2.0';
+import { scene, render, updateCamera, cam, camera, labelSprite, V, quality, setQuality, setQualityPref, canvasTex, FONT, sphere, mat } from './world.js?v=0.2.1';
+import { loadKind, loadClip, makeActor, addJog, updateActor, turnTo } from './assets.js?v=0.2.1';
+import * as fx from './fx.js?v=0.2.1';
+import { buildCourt, animateCourt, swishNet, C, COURT, HOOP, ARC_R, CORNER_X, TOP, WALL, isThree, hoopDist } from './court.js?v=0.2.1';
+import { music, musicStart, musicStop, musicTick } from './music.js?v=0.2.1';
 
-const VERSION = '0.2.0';
+const VERSION = '0.2.1';
 document.getElementById('ver').textContent = 'v' + VERSION;
 
 // ---------- 數值（調手感只改這裡） ----------
@@ -62,6 +62,9 @@ const CHARS = {
     sp: { name: '現場稽核', desc: '衝到持球的對手面前把球沒收，對手愣住 1.5 秒', need: 'opp' } },
 };
 const KEYS = Object.keys(CHARS);
+// 選角畫面只放這幾個人；其他人先藏起來（不在選角、封面、觀眾席出現），只有 3v3 對手湊不滿時才讓電腦用
+const ROSTER = ['kui', 'jie', 'mi', 'vivi', 'kevin'];
+const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 // 難度：電腦的命中、跑速、抄截、蓋帽、集氣倍率；green 是玩家投籃時機綠色區的寬度倍率
 const DIFF = [
   { name: '簡單', shot: 0.8, speed: 0.9, steal: 0.55, block: 0.6, gauge: 0.8, green: 1.6 },
@@ -199,7 +202,7 @@ function clearPlayers() {
 function buildCrowd() {
   for (const c of crowd) scene.remove(c.actor.root);
   crowd = [];
-  const out = KEYS.filter(k => !S.pick.includes(k) && !S.opp.includes(k));
+  const out = ROSTER.filter(k => !S.pick.includes(k) && !S.opp.includes(k));
   const list = [...out, 'npcM', 'npcF', 'npcM', 'npcF'].slice(0, 10);
   list.forEach((k, i) => {
     const side = i % 2 ? 1 : -1, slot = i >> 1;
@@ -1250,8 +1253,9 @@ function updateCrowd(dt, t) {
 // ---------- 比賽流程 ----------
 function newMatch() {
   clearPlayers();
-  const others = KEYS.filter(k => !S.pick.includes(k));
-  if (!S.keepOpp) { for (let i = others.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [others[i], others[j]] = [others[j], others[i]]; } S.opp = others.slice(0, S.pick.length); }
+  // 對手先從選角名單裡抽，不夠（3v3）再用藏起來的人補
+  const others = [...shuffle(ROSTER.filter(k => !S.pick.includes(k))), ...shuffle(KEYS.filter(k => !ROSTER.includes(k) && !S.pick.includes(k)))];
+  if (!S.keepOpp) S.opp = others.slice(0, S.pick.length);
   S.keepOpp = false;
   players = [...S.pick.map(k => makePlayer(k, 0)), ...S.opp.map(k => makePlayer(k, 1))];
   $('board').classList.toggle('three', S.pick.length > 2);
@@ -1428,14 +1432,14 @@ function soundIcon() { $('bSound').textContent = music.on ? '🔊' : '🔇'; con
 soundIcon();
 
 function buildSelect() {
-  $('grid').innerHTML = KEYS.map(k => { const c = CHARS[k]; return `<div class="ch" data-k="${k}" style="--cc:${c.color}"><span class="badge"></span><img src="${FACE[k]}" alt=""><div><div class="nm">${c.name}<small>${c.role}</small></div><span class="spn">⚡ ${c.sp.name}</span><div class="d">${c.sp.desc}</div><div class="st">${c.stat}</div></div></div>`; }).join('');
+  $('grid').innerHTML = ROSTER.map(k => { const c = CHARS[k]; return `<div class="ch" data-k="${k}" style="--cc:${c.color}"><span class="badge"></span><img src="${FACE[k]}" alt=""><div><div class="nm">${c.name}<small>${c.role}</small></div><span class="spn">⚡ ${c.sp.name}</span><div class="d">${c.sp.desc}</div><div class="st">${c.stat}</div></div></div>`; }).join('');
   for (const el of $('grid').children) el.onclick = () => {
     fx.audioInit(); fx.sfx.click();
     const k = el.dataset.k, i = S.sel.indexOf(k);
     if (i >= 0) S.sel.splice(i, 1); else { if (S.sel.length >= S.size) S.sel.shift(); S.sel.push(k); }
     refreshSelect();
   };
-  $('titleFaces').innerHTML = KEYS.map(k => `<img src="${FACE[k]}" alt="">`).join('');
+  $('titleFaces').innerHTML = ROSTER.map(k => `<img src="${FACE[k]}" alt="">`).join('');
 }
 function refreshSelect() {
   for (const el of $('grid').children) {
@@ -1451,7 +1455,7 @@ function refreshSelect() {
 }
 const MODE_KEY = 'office-basketball-mode', DIFF_KEY = 'office-basketball-diff';
 S.sel = []; S.size = store.get(MODE_KEY) === '3' ? 3 : 2; S.diff = ['0', '1', '2'].includes(store.get(DIFF_KEY)) ? +store.get(DIFF_KEY) : 1;
-$('bRand').onclick = () => { fx.audioInit(); fx.sfx.click(); const a = KEYS.slice().sort(() => Math.random() - 0.5); S.sel = a.slice(0, S.size); refreshSelect(); };
+$('bRand').onclick = () => { fx.audioInit(); fx.sfx.click(); S.sel = shuffle(ROSTER.slice()).slice(0, S.size); refreshSelect(); };
 $('bGo').onclick = () => { if (S.sel.length < S.size) return; S.pick = S.sel.slice(); startMatch(); };
 for (const b of $('modeSeg').children) b.onclick = () => { fx.sfx.click(); S.size = +b.dataset.v; store.set(MODE_KEY, S.size); S.sel = S.sel.slice(0, S.size); refreshSelect(); };
 for (const b of $('diffSeg').children) b.onclick = () => { fx.sfx.click(); S.diff = +b.dataset.v; store.set(DIFF_KEY, S.diff); refreshSelect(); };
