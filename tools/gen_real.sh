@@ -8,6 +8,7 @@ IMG=/private/tmp/claude-502/-Users-hermes-Public-0720/d9f138d0-5c6b-4bbc-80b8-77
 typeset -A PHOTO
 PHOTO[lin]=$IMG/1.jpg; PHOTO[yuan]=$IMG/2.jpg; PHOTO[hu]=$IMG/3.jpg
 P=~/Downloads/人物集
+S=work/ref/shanding; PHOTO[tu]=$S/tu_photo.jpg; PHOTO[zhang]=$S/zhang_photo.jpg; PHOTO[bian]=$S/bian_ref.jpg; PHOTO[needle]=$S/needle_ref.jpg
 PHOTO[jie]=$P/01阿傑.jpeg; PHOTO[mi]=$P/02小米.jpg; PHOTO[vivi]=$P/03VIVI老闆.jpeg; PHOTO[kui]=$P/04小葵.jpg; PHOTO[kevin]=$P/05Kevin特助.jpg
 # 造型補充：照片裡沒拍清楚或要統一的地方（Vivi 照主遊戲設定：襯衫扣到領口）
 typeset -A EXTRA
@@ -16,7 +17,11 @@ EXTRA[mi]="Black chin-length bob with blunt bangs, black call-center headset wit
 EXTRA[vivi]="Long straight light blonde hair with bangs, pink tailored blazer, light pink collared blouse buttoned all the way up to the collar (modest office look, no cleavage), pink pencil skirt, champagne-gold heels."
 EXTRA[kui]="Short light-brown bob, brown wool beret, round thin glasses, cream chunky knit sweater, navy floral mini skirt, brown ankle boots."
 EXTRA[kevin]="Short black hair, white wireless earbuds, gray blazer over a black turtleneck, black slacks, black shoes; no tablet, hands free."
-EXTRA[lin]=""; EXTRA[yuan]=""; EXTRA[hu]="" 
+EXTRA[lin]=""; EXTRA[yuan]=""; EXTRA[hu]=""
+EXTRA[tu]="Wavy shoulder-length brown hair with bangs, white and pink plush bunny-ear headband, pearl necklace, white lace lolita dress with puffy sleeves, pink ribbons and bows, layered white tulle knee-length skirt with pink butterfly appliques, white Mary-Jane flats. No basket."
+EXTRA[zhang]="Short black hair, thin metal-rimmed glasses, red polo shirt with white and purple stripe panels and a small white heart-hand logo, black belt, charcoal slacks, black leather shoes."
+EXTRA[bian]="His head is fully covered by a brown paper bag with black sunglasses and one black Chinese character 編 on it (no face visible), gray-blue plaid short-sleeve shirt, khaki shorts, white clog sandals."
+EXTRA[needle]="This is a plush toy mascot (a white syringe with button eyes, blue hub, silver needle on top, short plush arms and legs, red velvet cape): show it as a real photographed plush toy in a heroic pose; keep its exact shape and colors."
 STYLE="Photorealistic sports action photo of the same person as in the reference image: keep the face, hairstyle, hair color, glasses, accessories, outfit, socks and shoes exactly as in the reference (this is a basketball player character for a mobile game cut-in). Dynamic, energetic, tasteful sporty pose, whole body visible from head to shoes inside a tall portrait frame, body and face facing the camera or three-quarter front (no looking back over the shoulder), crisp studio sports lighting with a slight rim light, a standard orange basketball. Solid pure bright green background (#00FF00) with no floor, no shadow, no gradient, no text, no logos. Action: "
 typeset -A ACT
 ACT[dunk]="leaping high for a one-handed slam dunk, right arm stretched up high holding the basketball above her head, left arm out for balance, knees bent in the air, determined face."
@@ -38,6 +43,13 @@ ACT[card_kevin]="product-demo pose: left hand in his pocket, right hand presenti
 ACT[card_lin]="low aggressive crossover: crouched very low in a wide stance, dribbling the basketball between her legs, one hand down near the floor, intense sharp eyes on the camera, hair flicking."
 ACT[card_yuan]="dominant center pose: standing tall and powerful, palming the basketball high above her head with her right hand (arm straight up), left fist clenched by her side, the mandala tattoo on her arm clearly visible, fierce calm stare."
 ACT[card_hu]="playful trick pose: arms stretched out to both sides at shoulder height, the basketball rolling across her shoulders behind her neck, winking at the camera with a playful open-mouth smile, ponytail swinging."
+# 山頂國小隊：大招、選角卡
+ACT[egg]="shooting a jump shot with a giant glossy rainbow-painted Easter egg instead of a basketball, the egg leaving her fingertips high above her head with sparkles and tiny pastel confetti, joyful face."
+ACT[sprint]="explosive after-work sprint toward the camera, leaning forward at full speed, dribbling the basketball low with one hand, office ID badge lanyard flying, loosened energy, determined."
+ACT[hero]="superhero landing pose: one plush fist punching up to the sky, red cape flowing dramatically behind, slight low-angle hero shot, the basketball tucked under the other arm."
+ACT[card_tu]="cheerful teacher pose: holding the basketball up next to her face with both hands like an Easter egg, head tilted, one knee bent, bunny ears bouncing, big smile."
+ACT[card_zhang]="proud principal pose: standing tall, one hand raised giving a friendly wave like at a school assembly, the other hand holding the basketball against his hip, big warm smile."
+ACT[card_bian]="mysterious cool pose: leaning slightly, spinning the basketball on one finger at chest height, the other hand in his shorts pocket, paper-bag head tilted with attitude."
 gen() {
   local n=${1%%:*} a=${1##*:}
   $CODEX exec --skip-git-repo-check "Generate one image with your image generation tool, portrait 2:3: $STYLE${ACT[$a]} ${EXTRA[$n]} Do not run any shell commands." -i ${PHOTO[$n]} < /dev/null > work/art/real-$n-$a.log 2>&1

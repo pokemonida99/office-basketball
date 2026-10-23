@@ -1,13 +1,13 @@
 // 上班啟示錄：下班先鬥牛 2v2 —— 頂樓半場籃球。玩家挑兩個同事，電腦控制隊友和對手；每個人都有自己的大招
 import * as THREE from 'three';
-import { scene, render, updateCamera, cam, camera, CAMS, camMode, labelSprite, V, quality, setQuality, setQualityPref, canvasTex, FONT, sphere, mat } from './world.js?v=0.5.3';
-import { loadKind, loadClip, makeActor, addJog, updateActor, turnTo } from './assets.js?v=0.5.3';
-import * as fx from './fx.js?v=0.5.3';
-import { buildCourt, setCourt, animateCourt, swishNet, C, COURT, HOOP, ARC_R, CORNER_X, TOP, WALL, isThree, hoopDist } from './court.js?v=0.5.3';
-import { music, musicStart, musicStop, musicTick, musicTheme, musicPause } from './music.js?v=0.5.3';
-import { openOP, replayOP, seekOP } from './op.js?v=0.5.3';
+import { scene, render, updateCamera, cam, camera, CAMS, camMode, labelSprite, V, quality, setQuality, setQualityPref, canvasTex, FONT, sphere, mat } from './world.js?v=0.5.4';
+import { loadKind, loadClip, makeActor, addJog, updateActor, turnTo } from './assets.js?v=0.5.4';
+import * as fx from './fx.js?v=0.5.4';
+import { buildCourt, setCourt, animateCourt, swishNet, C, COURT, HOOP, ARC_R, CORNER_X, TOP, WALL, isThree, hoopDist } from './court.js?v=0.5.4';
+import { music, musicStart, musicStop, musicTick, musicTheme, musicPause } from './music.js?v=0.5.4';
+import { openOP, replayOP, seekOP } from './op.js?v=0.5.4';
 
-const VERSION = '0.5.3';
+const VERSION = '0.5.4';
 document.getElementById('ver').textContent = 'v' + VERSION;
 
 // ---------- 數值（調手感只改這裡） ----------
@@ -71,10 +71,20 @@ const CHARS = {
   hu: { name: '胡姬', role: '香香籃球隊・射手', skill: { name: '多元進攻', kind: 'combo' }, model: 'hu_walk', jog: 'hu_jog', color: '#e86aa6', spd: 1.04, sht: 1.04, stl: 1.0, blk: 0.9, str: 0.95, three: 1.45,
     stat: '三分 ★★★★★　招式 ★★★★★', quote: '想猜我出什麼招？',
     sp: { name: '千變萬化', desc: '假動作騙起所有防守者（全部跳起來落空），再來一記必進後仰跳投', need: true } },
+  // 山頂國小隊（使用者給的照片只當服裝參考，GPT 原創三視圖 → Tripo 3D）
+  tu: { name: '兔兔老師', role: '山頂國小・後衛', skill: { name: '兔子跳步', kind: 'dodge' }, model: 'tu_walk', jog: 'tu_jog', color: '#ff8fc0', spd: 1.14, sht: 1.0, stl: 1.25, blk: 0.85, str: 0.85, three: 1.1,
+    stat: '速度 ★★★★★　抄截 ★★★★', quote: '同學們，看好囉～🐰',
+    sp: { name: '彩蛋射籃', desc: '籃球變成彩色大彩蛋，從哪裡投都必進，三分線外算 3 分', need: true } },
+  zhang: { name: '校長', role: '山頂國小・校長', skill: { name: '朝會訓話', kind: 'power' }, model: 'zhang_walk', jog: 'zhang_jog', color: '#d6283b', spd: 0.95, sht: 0.98, stl: 0.95, blk: 1.05, str: 1.2,
+    stat: '變身 ★★★★★　體力 ★', quote: '各位同學，校長說幾句話就好。',
+    sp: { name: '針筒超人', desc: '變身 20 秒：能力全滿、跳起來必蓋、抄截飛過去、投籃必進；變回來虛弱 20 秒（走很慢、一抄就掉）', need: true } },
+  bian: { name: '小編', role: '山頂國小・前鋒', skill: { name: '後撤步', kind: 'stepback' }, model: 'bian_walk', jog: 'bian_jog', color: '#a0703c', spd: 1.02, sht: 1.05, stl: 1.0, blk: 0.95, str: 1.0, three: 1.1,
+    stat: '投籃 ★★★★　衝刺 ★★★★★', quote: '五點了，我要下班。',
+    sp: { name: '下班衝刺', desc: '打卡下班的速度衝到籃下，路上的人全撞飛，必進上籃', need: true } },
 };
 const KEYS = Object.keys(CHARS);
 // 選角畫面只放這幾個人；其他人先藏起來（不在選角、封面、觀眾席出現），只有 3v3 對手湊不滿時才讓電腦用
-const ROSTER = ['kui', 'jie', 'mi', 'vivi', 'kevin', 'lin', 'yuan', 'hu'];
+const ROSTER = ['kui', 'jie', 'mi', 'vivi', 'kevin', 'lin', 'yuan', 'hu', 'tu', 'zhang', 'bian'];
 const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 // 難度：電腦的命中、跑速、抄截、蓋帽、集氣倍率；green 是玩家投籃時機綠色區的寬度倍率
 const DIFF = [
@@ -94,7 +104,7 @@ const MOVE_WIN = { dodge: [0.1, 0.9], spin: [0.1, 1.1], stepback: [0.1, 1.0], pu
   guard: [0, 7.3], back: [0, 1.7], stop: [0.5, 1.2] };   // guard 防守滑步（馬步側跳整段循環）、back 後退步、stop 衝刺急停   // reach 抄截往前撲、sprint 持球衝刺、knock 被蓋倒、flop 撞人倒地
 async function loadAll(progress) {
   const jogs = KEYS.filter(k => CHARS[k].jog).map(k => [k + 'Jog', CHARS[k].jog, 7]);
-  const list = [...KEYS.map(k => [k, CHARS[k].model]), ...jogs, ['npcM', 'npc_m_walk'], ['npcF', 'npc_f_walk'], ['caishen', 'caishen_sit']];
+  const list = [...KEYS.map(k => [k, CHARS[k].model]), ...jogs, ['npcM', 'npc_m_walk'], ['npcF', 'npc_f_walk'], ['caishen', 'caishen_sit'], ['needle', 'needle_walk'], ['needleJog', 'needle_jog', 7]];
   let n = 0; const all = list.length + KEYS.length + Object.keys(MOVE_WIN).length;
   await Promise.all([
     ...list.map(async ([k, f, lean]) => { K[k] = await loadKind(`models/${f}.glb`, lean ?? null); progress(++n / all); }),
@@ -107,7 +117,7 @@ async function loadAll(progress) {
 // 招牌動作：大招時播一次（Higgsfield 綁的動作，套到同一套骨架上）
 // 動作檔很長（有的 9 秒），只播最精彩的那一段（秒）：用 work/peek.html 一格一格看過挑的
 const SIG_WIN = { kui: [0.4, 1.9], jie: [0.8, 1.73], mi: [0.5, 2.0], vivi: [1.0, 2.6], kevin: [2.4, 3.3], yan: [5.0, 5.9], heilun: [0, 1.5],
-  de: [0.4, 2.2], momo: [0.6, 2.2], zhe: [0, 1.9], zhen: [0.6, 2.0], lin: [0.3, 1.8], yuan: [0.3, 1.9], hu: [0.3, 1.8] };
+  de: [0.4, 2.2], momo: [0.6, 2.2], zhe: [0, 1.9], zhen: [0.6, 2.0], lin: [0.3, 1.8], yuan: [0.3, 1.9], hu: [0.3, 1.8], tu: [0.2, 1.8], zhang: [0.3, 2.0], bian: [0.3, 1.9] };
 // lock＝這段時間站著不動；loop＝一直重播（贏球慶祝）
 function playSig(p, { lock = false, loop = false, speed = 1 } = {}) {
   const clip = SIG[p.key]; if (!clip) return;
@@ -123,9 +133,9 @@ const st = (p, k, d = 1) => p.def[k] ?? d;   // 角色數值（沒寫就用預�
 // 真人風立繪（GPT 照使用者給的照片畫，tools/gen_real.sh → key_green.py）：art/角色_動作.webp
 // 動作：dunk 灌籃、three 三分、fade 後仰跳投、steal 抄截；大招用 SP_ART 那張。沒有立繪的人（隱藏角色）大招用頭像
 const ART_ACTS = ['dunk', 'three', 'fade', 'steal'];
-const SP_ART = { kui: 'coffee', jie: 'dunk', mi: 'phone', vivi: 'boss', kevin: 'ai', lin: 'cross', yuan: 'block', hu: 'fade' };
+const SP_ART = { kui: 'coffee', jie: 'dunk', mi: 'phone', vivi: 'boss', kevin: 'ai', lin: 'cross', yuan: 'block', hu: 'fade', tu: 'egg', zhang: 'hero', bian: 'sprint' };
 const hasArt = (k) => k in SP_ART;
-const artUrl = (k, a) => `art/${k}_${a}.webp?v=0.5.3`;
+const artUrl = (k, a) => `art/${k}_${a}.webp?v=0.5.4`;
 function preloadArt(keys) { for (const k of keys) if (hasArt(k)) for (const a of [...ART_ACTS, SP_ART[k]]) { const im = new Image(); im.src = artUrl(k, a); } }
 let flashUntil = 0, flashTimer = 0;
 // 動作立繪從旁邊滑進來一下（我方在左、對手在右），2 秒內只跳一次
@@ -256,7 +266,14 @@ const ballTex = canvasTex(256, 128, (g, w, h) => {
   for (const x of [0, w / 2, w]) { g.beginPath(); g.ellipse(x, h / 2, w / 9, h / 2, 0, 0, Math.PI * 2); g.stroke(); }
 });
 const BR = 0.15;
-const ballMesh = new THREE.Mesh(new THREE.SphereGeometry(BR, 24, 16), new THREE.MeshStandardMaterial({ map: ballTex, roughness: 0.6 }));
+const ballMat = new THREE.MeshStandardMaterial({ map: ballTex, roughness: 0.6 });
+const eggMat = new THREE.MeshStandardMaterial({ roughness: 0.35, map: canvasTex(256, 128, (g, w, h) => {   // 彩蛋：粉彩橫條＋波浪＋小點
+  const C = ['#ffb3d1', '#a8dcff', '#fff0a0', '#b8f0c8', '#d8c0ff', '#ffb3d1'];
+  C.forEach((c, i) => { g.fillStyle = c; g.fillRect(0, i * h / 6, w, h / 6 + 1); });
+  g.strokeStyle = '#ffffff'; g.lineWidth = 6; for (let i = 1; i < 6; i++) { g.beginPath(); for (let x = 0; x <= w; x += 8) g.lineTo(x, i * h / 6 + Math.sin(x / 12) * 5); g.stroke(); }
+  g.fillStyle = '#ff6fa8'; for (let i = 0; i < 40; i++) { g.beginPath(); g.arc(Math.random() * w, Math.random() * h, 3, 0, 7); g.fill(); }
+}) });
+const ballMesh = new THREE.Mesh(new THREE.SphereGeometry(BR, 24, 16), ballMat);
 ballMesh.castShadow = true; scene.add(ballMesh);
 // mode：held 有人拿、pass 傳球中、shot 投籃飛行、net 進網、loose 沒人拿、dead 進球後沒人能撿
 const B = { mode: 'dead', owner: null, pos: V(0, BR, 5), vel: V(), t: 0, T: 0, p0: V(), p1: V(), v0: V(), recv: null, passer: null, arc: 0.25, make: false, pts: 2, shooter: null, sure: false, drib: 0, spin: V() };
@@ -273,7 +290,7 @@ const teamOf = (t) => players.filter(p => p.team === t);
 const oppsOf = (p) => players.filter(q => q.team !== p.team);
 const dist2 = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const rand = (a, b) => a + Math.random() * (b - a);
-const BUSY = { down: 1, shoot: 1, lay: 1, block: 1, steal: 1, jdunk: 1, ai: 1, alley: 1, lob: 1, audit: 1, sig: 1, skill: 1, fake: 1, shadow: 1, mirage: 1 };
+const BUSY = { egg: 1, bsprint: 1, down: 1, shoot: 1, lay: 1, block: 1, steal: 1, jdunk: 1, ai: 1, alley: 1, lob: 1, audit: 1, sig: 1, skill: 1, fake: 1, shadow: 1, mirage: 1 };
 const busy = (p) => p.act && BUSY[p.act.type];
 const holding = (p) => B.mode === 'held' && B.owner === p;
 
@@ -443,6 +460,7 @@ const mateHasBall = (p) => B.mode === 'held' && B.owner.team === p.team && B.own
 // 要球：隊友馬上傳過來（隊友在忙就等一下再傳）
 function callForBall(p) {
   const h = B.owner; if (!mateHasBall(p)) return;
+  p.called = true;
   if (busy(h) || h.stun > 0) { h.callT = 1.2; } else doPass(h, p);
   fx.floatText(V(p.x, 2.3, p.z), '給我！', TEAM_COLOR[p.team], 0.7);
 }
@@ -480,13 +498,19 @@ function actPass() {
     S.trapT = 2.5; fx.sfx.click(); fx.floatText(V(p.x, 2.3, p.z), '包夾！', TEAM_COLOR[p.team], 0.8);
   }
 }
-// 抄截鍵：持球時變成「假動作」（騙防守的人跳起來）
+// 抄截鍵：持球時變成「衝刺」
 function actSteal() {
   const p = S.ctrl; if (!canAct(p)) return;
-  if (holding(p)) return pumpFake(p);
+  if (holding(p)) return burst(p);
   if (mateHasBall(p)) return callForBall(p);
   if (B.mode === 'held' && B.owner.team === p.team) return;
   startSteal(p);
+}
+// 衝刺（持球時的 D 鍵，取代原本的假動作）：0.75 秒爆發加速往前衝，接投籃＝切入上籃／急停跳投（連招 dash）
+function burst(p) {
+  if ((p.burstCd || 0) > 0) { if (p === S.ctrl) fx.toast('衝刺冷卻中'); return; }
+  p.burstCd = 2.2; p.dashT = Math.max(p.dashT || 0, 0.75); log(`burst ${p.key}`);
+  fx.sfx.pass(); fx.puff(V(p.x, 0.1, p.z), 0xffffff); fx.floatText(V(p.x, 2.2, p.z), '衝刺', p.def.color, 0.6);
 }
 function actSpecial() {
   const p = S.ctrl; if (!p || S.mode !== 'play') return;
@@ -601,6 +625,7 @@ function startShot(p, user = false) {
 function releaseShot(p, opt = {}) {
   if (!holding(p)) return;
   const a = p.act, lay = a.type === 'lay', sx = a.sx ?? p.x, sz = a.sz ?? p.z;
+  if (p.needle > 0) opt = { ...opt, sure: true };   // 針筒超人：投籃必中
   let pts = opt.pts ?? (isThree(sx, sz) ? 3 : 2);
   // 元小雨「禁區女王」：對手一般出手，她直接飛過去蓋掉
   const queen = !opt.sure && oppsOf(p).find(q => q.key === 'yuan' && S.buff[q.team].queen > 0 && q.stun <= 0 && dist2(q, p) < 6.5);
@@ -669,6 +694,12 @@ function timingBonus(p, t) {
 }
 function startBlock(p) {
   p.act = { type: 'block', t: 0 }; p.vy = CFG.blockV * (0.9 + 0.1 * st(p, 'reach')); p.y = 0.01; fx.sfx.jump(); playMove(p, 'block', { dur: 0.6 });
+  // 針筒超人：跳起來就飛到出手的人面前（一定蓋得到）
+  if (p.needle > 0) {
+    const sh = oppsOf(p).filter(q => q.act && (q.act.type === 'shoot' || q.act.type === 'lay' || q.act.type === 'egg') && dist2(q, p) < 6).sort((a, b) => dist2(a, p) - dist2(b, p))[0];
+    if (sh) { const dx = HOOP.x - sh.x, dz = HOOP.z - sh.z, l = Math.hypot(dx, dz) || 1; p.x = sh.x + dx / l * 0.6; p.z = sh.z + dz / l * 0.6; p.face = Math.atan2(sh.x - p.x, sh.z - p.z); fx.shockwave(V(p.x, 0, p.z), 0x7fd8ff, 2.5); fx.floatText(V(p.x, 2.6, p.z), '💉 打針！', '#3fa7ff', 1); }
+    return;
+  }
   // 玩家按蓋帽：自動往附近正在出手的對手撲過去（手感比較好）
   if (p === S.ctrl && !G.auto) {
     const sh = oppsOf(p).filter(q => q.act && (q.act.type === 'shoot' || q.act.type === 'lay') && dist2(q, p) < 2.4).sort((a, b) => dist2(a, p) - dist2(b, p))[0];
@@ -677,6 +708,10 @@ function startBlock(p) {
 }
 function startSteal(p) {
   if (p.stealCd > 0) return;
+  if (p.needle > 0 && B.mode === 'held' && B.owner.team !== p.team && dist2(p, B.owner) < 7) {   // 針筒超人：抄截直接飛過去
+    const h = B.owner; p.x = h.x + Math.sin(h.face) * 0.7; p.z = h.z + Math.cos(h.face) * 0.7; p.face = Math.atan2(h.x - p.x, h.z - p.z);
+    fx.shockwave(V(p.x, 0, p.z), 0x7fd8ff, 2.5); fx.sfx.whiff();
+  }
   p.stealCd = CFG.stealCd; p.act = { type: 'steal', t: 0, done: false };
   const h = B.mode === 'held' ? B.owner : null;
   if (h && h.team !== p.team) p.face = Math.atan2(h.x - p.x, h.z - p.z);
@@ -684,9 +719,9 @@ function startSteal(p) {
 }
 function resolveSteal(p) {
   const h = B.mode === 'held' ? B.owner : null, coffee = S.buff[p.team].coffee > 0;
-  if (h && h.team !== p.team && dist2(p, h) < CFG.stealR * (coffee ? 1.35 : 1) && !busy(h)) {
+  if (h && h.team !== p.team && dist2(p, h) < CFG.stealR * (coffee ? 1.35 : 1) && (!busy(h) || h.weak > 0)) {   // 變身完虛弱的校長：一抄就掉
     const low = (B.dribH ?? 1) < 0.45 || h.stopT > 0;   // 球彈在地上、被撞停的時候最好抄
-    const ch = CFG.stealP * p.def.stl * (coffee ? 1.8 : 1) * (p.team === 0 ? 1.15 : 1) * (h.stun > 0 ? 3 : 1) * (low ? 1.6 : 0.8) * (h.stopT > 0 ? 1.8 : 1);
+    const ch = h.weak > 0 ? 1 : CFG.stealP * p.def.stl * (coffee ? 1.8 : 1) * (p.team === 0 ? 1.15 : 1) * (h.stun > 0 ? 3 : 1) * (low ? 1.6 : 0.8) * (h.stopT > 0 ? 1.8 : 1);
     if (Math.random() < ch) {
       gainBall(p, 'steal'); log(`steal ${p.key}`); fx.sfx.steal(); fx.floatText(V(p.x, 2.3, p.z), '抄截！', TEAM_COLOR[p.team], 1); actionArt(p, 'steal');
       addGauge(p, CFG.gSteal); h.pickCd = 0.5; return;
@@ -734,6 +769,32 @@ function doSkill(p, as = null) {   // as：指定招式（胡姬的連招用）
   playMove(p, M.move, { dur: M.dur + 0.15 });
   fx.floatText(V(p.x, 2.2, p.z), p.def.skill.name, p.def.color, 0.7); fx.sfx.whiff();
   return p.act;
+}
+// 校長變身針筒超人：20 秒換成針筒模型、能力全滿；時間到變回來，虛弱 20 秒（走很慢、一抄就掉）
+const NEEDLE_T = 20, WEAK_T = 20;
+const NEEDLE_DEF = { spd: 1.4, sht: 1.6, stl: 3, blk: 4, str: 3, reb: 2.2, reach: 2, dunk: 1, three: 1.3, inside: 1.3 };
+function swapActor(p, toNeedle) {
+  const old = p.actor;
+  if (toNeedle && K.needle && !p.base) {
+    p.base = { actor: old, bones: p.bones, rest: p.rest, arm: p.arm, ow: p.ow, hipH: p.hipH, def: p.def };
+    const a = makeActor(K.needle, CFG.scale * 1.15); if (K.needleJog) addJog(a, K.needleJog); a.root.position.copy(old.root.position); a.root.rotation.copy(old.root.rotation);
+    scene.remove(old.root); scene.add(a.root);
+    const rig = rigOf(a); a.root.updateMatrixWorld(true);
+    Object.assign(p, rig, { actor: a, ow: null, hipH: rig.bones.Hips ? rig.bones.Hips.getWorldPosition(new THREE.Vector3()).y - a.root.position.y : 0.7, def: { ...p.def, ...NEEDLE_DEF } });
+  } else if (!toNeedle && p.base) {
+    const b = p.base; scene.remove(old.root); scene.add(b.actor.root);
+    Object.assign(p, { actor: b.actor, bones: b.bones, rest: b.rest, arm: b.arm, ow: b.ow, hipH: b.hipH, def: b.def }); p.base = null;
+  }
+}
+function updateNeedle(p, dt) {
+  if (p.needle > 0) {
+    if (Math.random() < dt * 6) fx.sparkle(V(p.x + rand(-0.4, 0.4), p.y + rand(0.4, 1.8), p.z + rand(-0.4, 0.4)), 0x7fd8ff, 0.35);
+    if ((p.needle -= dt) <= 0) {
+      p.needle = 0; swapActor(p, false); p.weak = WEAK_T; addIcon(p, '😵', WEAK_T, 2.25, 0.5);
+      fx.floatText(V(p.x, 2.4, p.z), '變回來了…好累', '#8a97a8', 1.2); fx.puff(V(p.x, 0.5, p.z), 0xffffff);
+    }
+  }
+  if (p.weak > 0) p.weak = Math.max(0, p.weak - dt);
 }
 // 倒地：球掉出去、1.5 秒後爬起來（clip：knock 往後倒、flop 撞人後仰天倒）
 function knockDown(p, clip, text, by) {
@@ -1041,6 +1102,22 @@ function doSpecial(p) {
       fx.shockwave(V(HOOP.x, 0, HOOP.z + 1), new THREE.Color(p.def.color).getHex(), 7);
       fx.toast('🏀 禁區女王：籃下是我的');
       break;
+    case 'tu':   // 兔兔老師：彩蛋射籃
+      ensureBall(p);
+      p.act = { type: 'egg', t: 0, pts: isThree(p.x, p.z) ? 3 : 2, rel: false, jumped: false };
+      fx.toast('🥚 彩蛋射籃：籃球變彩蛋，投了就進');
+      break;
+    case 'zhang':   // 校長：變身針筒超人
+      swapActor(p, true); p.needle = NEEDLE_T; p.weak = 0;
+      fx.sfx.power(); fx.pillar(V(p.x, 0, p.z), 0x7fd8ff, 1.2, 6); fx.shockwave(V(p.x, 0, p.z), 0x7fd8ff, 5);
+      addIcon(p, '💉', NEEDLE_T, 2.7, 0.6);
+      fx.toast('💉 校長變身：針筒超人登場！20 秒全能力最強');
+      break;
+    case 'bian':   // 小編：下班衝刺上籃
+      ensureBall(p);
+      p.act = { type: 'bsprint', t: 0 }; playLoop(p, 'sprint', 1.6);
+      fx.toast('🏃 下班衝刺：五點了，誰都別擋我');
+      break;
     case 'hu': {   // 千變萬化：假動作騙起所有防守者，再必進後仰跳投
       ensureBall(p);
       p.act = { type: 'mirage', t: 0, bit: false };
@@ -1181,7 +1258,7 @@ function goTo(p, x, z, mul = 1) {
   p.dvx = dx / d * sp; p.dvz = dz / d * sp; return false;
 }
 function speedOf(p) {
-  return CFG.speed * p.def.spd * (p.dashT > 0 ? 1.55 : 1) * (p.driving ? 1.3 : 1) * (p.guard ? 0.85 : 1) * (S.buff[p.team].coffee > 0 ? 1.45 : 1) * (S.buff[p.team].slow > 0 ? 0.55 : 1) * (holding(p) ? CFG.handler : 1) * (p.team === 1 ? dif().speed : 1);
+  return CFG.speed * p.def.spd * (p.weak > 0 ? 0.45 : 1) * (p.dashT > 0 ? 1.55 : 1) * (p.driving ? 1.3 : 1) * (p.guard ? 0.85 : 1) * (S.buff[p.team].coffee > 0 ? 1.45 : 1) * (S.buff[p.team].slow > 0 ? 0.55 : 1) * (holding(p) ? CFG.handler : 1) * (p.team === 1 ? dif().speed : 1);
 }
 function think(p, dt) {
   p.dvx = p.dvz = 0;
@@ -1238,7 +1315,8 @@ function aiHandler(p, dt) {
     if (mp > prob + 0.1 && p.holdT > 0.5 && Math.random() < 0.55) { doPass(p, m); return; }
     const v = frontDefender(p, 1.7);
     if (v && !(p.skillCd > 0) && Math.random() < 0.35) { const sa = doSkill(p); if (sa && Math.random() < 0.5) { sa.then = 'combo'; sa.comboKind = sa.kind; } return; }
-    if (v && v.y <= 0 && (p.fakeCd || 0) <= 0 && Math.random() < 0.12) { pumpFake(p); if (p.act?.type === 'fake' && Math.random() < 0.45) p.act.then = 'combo'; return; }
+    if (!(p.burstCd > 0) && hoopDist(p.x, p.z) < 7 && Math.random() < 0.08) { burst(p); return; }   // 往籃框衝刺（衝刺中隨機接投籃＝切入上籃／急停跳投）
+    if (p.dashT > 0 && hoopDist(p.x, p.z) < 3.2 && Math.random() < dt * 4) { runCombo(p, 'dash'); return; }
     // 切入：往籃框走，前面有人就往旁邊閃
     let gx = HOOP.x - p.x, gz = HOOP.z + 0.6 - p.z; const gl = Math.hypot(gx, gz) || 1; gx /= gl; gz /= gl;
     let side = 0;
@@ -1307,7 +1385,8 @@ function aiSpecial(p, dt) {
     case 'kui': ok = mine && !S.mustClear; break;
     case 'jie': case 'kevin': ok = mine && !busy(B.owner); break;
     case 'yan': ok = mine && !busy(B.owner) && !!alleyMate(p); break;
-    case 'lin': case 'hu': ok = mine && !busy(B.owner) && !S.mustClear; break;
+    case 'lin': case 'hu': case 'tu': case 'bian': ok = mine && !busy(B.owner) && !S.mustClear; break;
+    case 'zhang': ok = mine && !(p.weak > 0); break;
     case 'yuan': case 'de': case 'zhe': case 'zhen': ok = mine; break;
     case 'momo': case 'vivi': case 'mi': ok = mine && !S.mustClear; break;
     case 'heilun': ok = mine && S.score[1 - t] >= 2; break;
@@ -1414,6 +1493,20 @@ function updateAct(p, dt) {
       if (a.t >= 1.15 && !a.rel && holding(p)) { a.rel = true; releaseShot(p, { sure: true, pts: a.pts, T: 1.0 }); }
       if (a.t > 2.5 || (a.rel && p.y <= 0)) p.act = null;
       break;
+    case 'egg':   // 兔兔老師：舉起彩蛋 0.35 秒後起跳，0.55 秒出手（必進）
+      p.face = Math.atan2(HOOP.x - p.x, HOOP.z - p.z);
+      if (a.t >= 0.35 && !a.jumped && holding(p)) { a.jumped = true; p.vy = CFG.jumpV; p.y = 0.01; }
+      if (a.t >= 0.55 && !a.rel && holding(p)) { a.rel = true; B.egg = true; releaseShot(p, { sure: true, pts: a.pts, T: 1.0 }); fx.sfx.boss(); }
+      if (a.t > 2.2 || (a.rel && p.y <= 0)) p.act = null;
+      break;
+    case 'bsprint': {   // 小編下班衝刺：直線衝到籃下，路上的防守者被撞開，最後必進上籃
+      const tx = HOOP.x, tz = HOOP.z + 1.15, dx = tx - p.x, dz = tz - p.z, d = Math.hypot(dx, dz);
+      if (d < 0.35 || a.t > 2.6 || !holding(p)) { stopSig(p); p.act = holding(p) ? { type: 'lay', t: 0, sx: p.x, sz: p.z, tx: HOOP.x, tz: HOOP.z + 0.42, dunk: false, rel: false, sure: true } : null; break; }
+      const sp = Math.min(d, 9 * dt); p.x += dx / d * sp; p.z += dz / d * sp; p.face = Math.atan2(dx, dz);
+      for (const q of oppsOf(p)) if (q.stun <= 0 && dist2(q, p) < 0.9) { q.stun = 0.9; q.act = null; q.x += dz / d * 0.8; q.z -= dx / d * 0.8; playMove(q, 'stumble', { dur: 0.8 }); fx.floatText(V(q.x, 2.3, q.z), '撞飛！', p.def.color, 0.9); fx.sfx.block(); }
+      if (Math.random() < 0.7) fx.puff(V(p.x, 0.1, p.z), 0xffffff);
+      break;
+    }
     case 'lob':
       if (!a.sig) { a.sig = true; playSig(p); }
       if (a.t >= 0.4 && !a.thrown && holding(p)) { a.thrown = true; doPass(p, a.to, { sure: true, T: 0.62, arc: 1.5, alley: true }); a.to.act && (a.to.act.ph = 'jump', a.to.act.jt = 0, a.to.act.jx = a.to.x, a.to.act.jz = a.to.z); fx.sfx.pass(); }
@@ -1538,6 +1631,10 @@ function updateBall(dt) {
     if (k >= 1) {
       const passer = B.passer;
       gainBall(r, passer.team === r.team ? 'pass' : 'intercept'); fx.sfx.catch();
+      if (passer.team === r.team && passer !== r && st(r, 'dunk', 0.1) > 0.5 && hoopDist(r.x, r.z) < 2.9 && !busy(r) && r.stun <= 0 && r.y <= 0 && !S.mustClear && Math.random() < (r.called ? 0.75 : 0.45)) {
+        startLay(r); r.act.dunk = true; fx.floatText(V(r.x, 2.5, r.z), '接球灌籃！', r.def.color, 1.1); log(`catchdunk ${r.key}`);   // 中鋒在籃下接球：一接到就跳起來灌
+      }
+      r.called = false;
       if (passer !== r && passer.team === r.team) addGauge(passer, CFG.gPass);
       else if (passer.team !== r.team) { fx.floatText(V(r.x, 2.3, r.z), '抄截！', TEAM_COLOR[r.team], 1); addGauge(r, CFG.gSteal); fx.sfx.steal(); actionArt(r, 'steal'); }
     }
@@ -1598,6 +1695,10 @@ function updateBall(dt) {
   }
   ballMesh.position.copy(B.pos);
   ballMesh.rotation.x += B.spin.x * dt; ballMesh.rotation.z += B.spin.z * dt;
+  const egg = B.egg && (B.mode === 'shot' || B.mode === 'net');   // 兔兔老師的彩蛋射籃：飛出去的球變成彩蛋
+  if (egg !== !!ballMesh.userData.egg) { ballMesh.userData.egg = egg; ballMesh.material = egg ? eggMat : ballMat; ballMesh.scale.set(egg ? 1.25 : 1, egg ? 1.55 : 1, egg ? 1.25 : 1); }
+  if (!egg && B.egg && B.mode !== 'shot' && B.mode !== 'net') B.egg = false;
+  if (egg && Math.random() < 0.5) fx.sparkle(B.pos.clone(), [0xff9ec7, 0x9fd8ff, 0xfff08a, 0xa8f0c0][Math.floor(Math.random() * 4)], 0.3);
 }
 
 // ---------- 每幀：球員 ----------
@@ -1610,9 +1711,10 @@ function updatePlayers(dt, t) {
     if (p.sigT > 0) { p.sigT -= dt; if (p.sigT <= 0) stopSig(p); }
     updateDrive(p, dt);
     updateFootwork(p);
+    if (p.needle > 0 || p.weak > 0) updateNeedle(p, dt);
     if (p.def.nag) updateNag(p, dt);
     if (p.def.pretty && Math.random() < dt * 2.5) fx.sparkle(V(p.x + rand(-0.4, 0.4), p.y + rand(0.9, 1.7), p.z + rand(-0.3, 0.3)), 0xffc6e6, 0.28);   // 老闆：漂漂亮亮
-    for (const k of ['skillCd', 'dashT', 'openT', 'stopT', 'fakeCd', 'boxedT', 'comboT']) if (p[k] > 0) p[k] = Math.max(0, p[k] - dt);
+    for (const k of ['skillCd', 'dashT', 'openT', 'stopT', 'fakeCd', 'boxedT', 'comboT', 'burstCd']) if (p[k] > 0) p[k] = Math.max(0, p[k] - dt);
     if (p.y <= 0 && !busy(p)) { p.bitten = false; p.blockBoost = 0; }
     // 貼身防守（按住技能鍵，電腦則是盯球的人自動）、卡位（球在空中時）
     const defending = B.mode === 'held' && B.owner.team !== p.team && p.stun <= 0;
@@ -1698,6 +1800,7 @@ function overTarget(p) {
     case 'shoot': case 'ai': case 'block': return 'handsup';
     case 'lay': return a.dunk ? 'handsup' : null;
     case 'jdunk': return a.t < 0.3 ? null : 'handsup';
+    case 'egg': return 'handsup';
     case 'alley': return a.ph === 'jump' ? 'handsup' : null;
     default: return null;
   }
@@ -1777,7 +1880,8 @@ function newMatch() {
   $('scA').textContent = '0'; $('scB').textContent = '0';
   checkBall(); S.phaseT = 2.2;
   const nm = (ks) => ks.map(k => CHARS[k].name).join('＆');
-  if (S.prac) { setPracOpp('none'); S.phaseT = 1.2; fx.banner(`${nm(S.pick)} 練習場`, '右上角切換對手：自己練／陪練防守／一打一', 0, '#36b37e'); }
+  S.tut = S.prac && S.tutorial ? { i: 0 } : null; document.body.classList.toggle('tut', !!S.tut);
+  if (S.prac) { setPracOpp('none'); S.phaseT = 1.2; if (S.tut) { S.prac.inf = false; S.ctrl.gauge = 0; tutGo(0); } fx.banner(`${nm(S.pick)} 練習場`, '右上角切換對手：自己練／陪練防守／一打一', 0, '#36b37e'); }
   else fx.banner(nm(S.pick), `VS　${nm(S.opp)}`, 0, '#ff7a45');
   updateCamera(camFocus(), 0, true);
 }
@@ -1797,9 +1901,61 @@ function setPracOpp(mode) {
   fx.toast(mode === 'none' ? '🏀 自由練習：投進球會直接回到你手上' : mode === 'def' ? `🛡️ ${o.def.name}來陪練：只防守，搶到球會還你` : `⚔️ 一打一：${o.def.name}，先到 ${target()} 分`);
   pracHud();
 }
+// ---------- 教學關卡：練習場上照步驟做，每一步做到就下一步 ----------
+const TUT = [
+  { t: '移動', d: '用左邊搖桿（電腦 WASD）走到發光的圈圈', key: null },
+  { t: '投籃', d: '按住投籃，時機條到綠色放開，投進 2 球', key: 'kShoot' },
+  { t: '衝刺切入', d: '按「衝刺」往籃框衝，衝刺中按投籃＝切入上籃', key: 'kSteal' },
+  { t: '招式連招', d: '按技能鍵做招式，招式中按投籃＝連招出手', key: 'kSkill' },
+  { t: '防守抄截', d: '對手拿球了：靠近按「抄截」或在他出手時「蓋帽」，把球搶回來', key: 'kSteal' },
+  { t: '大招', d: '大招集滿了：拿到球按大招鍵', key: 'kSp' },
+];
+let tutRing = null;
+function tutGo(i) {
+  const T = S.tut; T.i = i; T.mark = LOG.length; T.made0 = S.prac.made; T.done = i >= TUT.length;
+  const me = S.ctrl, o = teamOf(1)[0];
+  for (const b of ['kShoot', 'kSteal', 'kSkill', 'kSp', 'kPass']) $(b).classList.remove('tutHi');
+  if (T.done) {
+    setHtml('tutBar', '<b>教學完成！</b>你已經會打了 <button id="tutEnd">開始比賽</button>');
+    $('tutEnd').onclick = () => { fx.sfx.click(); S.tutorial = false; toSelect(); };
+    fx.banner('教學完成！', '去選角色開打吧', 3, '#36b37e'); fx.sfx.win(); if (tutRing) tutRing.visible = false; return;
+  }
+  const st = TUT[i];
+  setHtml('tutBar', `<span>${i + 1}／${TUT.length}</span><b>${st.t}</b>${st.d}`);
+  if (st.key) $(st.key).classList.add('tutHi');
+  if (tutRing) tutRing.visible = i === 0;
+  if (i === 0) {
+    if (!tutRing) { tutRing = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.06, 8, 40), new THREE.MeshBasicMaterial({ color: 0xffd23f, toneMapped: false })); tutRing.rotation.x = -Math.PI / 2; scene.add(tutRing); }
+    tutRing.position.set(-2.5, 0.06, 4.5); tutRing.visible = true;
+  }
+  if (i === 4) { setPracOpp('1v1'); gainBall(o, 'check'); o.aiT = 0.8; }   // 對手持球進攻
+  if (i === 5) { setPracOpp('none'); me.gauge = 100; S.spPoss = -1; }
+}
+function updateTutorial(dt, t) {
+  const T = S.tut; if (!T || T.done) return;
+  const me = S.ctrl, news = LOG.slice(T.mark), has = (re) => news.some(l => re.test(l));
+  if (tutRing && tutRing.visible) { tutRing.scale.setScalar(1 + Math.sin(t * 5) * 0.12); }
+  let ok = false;
+  switch (T.i) {
+    case 0: ok = Math.hypot(me.x - tutRing.position.x, me.z - tutRing.position.z) < 0.7; break;
+    case 1: ok = S.prac.made - T.made0 >= 2; break;
+    case 2: ok = has(new RegExp(`combo ${me.key} dash`)); break;
+    case 3: ok = has(new RegExp(`combo ${me.key} (dodge|spin|power|stepback|combo)`)); break;
+    case 4: {
+      ok = has(new RegExp(`(steal|block) ${me.key}`));
+      const o = teamOf(1)[0];
+      if (!ok && has(new RegExp(`score ${o.key} `)) && S.phase !== 'score') { T.mark = LOG.length; fx.toast('被投進了，再試一次'); gainBall(o, 'check'); o.aiT = 0.8; }   // 被投進：球再給對手
+      break;
+    }
+    case 5: ok = has(new RegExp(`special ${me.key}`)); if (me.gauge < 100 && !ok && !S.cut) me.gauge = 100; break;
+  }
+  if (ok && !T.ok) { fx.sfx.full(); fx.floatText(V(me.x, 2.5, me.z), '完成！', '#36b37e', 1); T.wait = 1.0; T.ok = true; }
+  if (T.ok) { if ((T.wait -= dt) <= 0) { T.ok = false; tutGo(T.i + 1); } }
+}
 function updatePractice(dt) {
   const pr = S.prac, me = S.ctrl, o = teamOf(1)[0];
   if (pr.inf) me.gauge = 100;
+  if (S.tut) updateTutorial(dt, S.t);
   if (o.bench) { o.x = COURT.x + 0.2; o.z = 11.2; o.vx = o.vz = 0; }
   if (pr.opp !== '1v1') o.gauge = 0;   // 陪練不放大招
   if (pr.retT > 0 && (pr.retT -= dt) <= 0 && holding(o) && !busy(o)) { doPass(o, me); fx.floatText(V(o.x, 2.3, o.z), '還你！', TEAM_COLOR[1], 0.8); }
@@ -1825,7 +1981,9 @@ function pracRound() {
 $('pOpp').onclick = () => { if (!S.prac) return; fx.sfx.click(); const order = ['none', 'def', '1v1']; setPracOpp(order[(order.indexOf(S.prac.opp) + 1) % 3]); };
 $('pInf').onclick = () => { if (!S.prac) return; fx.sfx.click(); S.prac.inf = !S.prac.inf; if (!S.prac.inf) S.ctrl.gauge = 0; pracHud(); };
 $('pSwap').onclick = () => { if (!S.prac) return; fx.sfx.click(); const o = teamOf(1)[0]; S.opp = [shuffle(ROSTER.filter(k => k !== S.pick[0] && k !== o.key))[0]]; S.keepOpp = true; const mode = S.prac.opp, inf = S.prac.inf; newMatch(); S.prac.inf = inf; setPracOpp(mode); };
-$('pExit').onclick = () => { fx.sfx.click(); toSelect(); };
+$('pExit').onclick = () => { fx.sfx.click(); S.tutorial = false; toSelect(); };
+// 教學關卡：用林語彤在練習場照步驟做
+$('bTut').onclick = () => { fx.audioInit(); fx.sfx.click(); S.tutorial = true; S.practice = true; S.size = 1; S.pick = ['lin']; S.keepOpp = true; S.opp = ['jie']; startMatch(); };
 function finish() {
   if (S.prac) { pracRound(); return; }
   if (S.phase === 'end') return;
@@ -1986,7 +2144,7 @@ function hud() {
   setText('kSkillT', hold ? p.def.skill.name : mate ? '空手切入' : reb ? '卡位' : '防守');
   setText('kSkillS', hold ? (p.skillCd > 0 ? Math.ceil(p.skillCd) + ' 秒' : '') : mate ? '' : '按住');
   $('kSkill').classList.toggle('cd', hold && p.skillCd > 0);
-  setText('kStealT', hold ? '假動作' : mate ? '要球' : '抄截');
+  setText('kStealT', hold ? (p.burstCd > 0 ? Math.ceil(p.burstCd) + ' 秒' : '衝刺') : mate ? '要球' : '抄截');
   $('kPass').classList.toggle('dim', solo || (!hold && !mate && S.trapT > 0));
   const hh = B.mode === 'held' && B.owner.team !== p.team ? B.owner : null;
   $('kSteal').classList.toggle('hot', !!hh && p.stealCd <= 0 && dist2(p, hh) < CFG.stealR && (B.dribH ?? 1) < 0.45);   // 貼近、球在地上：抄截鍵發亮
@@ -2051,7 +2209,7 @@ soundIcon();
 
 function buildSelect() {
   // 選角卡：真人風全身照（art/<人>_card.webp，tools/gen_real.sh 的 card_* 姿勢，每個人不一樣）＋位置標籤
-  $('grid').innerHTML = ROSTER.map(k => { const c = CHARS[k], [job, pos] = c.role.split('・'); return `<div class="ch" data-k="${k}" style="--cc:${c.color}"><span class="badge"></span><div class="pic"><span class="pos">${pos || job}</span><img src="art/${k}_card.webp?v=0.5.3" alt="${c.name}" onerror="this.src='${FACE[k]}'"></div><div class="info"><div class="nm">${c.name}<small>${pos ? job : ''}</small></div><span class="spn">${c.sp.name}</span><span class="skn">${c.skill.name}</span><div class="d">${c.sp.desc}</div><div class="st">${c.stat}</div></div></div>`; }).join('');
+  $('grid').innerHTML = ROSTER.map(k => { const c = CHARS[k], [job, pos] = c.role.split('・'); return `<div class="ch" data-k="${k}" style="--cc:${c.color}"><span class="badge"></span><div class="pic"><span class="pos">${pos || job}</span><img src="art/${k}_card.webp?v=0.5.4" alt="${c.name}" onerror="this.src='${FACE[k]}'"></div><div class="info"><div class="nm">${c.name}<small>${pos ? job : ''}</small></div><span class="spn">${c.sp.name}</span><span class="skn">${c.skill.name}</span><div class="d">${c.sp.desc}</div><div class="st">${c.stat}</div></div></div>`; }).join('');
   for (const el of $('grid').children) el.onclick = () => {
     fx.audioInit(); fx.sfx.click();
     const k = el.dataset.k, i = S.sel.indexOf(k);
@@ -2084,7 +2242,7 @@ for (const b of $('diffSeg').children) b.onclick = () => { fx.sfx.click(); S.dif
 // 球場：辦公室頂樓／大橋尾球場（廟口），選了背景馬上換，會記住
 S.court = store.get(COURT_KEY) === 'temple' ? 'temple' : 'roof';
 for (const b of $('courtSeg').children) b.onclick = () => { fx.sfx.click(); S.court = b.dataset.v; store.set(COURT_KEY, S.court); setCourt(S.court); refreshSelect(); };
-function toSelect() { S.prac = null; document.body.classList.remove('prac'); musicTheme(); S.mode = 'select'; document.body.classList.remove('playing'); show('select'); refreshSelect(); clearCourt(); }
+function toSelect() { S.prac = null; S.tut = null; S.tutorial = false; document.body.classList.remove('tut'); if (tutRing) tutRing.visible = false; document.body.classList.remove('prac'); musicTheme(); S.mode = 'select'; document.body.classList.remove('playing'); show('select'); refreshSelect(); clearCourt(); }
 // 比賽中途回選角：球員、防守扇形、Kevin 的無人機、大招過場、特寫鏡頭都收掉，不要定格留在選角背景的球場上
 function clearCourt() {
   clearPlayers(); S.cut = null; S.meter = null; SC.t = 0; $('cutin').classList.remove('on'); $('flash').className = '';

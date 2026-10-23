@@ -395,7 +395,9 @@
   @media (orientation: landscape) and (max-height: 560px) {
     #sSelect { padding-bottom: calc(60px + env(safe-area-inset-bottom)); }
     #grid .ch[data-k="mi"] .pic img { object-position: 34% 0; }   /* 小米的臉在圖的偏左，瘦長卡往右挪一點 */
-    #grid { grid-template-columns: repeat(8, 1fr); gap: 5px; }
+    /* 11 張：一次看 7 張半（露出半張提示往右滑） */
+    #grid { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: calc((100% - 35px) / 7.5); gap: 5px; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; scroll-snap-type: x proximity; }
+    #grid::-webkit-scrollbar { display: none; } #grid .ch { scroll-snap-align: start; }
     #grid .ch { display: block; height: calc(100vh - 128px - env(safe-area-inset-bottom)); min-height: 180px; border-radius: 12px; }
     #grid .ch .pic { position: absolute; inset: 0; height: auto; aspect-ratio: auto; }
     #grid .ch .pic img { float: none; width: 100%; height: calc(100% - 40px); top: 0; margin: 0; }
@@ -667,7 +669,7 @@
   #sTitle { background: var(--ink); }
   #sTitle::before { content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
     background: linear-gradient(180deg, #121110 0%, #12111000 30%, #12111000 55%, #121110f2 100%), linear-gradient(90deg, #ff4d1a59, #12111000 45%, #ff9a1f40),
-      url(op/op9.webp?v=0.5.3) center 30% / cover; filter: grayscale(1) contrast(1.25) brightness(.62) sepia(.35); }
+      url(op/op9.webp?v=0.5.4) center 30% / cover; filter: grayscale(1) contrast(1.25) brightness(.62) sepia(.35); }
   #sTitle::after { background: var(--dots), var(--grain); opacity: .55; mix-blend-mode: multiply; }
   #sTitle .card h1 small, .logoH small { display: inline-block; font-family: var(--en); font-weight: 400; letter-spacing: 4px; font-size: 13px; color: var(--ink); background: var(--yolk); padding: 2px 10px; transform: rotate(-2deg); margin-bottom: 0; }
   .logoH small::before { content: 'STREETBALL 3ON3 · '; }
@@ -734,6 +736,40 @@
   #kShoot.combo { box-shadow: 0 0 0 4px var(--yolk), 0 0 22px var(--yolk); animation: comboPulse .35s ease-in-out infinite alternate; }
   #kShoot.combo span { font-size: 13px; }
   @keyframes comboPulse { to { transform: scale(1.07); } }
+
+  /* --- 標題畫面（v0.5.4）：大火焰字＋三隊對決條，主按鈕「開打／教學關卡」；橫式手機左右兩欄 --- */
+  #sTitle .card.tTitle { width: min(640px, 100%); display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  #sTitle .tMain, #sTitle .tSide { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; }
+  #sTitle .tTitle .logoH img.logo { width: min(560px, 94%); margin: -26px auto -30px; }
+  .tTeams { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  .tTeams span { background: var(--ink); color: var(--paper); font-weight: 900; font-style: italic; font-size: 15px; padding: 4px 12px; border-bottom: 4px solid var(--fire); transform: skewX(-8deg); }
+  .tTeams span.t2 { border-color: #ff6fae; } .tTeams span.t3 { border-color: #36b37e; }
+  .tTeams b { font: 400 22px/1 var(--en); color: var(--yolk); text-shadow: 2px 2px 0 var(--ink); }
+  #sTitle .tSide .big { width: min(380px, 100%); margin: 6px 0 0; }
+  #bStart { font-size: 30px; padding: 16px; letter-spacing: 8px; }
+  #bTut { font-size: 18px; padding: 11px; }
+  .tSmall { display: flex; gap: 8px; justify-content: center; }
+  .tSmall .qbtn, .tSmall .opAgain { margin: 6px 0 0 !important; display: inline-block !important; font-size: 12px !important; padding: 5px 10px !important; }
+  @media (orientation: landscape) and (max-height: 560px) {
+    #sTitle .card.tTitle { width: min(800px, 100%); display: grid; grid-template-columns: 1.25fr 1fr; align-items: center; column-gap: 20px; }
+    #sTitle .tTitle > * { grid-column: auto !important; grid-row: auto !important; }
+    #sTitle .tTitle .logoH img.logo { width: min(400px, 96%); margin: -22px auto -24px; }
+    #bStart { font-size: 24px; padding: 12px; } #bTut { font-size: 15px; padding: 8px; }
+    .tTeams span { font-size: 12px; padding: 3px 8px; } .tTeams b { font-size: 16px; }
+    #sTitle .tSide { gap: 6px; }
+  }
+
+  /* --- 教學關卡：上方步驟條、要按的鍵閃 --- */
+  #tutBar { position: absolute; left: 50%; top: calc(64px + env(safe-area-inset-top)); transform: translateX(-50%); display: none; max-width: min(92vw, 520px); background: var(--paper); color: var(--ink); font-size: 13px; font-weight: 800; padding: 6px 12px; box-shadow: 4px 4px 0 var(--fire); pointer-events: auto; text-align: center; line-height: 1.4; }
+  body.tut #tutBar { display: block; }
+  #tutBar span { font: 400 13px/1 var(--en); background: var(--ink); color: var(--yolk); padding: 2px 6px; margin-right: 6px; }
+  #tutBar b { font-style: italic; margin-right: 6px; color: var(--fire); }
+  #tutBar button { margin-left: 8px; border: 0; background: var(--fire); color: var(--ink); font: inherit; font-weight: 900; padding: 4px 12px; }
+  body.tut #pracBar #pOpp, body.tut #pracBar #pInf, body.tut #pracBar #pSwap, body.tut #pracBar span { display: none; }
+  body.tut #pracBar #pExit::before { content: '結束教學'; } body.tut #pracBar #pExit { font-size: 0; } body.tut #pracBar #pExit::before { font-size: 12px; }
+  .tutHi { animation: tutPulse .5s ease-in-out infinite alternate !important; box-shadow: 0 0 0 4px var(--yolk), 0 0 24px var(--yolk) !important; }
+  @keyframes tutPulse { to { transform: scale(1.1); } }
+  @media (orientation: landscape) and (max-height: 560px) { #tutBar { top: calc(6px + env(safe-area-inset-top)); left: 56%; max-width: 46vw; font-size: 11px; } }
 </style>
 </head>
 <body>
@@ -752,6 +788,7 @@
     <div class="tm b"><div class="faces" id="facesB"></div><div class="sc" id="scB">0</div></div>
   </div>
   <div id="poss"></div>
+  <div id="tutBar"></div>
   <div id="pracBar"><button id="pOpp">對手：無</button><button id="pInf">大招無限：開</button><span id="pStat"></span><button id="pSwap">換對手</button><button id="pExit">結束練習</button></div>
   <div id="btnsTop"><button id="bPause" aria-label="暫停">⏸</button><button id="bSound" aria-label="聲音">🔊</button><button id="bFull" aria-label="全螢幕">⛶</button></div>
   <div id="ver"></div>
@@ -766,7 +803,7 @@
     <div class="kb" id="kSteal"><b>✋</b><span>抄截</span></div>
     <div class="kb" id="kSp"><div class="ring"></div><div class="in"><span>大招</span></div></div>
   </div>
-  <div id="kbHint"><b>WASD</b>移動　<b>J</b>按住投籃（綠區放開）／蓋帽　<b>K</b>傳球／要球／包夾　<b>U</b>技能・按住防守／卡位　<b>L</b>抄截／假動作　<b>I</b>大招　<b>P</b>暫停</div>
+  <div id="kbHint"><b>WASD</b>移動　<b>J</b>按住投籃（綠區放開）／蓋帽　<b>K</b>傳球／要球／包夾　<b>U</b>技能・按住防守／卡位　<b>L</b>抄截／持球衝刺　<b>I</b>大招　<b>P</b>暫停</div>
 </div>
 <div id="flash"><div class="slab"><i></i></div><div class="echo"></div><img alt=""><div class="ft"><b></b><i></i></div></div>
 <div id="cutin">
@@ -777,22 +814,20 @@
   <div class="flashw"></div>
 </div>
 
-<div class="screen" id="sTitle"><div class="card">
-  <h1 class="logoH"><small>上班啟示錄</small><img class="logo" src="art/logo.webp?v=0.5.3" alt="下班先鬥牛"></h1>
-  <div class="collab"><i>a4</i>不想上班 × <em>香香籃球隊</em> 聯名製作</div>
-  <div class="row7" id="titleFaces"></div>
-  <p>頂樓、廟口球場半場鬥牛！<br>上班族＋香香籃球隊 8 個人任你挑，1v1 到 3v3，<br>先到 21 分或時間到分數高的贏。每個人都有自己的大招！</p>
-  <div class="howto">
-    <div><b>🕹️</b>左邊搖桿移動<br>電腦用 WASD／方向鍵</div>
-    <div><b>🏀</b>按住投籃、跳到最高<br>綠色區放開最準</div>
-    <div><b>🔄</b>搶到籃板、抄截<br>要先把球帶出三分線</div><div><b>⚡</b>傳球、得分、抄截<br>都會集大招</div><div><b>🎯</b>三分線外 3 分<br>線內 2 分、籃下灌籃</div>
-    <div><b>⚡</b>招式、假動作中按投籃＝連招<br>（轉身上籃、後撤跳投…）</div>
+<div class="screen" id="sTitle"><div class="card tTitle">
+  <div class="tMain">
+    <h1 class="logoH"><small>上班啟示錄</small><img class="logo" src="art/logo.webp?v=0.5.4" alt="下班先鬥牛"></h1>
+    <div class="tTeams"><span class="t1">上班族</span><b>VS</b><span class="t2">香香籃球隊</span><b>VS</b><span class="t3">山頂國小</span></div>
+    <div class="collab"><i>a4</i>不想上班 × <em>香香籃球隊</em> 聯名製作</div>
   </div>
-  <button class="big" id="bStart">選角色</button>
-  <button class="qbtn" id="qBtn">🎨 畫質：自動</button>
-  <button class="opAgain" id="bOP">▶ 再看一次開場</button>
-  <div class="iconPick"><span>主畫面圖示</span><div id="iconPick"></div><p class="iconHint" id="iconHint"></p></div>
-  <p class="iosTip" id="iosTip">📱 iPhone：Safari 按「分享 → 加入主畫面」，從主畫面打開就能全螢幕玩</p>
+  <div class="tSide">
+    <button class="big" id="bStart">開打</button>
+    <button class="big sec" id="bTut">教學關卡</button>
+    <div class="tSmall"><button class="qbtn" id="qBtn">畫質：自動</button><button class="opAgain" id="bOP">再看一次開場</button></div>
+    <div class="iconPick"><span>主畫面圖示</span><div id="iconPick"></div><p class="iconHint" id="iconHint"></p></div>
+    <p class="iosTip" id="iosTip">iPhone：Safari 按「分享 → 加入主畫面」，從主畫面打開就能全螢幕玩</p>
+  </div>
+  <div class="row7" id="titleFaces" hidden></div>
 </div></div>
 
 <div id="op" aria-label="開場">
@@ -809,7 +844,7 @@
     </div>
     <div id="opMade">聯名製作</div>
   </div>
-  <div id="opTitle"><small>上班啟示錄 番外</small><div id="opTitleMain"><img class="logo" src="art/logo.webp?v=0.5.3" alt="下班先鬥牛"></div><div id="opTitleSub">a4 不想上班 × 香香籃球隊　聯名製作</div></div>
+  <div id="opTitle"><small>上班啟示錄 番外</small><div id="opTitleMain"><img class="logo" src="art/logo.webp?v=0.5.4" alt="下班先鬥牛"></div><div id="opTitleSub">a4 不想上班 × 香香籃球隊　聯名製作</div></div>
   <div id="opBarWrap"><div id="opBar"></div></div>
   <button id="opSkip">跳過 ›</button>
   <div id="opGate"><button id="opPlay">▶ 播放開場</button><button id="opNo">直接開始</button></div>
@@ -849,6 +884,6 @@
 <script type="importmap">
 {"imports":{"three":"./vendor/three/build/three.module.min.js","three/addons/":"./vendor/three/examples/jsm/"}}
 </script>
-<script type="module" src="js/main.js?v=0.5.3"></script>
+<script type="module" src="js/main.js?v=0.5.4"></script>
 </body>
 </html>
