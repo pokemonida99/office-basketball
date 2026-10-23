@@ -273,6 +273,12 @@
   #op.gate #opSkip, #op.gate #opBarWrap { display: none; }
   #opPlay { border: 0; border-radius: 99px; padding: 14px 34px; font-size: 20px; font-weight: 900; color: #2c3e57; background: #ffd34d; box-shadow: 0 5px 0 #c99a1c, 0 10px 24px #0008; animation: glow .8s infinite alternate; }
   #opNo { border: 0; background: none; color: #fffb; font-size: 14px; text-decoration: underline; padding: 6px; }
+  /* 橫式手機太矮：聯名卡往上，播放鍵縮小，不要蓋到「聯名製作」 */
+  @media (max-height: 500px) {
+    #op.gate #opBrand { justify-content: flex-start; padding-top: 9vh; gap: 3vh; }
+    #opGate { bottom: max(5%, calc(10px + env(safe-area-inset-bottom))); gap: 4px; }
+    #opPlay { padding: 10px 26px; font-size: 17px; }
+  }
   /* 直式手機：劇照放中間，上下用模糊的同一張墊底，字幕放在下面的空間 */
   @media (orientation: portrait) {
     #opFrame { top: 21%; bottom: auto; height: 46%; box-shadow: 0 10px 40px #000a; }
@@ -687,6 +693,6 @@
 <script type="importmap">
 {"imports":{"three":"./vendor/three/build/three.module.min.js","three/addons/":"./vendor/three/examples/jsm/"}}
 </script>
-<script type="module" src="js/main.js?v=0.3.3"></script>
+<script type="module" src="js/main.js?v=0.4.0"></script>
 </body>
 </html>
