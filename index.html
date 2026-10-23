@@ -360,14 +360,15 @@
     .selBar .big { padding: 9px; font-size: 18px; } .selBar .big.sec { padding: 9px 14px; }
   }
 
-  /* ===== 選角卡：上面是真人風全身照（角色色底＋集中線、位置標籤），下面是名字、大招、技能 ===== */
+  /* ===== 選角卡：上面是真人風上半身特寫（角色色底＋集中線、位置標籤），下面是名字、大招、技能 ===== */
   #grid { grid-template-columns: repeat(4, 1fr); gap: 10px; }
   #grid .ch { display: flex; flex-direction: column; align-items: stretch; gap: 0; padding: 0; overflow: hidden; border-radius: 18px; }
-  #grid .ch .pic { position: relative; height: 200px; overflow: hidden; background: radial-gradient(circle at 50% 38%, color-mix(in srgb, var(--cc) 45%, #fff), var(--cc) 75%); }
+  #grid .ch .pic { position: relative; aspect-ratio: 4 / 5; overflow: hidden; background: radial-gradient(circle at 50% 38%, color-mix(in srgb, var(--cc) 45%, #fff), var(--cc) 75%); }
   #grid .ch .pic::before { content: ''; position: absolute; inset: 0; background: repeating-conic-gradient(from 0deg at 50% 38%, #ffffff26 0 3deg, transparent 3deg 11deg); }
   #grid .ch .pic::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 30%; background: linear-gradient(transparent, #0000002e); }
-  #grid .ch .pic img { position: absolute; left: 0; top: 6px; width: 100%; height: calc(100% - 2px); object-fit: contain; object-position: 50% 100%; border-radius: 0; background: none; filter: drop-shadow(0 6px 8px #0004); transition: transform .2s; transform-origin: 50% 100%; z-index: 1; }
-  #grid .ch:hover .pic img, #grid .ch.sel .pic img { transform: scale(1.05); }
+  #grid .ch .pic img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 0; border-radius: 0; background: none; filter: drop-shadow(0 6px 8px #0004); transition: transform .2s; transform-origin: 50% 100%; z-index: 1; }
+  #grid .ch:hover .pic img, #grid .ch.sel .pic img { transform: scale(1.04); }
+  #grid .ch .pic img { transform-origin: 50% 30%; }
   #grid .ch .pos { position: absolute; top: 8px; left: 8px; z-index: 2; background: #1d1d1fd9; color: #fff; font-weight: 900; font-size: 11px; padding: 2px 8px; border-radius: 8px; letter-spacing: 1px; }
   #grid .ch .info { padding: 7px 10px 10px; }
   #grid .ch .nm { font-size: 18px; }
@@ -375,7 +376,6 @@
   #grid .ch .badge { top: 8px; left: auto; right: 8px; z-index: 3; }
   @media (max-width: 760px) and (orientation: portrait) {
     #grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
-    #grid .ch .pic { height: 170px; }
     #grid .ch .nm { font-size: 16px; } #grid .ch .nm small { display: block; margin: 0; }
     #grid .ch .d { font-size: 11px; }
   }
@@ -383,8 +383,8 @@
   @media (orientation: landscape) and (max-height: 560px) {
     #grid { grid-template-columns: repeat(8, 1fr); gap: 5px; }
     #grid .ch { display: block; height: calc(100vh - 128px - env(safe-area-inset-bottom)); min-height: 180px; border-radius: 12px; }
-    #grid .ch .pic { position: absolute; inset: 0; height: auto; }
-    #grid .ch .pic img { float: none; width: 100%; height: calc(100% - 46px); top: 4px; margin: 0; }
+    #grid .ch .pic { position: absolute; inset: 0; height: auto; aspect-ratio: auto; }
+    #grid .ch .pic img { float: none; width: 100%; height: calc(100% - 40px); top: 0; margin: 0; }
     #grid .ch .info { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; padding: 3px 5px 5px; background: linear-gradient(transparent, #fffffff2 30%); }
     #grid .ch .nm { font-size: 13px; line-height: 1.15; } #grid .ch .nm small { display: none; }
     #grid .ch .spn { font-size: 9px; padding: 1px 5px; margin: 1px 0 0; } #grid .ch .skn, #grid .ch .d, #grid .ch .st { display: none; }
@@ -738,6 +738,6 @@
 <script type="importmap">
 {"imports":{"three":"./vendor/three/build/three.module.min.js","three/addons/":"./vendor/three/examples/jsm/"}}
 </script>
-<script type="module" src="js/main.js?v=0.4.3"></script>
+<script type="module" src="js/main.js?v=0.4.4"></script>
 </body>
 </html>
