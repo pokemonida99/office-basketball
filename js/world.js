@@ -88,15 +88,21 @@ addEventListener('resize', () => { if (innerWidth && innerHeight) fitSize(); });
 
 // 鏡頭：從半場線後方往籃框看。橫式看整個半場寬，直式手機看窄一點、跟著球左右移
 export const cam = { target: new THREE.Vector3(), kick: 0, shake: 0, zoom: 1 };
-export function viewWidth() { return camera.aspect < 1 ? 7.2 : Math.min(13, 8.6 * camera.aspect); }
+// 鏡頭參數分三種畫面：直式手機、橫式手機（矮）、電腦。pitch＝鏡頭往下看的比例 [高, 遠]
+export const CAMS = {
+  portrait: { w: 7.2, pitch: [0.7, 0.71] },               // 往下看約 45°，球場塞滿直長畫面
+  landPhone: { w: 14.5, maxW: 14.5, pitch: [0.66, 0.75] }, // 橫式手機：畫面矮，往下看約 41°，籃框在上面中間、少拍後面的窗戶
+  desktop: { w: 8.6, maxW: 13, pitch: [0.5, 0.87] },      // 電腦：往下看約 30°
+};
+export const camMode = () => camera.aspect < 1 ? 'portrait' : innerHeight < 560 ? 'landPhone' : 'desktop';
+export function viewWidth() { const c = CAMS[camMode()]; return camera.aspect < 1 ? c.w : Math.min(c.maxW, c.w * camera.aspect); }
 const _off = new THREE.Vector3(), _sh = new THREE.Vector3();
 export function updateCamera(focus, dt, snap = false) {
   if (snap) cam.target.copy(focus); else cam.target.lerp(focus, 1 - Math.exp(-dt * 4));
   cam.kick *= Math.exp(-dt * 5); cam.shake *= Math.exp(-dt * 8);
   const half = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
   const d = viewWidth() / (2 * half * camera.aspect) * cam.zoom * (1 - cam.kick * 0.08);
-  if (camera.aspect < 1) _off.set(0, d * 0.7, d * 0.71);   // 直式：往下看約 45°，球場塞滿直長畫面
-  else _off.set(0, d * 0.5, d * 0.87);   // 橫式：往下看約 30°
+  const [py, pz] = CAMS[camMode()].pitch; _off.set(0, d * py, d * pz);
   camera.position.copy(cam.target).add(_off);
   if (cam.shake > 0.01) camera.position.add(_sh.set((Math.random() - 0.5) * cam.shake, (Math.random() - 0.5) * cam.shake, 0));
   camera.lookAt(cam.target);

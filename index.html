@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="午休鬥牛">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#ff7a45">
 <title>上班啟示錄：午休鬥牛</title>
 <link rel="apple-touch-icon" href="icons/kui-180.png">
@@ -44,7 +47,7 @@
 </script>
 <style>
   * { box-sizing: border-box; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
-  html, body { margin: 0; height: 100%; overflow: hidden; background: #bfe6ff; font-family: -apple-system, "PingFang TC", "Noto Sans TC", sans-serif; touch-action: none; overscroll-behavior: none; }
+  html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #e8a060; font-family: -apple-system, "PingFang TC", "Noto Sans TC", sans-serif; touch-action: none; overscroll-behavior: none; }
   canvas { display: block; touch-action: none; -webkit-user-drag: none; }
   img { -webkit-user-drag: none; pointer-events: none; }
   button { font-family: inherit; cursor: pointer; touch-action: manipulation; }
@@ -189,6 +192,8 @@
   .howto { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0 4px; }
   .howto div { background: #fff; border-radius: 14px; padding: 8px 6px; font-weight: 800; font-size: 13px; box-shadow: 0 2px 6px #0001; line-height: 1.4; }
   .howto b { display: block; font-size: 20px; }
+  .iosTip { display: none; font-size: 12px !important; color: #8a4b1f; margin: 8px 0 0 !important; }
+  .iosTip.on { display: block; }
   .qbtn { display: inline-block; margin: 10px 4px 0; border: 0; border-radius: 14px; padding: 6px 14px; font: inherit; font-size: 13px; font-weight: 800; background: #fff3e0; color: #8a4b1f; }
   /* 選角 */
   #sSelect { align-items: flex-start; padding-bottom: 120px; }
@@ -248,6 +253,17 @@
   #bootMsg button.sec { background: #fff; color: #2c3e57; box-shadow: 0 4px 0 #0002, 0 0 0 2px #e4d6c2 inset; }
   #bootMsg .wait { font-size: 12px; margin-top: 10px; color: #8a7a66; }
 
+  /* 橫式手機（畫面矮）：記分板、球權提示都靠左上，正中間留給籃框 */
+  @media (orientation: landscape) and (max-height: 560px) {
+    #board { left: calc(8px + env(safe-area-inset-left)); transform: none; top: calc(4px + env(safe-area-inset-top)); gap: 4px; }
+    .tm { padding: 2px 6px 2px 3px; gap: 4px; } .tm.b { padding: 2px 3px 2px 6px; }
+    .pf { width: 26px; height: 31px; } .pf .f { width: 26px; height: 26px; }
+    .sc { font-size: 22px; min-width: 26px; }
+    #clockBox { min-width: 50px; padding: 2px 6px; } #clock { font-size: 17px; } #clockSub { display: none; }
+    #poss { left: calc(8px + env(safe-area-inset-left)); transform: none; top: calc(46px + env(safe-area-inset-top)); flex-direction: row; }
+    #poss span { font-size: 11px; padding: 2px 8px; }
+    #toast { top: calc(72px + env(safe-area-inset-top)); }
+  }
 </style>
 </head>
 <body>
@@ -266,7 +282,7 @@
     <div class="tm b"><div class="faces" id="facesB"></div><div class="sc" id="scB">0</div></div>
   </div>
   <div id="poss"></div>
-  <div id="btnsTop"><button id="bPause" aria-label="暫停">⏸</button><button id="bSound" aria-label="聲音">🔊</button></div>
+  <div id="btnsTop"><button id="bPause" aria-label="暫停">⏸</button><button id="bSound" aria-label="聲音">🔊</button><button id="bFull" aria-label="全螢幕">⛶</button></div>
   <div id="ver"></div>
   <div id="meter"><i class="g"></i><i class="f"></i></div>
   <div id="toast"></div>
@@ -296,6 +312,7 @@
   </div>
   <button class="big" id="bStart">選角色</button>
   <button class="qbtn" id="qBtn">🎨 畫質：自動</button>
+  <p class="iosTip" id="iosTip">📱 iPhone：Safari 按「分享 → 加入主畫面」，從主畫面打開就能全螢幕玩</p>
 </div></div>
 
 <div class="screen" id="sSelect"><div class="selWrap">
@@ -325,6 +342,6 @@
 <script type="importmap">
 {"imports":{"three":"./vendor/three/build/three.module.min.js","three/addons/":"./vendor/three/examples/jsm/"}}
 </script>
-<script type="module" src="js/main.js?v=0.3.2"></script>
+<script type="module" src="js/main.js?v=0.3.3"></script>
 </body>
 </html>

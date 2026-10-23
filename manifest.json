@@ -1,0 +1,10 @@
+{
+  "name": "上班啟示錄：午休鬥牛",
+  "short_name": "午休鬥牛",
+  "start_url": "./",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#bfe6ff",
+  "theme_color": "#ff7a45",
+  "icons": [{ "src": "icons/kui-192.png", "sizes": "192x192", "type": "image/png" }]
+}
