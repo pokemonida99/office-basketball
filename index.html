@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="午休鬥牛">
+<meta name="theme-color" content="#ff7a45">
+<title>上班啟示錄：午休鬥牛 2v2</title>
+<link rel="apple-touch-icon" href="icons/kui-180.png">
+<link rel="icon" type="image/png" href="icons/kui-192.png">
+<script>
+  // 開不起來時說清楚原因（不支援 3D、App 內建瀏覽器、檔案下載失敗、載入太久），不要一直停在「載入中…」
+  (() => {
+    const inApp = /Line\/|FBAN|FBAV|FB_IAB|Instagram|MicroMessenger|; wv\)/i.test(navigator.userAgent);
+    const tip = inApp ? '你現在是用 App 內建的瀏覽器開的，請點右上角「⋯」選「用瀏覽器開啟」，或按「複製網址」貼到 Chrome／Safari。'
+      : '請用最新版的 Chrome 或 Safari 開啟。Android 可以到 Play 商店更新「Chrome」和「Android System WebView」。';
+    let level = 0;   // 0 沒顯示、1 可以再等等、2 開不起來
+    window.bootFail = (title, detail, fatal = true) => {
+      if (window.__booted || level >= (fatal ? 2 : 1)) return; level = fatal ? 2 : 1;
+      const put = () => {
+        const el = document.getElementById('bootMsg'); if (!el) return;
+        el.querySelector('h3').textContent = title; el.querySelector('.d').textContent = detail || ''; el.querySelector('.t').textContent = tip;
+        el.querySelector('.wait').style.display = fatal ? 'none' : ''; el.classList.add('on');
+      };
+      document.readyState === 'loading' ? addEventListener('DOMContentLoaded', put) : put();
+    };
+    window.bootOk = () => { window.__booted = true; const el = document.getElementById('bootMsg'); if (el) el.classList.remove('on'); };
+    let gl2 = false; try { gl2 = !!document.createElement('canvas').getContext('webgl2'); } catch {}
+    if (!gl2) bootFail('這支手機開不了 3D 畫面', '遊戲需要「WebGL2」3D 繪圖功能，這個瀏覽器沒有提供（太舊、或被 App 內建瀏覽器關掉了）。');
+    // 太舊的瀏覽器不認得 importmap：補上 es-module-shims（新瀏覽器不會載）
+    const shim = !(window.HTMLScriptElement && HTMLScriptElement.supports && HTMLScriptElement.supports('importmap'));
+    if (shim) { const sc = document.createElement('script'); sc.async = true; sc.src = 'vendor/es-module-shims.js'; document.head.appendChild(sc); }
+    addEventListener('error', (e) => {
+      if (window.__booted) return;
+      const t = e.target;
+      if (t && t !== window && (t.src || t.href)) return bootFail('有檔案下載失敗', '網路可能不穩，重新整理再試一次。');
+      if (shim && /specifier|resolve|import/i.test(e.message || '')) return;   // 補丁會自己重新載入
+      bootFail('遊戲載入失敗', e.message);
+    }, true);
+    addEventListener('unhandledrejection', (e) => { if (!window.__booted) bootFail('遊戲載入失敗', String((e.reason && e.reason.message) || e.reason)); });
+    setTimeout(() => { if (!window.__booted) bootFail('載入比較久……', '可能是網路比較慢，可以再等一下，或重新整理試試。', false); }, 25000);
+  })();
+</script>
+<style>
+  * { box-sizing: border-box; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #bfe6ff; font-family: -apple-system, "PingFang TC", "Noto Sans TC", sans-serif; touch-action: none; overscroll-behavior: none; }
+  canvas { display: block; touch-action: none; -webkit-user-drag: none; }
+  img { -webkit-user-drag: none; pointer-events: none; }
+  button { font-family: inherit; cursor: pointer; touch-action: manipulation; }
+  #hud { position: fixed; inset: 0; pointer-events: none; display: none; }
+  body.playing #hud { display: block; }
+  /* 記分板 */
+  #board { position: absolute; left: 50%; top: calc(6px + env(safe-area-inset-top)); transform: translateX(-50%); display: flex; align-items: stretch; gap: 6px; }
+  .tm { display: flex; align-items: center; gap: 6px; background: #2c3e57e6; border-radius: 18px; padding: 4px 10px 4px 5px; color: #fff; }
+  .tm.b { flex-direction: row-reverse; padding: 4px 5px 4px 10px; }
+  .tm .faces { display: flex; gap: 3px; }
+  .pf { position: relative; width: 34px; height: 40px; }
+  .pf .f { width: 34px; height: 34px; border-radius: 50%; background: #ffcf8a center/cover; border: 2px solid #ff7a45; }
+  .tm.b .pf .f { border-color: #4f9bff; background-color: #bfe0ff; }
+  .pf .g { position: absolute; left: 2px; right: 2px; bottom: 0; height: 5px; border-radius: 3px; background: #ffffff33; overflow: hidden; }
+  .pf .g i { display: block; height: 100%; width: 0; background: #ffd34d; }
+  .pf.full .g i { background: linear-gradient(90deg, #ff5d73, #ffd34d, #4cd964, #3fa7ff, #b46bff); background-size: 200% 100%; animation: rb 1s linear infinite; }
+  @keyframes rb { to { background-position: -200% 0; } }
+  .pf.ctl .f { box-shadow: 0 0 0 2px #ffd34d; }
+  .sc { font-size: 30px; font-weight: 900; min-width: 38px; text-align: center; line-height: 1; }
+  .tm .sc { text-shadow: 0 2px 0 #0004; }
+  .tm.a .sc { color: #ffb38a; } .tm.b .sc { color: #9cc9ff; }
+  .sc.bump { animation: bump .35s; }
+  @keyframes bump { 40% { transform: scale(1.5); } }
+  #clockBox { background: #fff; color: #2c3e57; border-radius: 14px; padding: 3px 10px; text-align: center; font-weight: 900; display: flex; flex-direction: column; justify-content: center; min-width: 64px; }
+  #clock { font-size: 22px; line-height: 1; font-variant-numeric: tabular-nums; }
+  #clock.low { color: #e0413b; }
+  #clockSub { font-size: 10px; opacity: .6; margin-top: 2px; white-space: nowrap; }
+  #poss { position: absolute; left: 50%; top: calc(58px + env(safe-area-inset-top)); transform: translateX(-50%); display: flex; gap: 6px; white-space: nowrap; }
+  #poss span { background: #fff; border-radius: 12px; padding: 3px 10px; font-weight: 900; font-size: 13px; color: #2c3e57; box-shadow: 0 2px 6px #0002; }
+  #poss .off { background: #ff7a45; color: #fff; } #poss .def { background: #3f7fd9; color: #fff; }
+  #poss .clr { background: #ffd34d; color: #7a4a00; animation: pulse .5s infinite alternate; }
+  #poss .buff { background: #2c3e57; color: #fff; }
+  @keyframes pulse { to { transform: scale(1.06); } }
+  .pts { position: absolute; font-weight: 900; font-size: 22px; pointer-events: none; animation: ptsUp 1.4s forwards; text-shadow: 0 2px 0 #fff, 0 0 8px #fff; }
+  @keyframes ptsUp { 0% { opacity: 0; transform: translateY(0) scale(.5); } 15% { opacity: 1; transform: translateY(-6px) scale(1.3); } 100% { opacity: 0; transform: translateY(-30px) scale(1); } }
+  #btnsTop { position: absolute; right: 8px; top: calc(8px + env(safe-area-inset-top)); display: flex; gap: 6px; pointer-events: auto; }
+  #btnsTop button { width: 36px; height: 36px; border-radius: 50%; border: 0; background: #ffffffd9; font-size: 17px; box-shadow: 0 2px 6px #0002; }
+  @media (max-width: 560px) {
+    #btnsTop { top: calc(62px + env(safe-area-inset-top)); flex-direction: column; }
+    #poss { top: calc(56px + env(safe-area-inset-top)); flex-direction: column; align-items: center; gap: 4px; }
+    .tm { padding: 3px 7px 3px 4px; gap: 4px; } .tm.b { padding: 3px 4px 3px 7px; }
+    .pf { width: 30px; height: 36px; } .pf .f { width: 30px; height: 30px; }
+    .sc { font-size: 26px; min-width: 30px; }
+    #clockBox { min-width: 54px; padding: 3px 6px; } #clock { font-size: 19px; }
+  }
+  #ver { position: absolute; left: 10px; top: calc(8px + env(safe-area-inset-top)); font-size: 10px; color: #2c3e57; opacity: .4; font-weight: 700; }
+  #toast { position: absolute; left: 50%; top: 70%; transform: translate(-50%, -50%) scale(.8); background: #2c3e57; color: #fff; font-weight: 900; font-size: 17px; padding: 8px 18px; border-radius: 16px; opacity: 0; transition: all .25s; white-space: nowrap; box-shadow: 0 4px 0 #0003; }
+  #toast.on { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  #banner { --bc: #ff7a45; position: absolute; left: 50%; top: 56%; transform: translate(-50%, -50%) scale(.3); opacity: 0; text-align: center; pointer-events: none; }
+  #banner.on { animation: bannerIn 2.6s cubic-bezier(.2,1.4,.4,1) forwards; }
+  @keyframes bannerIn { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.3) rotate(-6deg); } 12% { opacity: 1; transform: translate(-50%, -50%) scale(1.12) rotate(2deg); } 20% { transform: translate(-50%, -50%) scale(1) rotate(0); } 85% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -60%) scale(.95); } }
+  #banner .b-stars { color: #ffd34d; font-size: 28px; letter-spacing: 4px; text-shadow: 0 3px 0 #b8860b, 0 0 18px #ffd34d; }
+  #banner .b-title { font-size: 32px; font-weight: 900; color: #fff; background: var(--bc); padding: 8px 24px; border-radius: 20px; box-shadow: 0 6px 0 #0003, 0 0 40px var(--bc); white-space: nowrap; }
+  #banner .b-sub { margin-top: 10px; font-size: 15px; font-weight: 900; color: var(--bc); background: #fff; display: inline-block; padding: 5px 16px; border-radius: 14px; box-shadow: 0 3px 0 #0002; white-space: nowrap; }
+  /* 大招過場 */
+  #cutin { position: fixed; inset: 0; pointer-events: none; display: none; z-index: 5; overflow: hidden; }
+  #cutin.on { display: block; }
+  #cutin .dim { position: absolute; inset: 0; background: radial-gradient(circle, #0000 30%, #0008); animation: fadeIO 1.15s forwards; }
+  #cutin .band { --cc: #ff7a45; position: absolute; left: -10%; right: -10%; top: 50%; height: 170px; margin-top: -85px; transform: skewY(-7deg); background: repeating-linear-gradient(90deg, var(--cc) 0 40px, color-mix(in srgb, var(--cc) 85%, #fff) 40px 80px); box-shadow: 0 0 0 6px #fff, 0 0 0 12px var(--cc), 0 10px 40px #0006; animation: bandIn 1.15s cubic-bezier(.2,.9,.3,1) forwards; display: flex; align-items: center; justify-content: center; gap: 14px; }
+  #cutin .band::before { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(90deg, #fff0 0 60px, #fff6 60px 64px); animation: lines .3s linear infinite; }
+  @keyframes lines { to { background-position: -64px 0; } }
+  #cutin .face { width: 150px; height: 150px; border-radius: 50%; background: #fff center/cover; border: 6px solid #fff; transform: skewY(7deg); box-shadow: 0 6px 0 #0003; position: relative; animation: faceIn 1.15s forwards; }
+  #cutin .txt { transform: skewY(7deg); color: #fff; position: relative; text-shadow: 0 4px 0 #0004; }
+  #cutin .who { font-size: 18px; font-weight: 900; opacity: .95; }
+  #cutin .sp { font-size: 44px; font-weight: 900; line-height: 1.05; letter-spacing: 2px; white-space: nowrap; animation: spIn 1.15s forwards; }
+  #cutin .q { margin-top: 6px; display: inline-block; background: #fff; color: var(--cc); font-weight: 900; font-size: 15px; padding: 4px 12px; border-radius: 12px; text-shadow: none; }
+  @keyframes bandIn { 0% { transform: skewY(-7deg) translateX(110%); } 22% { transform: skewY(-7deg) translateX(0); } 80% { transform: skewY(-7deg) translateX(-2%); opacity: 1; } 100% { transform: skewY(-7deg) translateX(-110%); opacity: 1; } }
+  @keyframes faceIn { 0%, 15% { transform: skewY(7deg) scale(.3); } 30% { transform: skewY(7deg) scale(1.1); } 40%, 100% { transform: skewY(7deg) scale(1); } }
+  @keyframes spIn { 0%, 20% { transform: scale(2); opacity: 0; } 32% { transform: scale(.95); opacity: 1; } 40%, 100% { transform: scale(1); } }
+  @keyframes fadeIO { 0% { opacity: 0; } 20%, 80% { opacity: 1; } 100% { opacity: 0; } }
+  @media (max-width: 560px) { #cutin .band { height: 140px; margin-top: -70px; gap: 10px; } #cutin .face { width: 104px; height: 104px; } #cutin .sp { font-size: 32px; } #cutin .q { font-size: 13px; } #cutin .who { font-size: 15px; } }
+  /* 觸控：左邊搖桿、右邊按鈕 */
+  #stickZone { position: fixed; left: 0; bottom: 0; width: 50%; height: 55%; pointer-events: auto; }
+  #stick { position: absolute; width: 120px; height: 120px; margin: -60px 0 0 -60px; border-radius: 50%; background: #ffffff55; border: 3px solid #ffffffcc; box-shadow: 0 4px 12px #0002; left: calc(86px + env(safe-area-inset-left)); top: calc(100% - 110px - env(safe-area-inset-bottom)); transition: opacity .2s; opacity: .7; }
+  #stick.on { opacity: 1; transition: none; }
+  #knob { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%; background: #fff; box-shadow: 0 3px 0 #0003; }
+  #pad { position: fixed; right: calc(10px + env(safe-area-inset-right)); bottom: calc(14px + env(safe-area-inset-bottom)); width: 208px; height: 200px; pointer-events: none; }
+  .kb { position: absolute; border-radius: 50%; border: 4px solid #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 900; color: #fff; font-size: 14px; box-shadow: 0 5px 0 #0003; pointer-events: auto; transition: transform .06s, opacity .15s; text-shadow: 0 2px 0 #0003; }
+  .kb b { font-size: 26px; line-height: 1; }
+  .kb.on { transform: scale(.9); }
+  .kb.dim { opacity: .45; }
+  #kShoot { right: 0; bottom: 0; width: 96px; height: 96px; background: #ff7a45; font-size: 16px; }
+  #kShoot b { font-size: 32px; }
+  #kPass { right: 104px; bottom: 0; width: 70px; height: 70px; background: #36c35d; }
+  #kSteal { right: 14px; bottom: 106px; width: 70px; height: 70px; background: #3f7fd9; }
+  #kSp { right: 98px; bottom: 82px; width: 80px; height: 80px; background: #2c3e57; overflow: hidden; }
+  #kSp .ring { position: absolute; inset: -4px; border-radius: 50%; background: conic-gradient(#ffd34d var(--p, 0%), #ffffff22 0); }
+  #kSp .in { position: absolute; inset: 5px; border-radius: 50%; background: #2c3e57 center/cover; display: flex; align-items: flex-end; justify-content: center; }
+  #kSp .in span { background: #2c3e57dd; border-radius: 8px; padding: 1px 6px; font-size: 12px; margin-bottom: 4px; white-space: nowrap; }
+  #kSp.full { animation: glow .6s infinite alternate; }
+  #kSp.full .ring { background: conic-gradient(#ff5d73, #ffd34d, #4cd964, #3fa7ff, #b46bff, #ff5d73); animation: spin 1.2s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes glow { to { box-shadow: 0 5px 0 #0003, 0 0 24px #ffd34d; } }
+  @media (orientation: landscape) and (max-height: 520px) { #pad { transform: scale(.82); transform-origin: right bottom; } #stick { transform: scale(.85); } }
+  body.kbd #stickZone, body.kbd #pad { display: none; }
+  #kbHint { position: absolute; left: 50%; bottom: calc(10px + env(safe-area-inset-bottom)); transform: translateX(-50%); background: #fffffff0; color: #2c3e57; font-weight: 800; font-size: 13px; padding: 7px 16px; border-radius: 20px; white-space: nowrap; display: none; box-shadow: 0 3px 10px #0002; }
+  #kbHint b { background: #2c3e57; color: #fff; border-radius: 5px; padding: 0 5px; margin: 0 2px; }
+  body.kbd #kbHint { display: block; }
+  /* 畫面 */
+  .screen { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: radial-gradient(circle at 50% 30%, #fff6e3f2, #ffd9a8f7); z-index: 10; padding: 16px; overflow-y: auto; }
+  .screen.on { display: flex; }
+  .card { width: min(400px, 100%); text-align: center; color: #2c3e57; margin: auto; }
+  .card h1 { margin: 6px 0 2px; font-size: 36px; line-height: 1.1; color: #ff7a45; text-shadow: 0 3px 0 #fff, 0 5px 0 #0001; }
+  .card h1 small { display: block; font-size: 17px; color: #2c3e57; margin-bottom: 4px; }
+  .card p { margin: 8px 0; font-weight: 700; font-size: 15px; line-height: 1.5; }
+  .row7 { display: flex; justify-content: center; margin: 10px 0 4px; }
+  .row7 img { width: 54px; height: 54px; border-radius: 50%; border: 3px solid #fff; background: #ffcf8a; margin: 0 -5px; box-shadow: 0 3px 8px #c4501f33; }
+  .big { display: block; width: 100%; margin: 12px 0 0; padding: 15px; font-size: 22px; font-weight: 900; color: #fff; background: #ff7a45; border: 0; border-radius: 20px; box-shadow: 0 6px 0 #c4501f; }
+  .big:active { transform: translateY(3px); box-shadow: 0 3px 0 #c4501f; }
+  .big:disabled { background: #c9b8a6; box-shadow: 0 6px 0 #9c8a78; }
+  .big.sec { background: #3fa7ff; box-shadow: 0 6px 0 #1f6fb8; font-size: 17px; padding: 11px; }
+  .howto { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0 4px; }
+  .howto div { background: #fff; border-radius: 14px; padding: 8px 6px; font-weight: 800; font-size: 13px; box-shadow: 0 2px 6px #0001; line-height: 1.4; }
+  .howto b { display: block; font-size: 20px; }
+  .qbtn { display: inline-block; margin: 10px 4px 0; border: 0; border-radius: 14px; padding: 6px 14px; font: inherit; font-size: 13px; font-weight: 800; background: #fff3e0; color: #8a4b1f; }
+  /* 選角 */
+  #sSelect { align-items: flex-start; padding-bottom: 120px; }
+  .selWrap { width: min(860px, 100%); margin: 0 auto; color: #2c3e57; text-align: center; }
+  .selWrap h2 { margin: 4px 0 2px; font-size: 24px; color: #ff7a45; }
+  .selWrap .hint { font-weight: 800; font-size: 14px; margin-bottom: 10px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+  .ch { position: relative; background: #fff; border-radius: 18px; padding: 10px; display: flex; gap: 10px; align-items: center; text-align: left; box-shadow: 0 3px 10px #c4501f22; border: 3px solid transparent; cursor: pointer; transition: transform .1s; }
+  .ch:active { transform: scale(.97); }
+  .ch img { width: 72px; height: 72px; border-radius: 50%; background: #ffcf8a; flex: none; }
+  .ch .nm { font-weight: 900; font-size: 18px; } .ch .nm small { font-size: 12px; opacity: .6; margin-left: 4px; }
+  .ch .spn { display: inline-block; background: var(--cc); color: #fff; font-weight: 900; font-size: 13px; padding: 2px 8px; border-radius: 9px; margin: 3px 0; }
+  .ch .d { font-size: 12px; font-weight: 700; line-height: 1.4; opacity: .85; }
+  .ch .st { font-size: 11px; font-weight: 800; color: #8a4b1f; margin-top: 3px; }
+  .ch.sel { border-color: #ff7a45; background: #fff6ee; }
+  .ch .badge { position: absolute; top: -8px; left: -6px; background: #ff7a45; color: #fff; font-weight: 900; font-size: 12px; padding: 3px 8px; border-radius: 10px; display: none; box-shadow: 0 2px 0 #c4501f; }
+  .ch.sel .badge { display: block; }
+  .selBar { position: fixed; left: 0; right: 0; bottom: 0; padding: 10px 16px calc(12px + env(safe-area-inset-bottom)); background: linear-gradient(#ffd9a800, #ffd9a8 30%); display: flex; justify-content: center; }
+  .selBar .in { width: min(480px, 100%); display: flex; gap: 8px; align-items: center; }
+  .selBar .big { margin: 0; flex: 1; }
+  .selBar .big.sec { flex: none; width: auto; padding: 15px 16px; }
+  /* 結算 */
+  .final { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 10px 0; }
+  .final .s { font-size: 52px; font-weight: 900; line-height: 1; }
+  .final .s.a { color: #ff7a45; } .final .s.b { color: #3f7fd9; }
+  .final .vs { font-weight: 900; opacity: .5; }
+  .mvp { background: #fff; border-radius: 18px; padding: 10px; display: flex; gap: 10px; align-items: center; text-align: left; box-shadow: 0 3px 10px #0001; margin: 8px 0; }
+  .mvp img { width: 70px; height: 70px; border-radius: 50%; background: #ffd34d; }
+  .mvp .t { font-size: 12px; font-weight: 900; color: #b8860b; }
+  .mvp .n { font-size: 20px; font-weight: 900; }
+  .mvp .q { font-size: 13px; font-weight: 700; opacity: .75; }
+  .statRow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .statRow div { background: #fff; border-radius: 12px; padding: 6px 2px; font-size: 12px; font-weight: 800; }
+  .statRow img { width: 36px; height: 36px; border-radius: 50%; background: #ffcf8a; display: block; margin: 0 auto 2px; }
+  .statRow .b img { background: #bfe0ff; }
+  .statRow b { font-size: 18px; display: block; }
+  #loading { position: fixed; inset: 0; display: flex; flex-direction: column; gap: 10px; align-items: center; justify-content: center; background: #bfe6ff; z-index: 20; font-weight: 900; color: #2c3e57; font-size: 18px; }
+  #loading .bar { width: 200px; height: 10px; border-radius: 6px; background: #ffffff99; overflow: hidden; }
+  #loading .bar i { display: block; height: 100%; width: 0; background: #ff7a45; transition: width .2s; }
+  /* 開不起來時的說明卡 */
+  .qbtn { display: block; margin: 10px auto 0; border: 0; border-radius: 14px; padding: 6px 14px; font: inherit; font-size: 13px; font-weight: 800; background: #fff3e0; color: #8a4b1f; }
+  #bootMsg { position: fixed; inset: 0; z-index: 99; display: none; align-items: center; justify-content: center; background: #2c3e57cc; padding: 20px; }
+  #bootMsg.on { display: flex; }
+  #bootMsg .card { width: min(360px, 100%); background: #fffdf7; border-radius: 22px; padding: 20px 18px 16px; color: #2c3e57; text-align: center; box-shadow: 0 10px 30px #0005; -webkit-user-select: text; user-select: text; }
+  #bootMsg h3 { margin: 0 0 8px; font-size: 20px; color: #e0473a; }
+  #bootMsg .d { font-size: 14px; line-height: 1.6; margin: 0 0 8px; font-weight: 700; }
+  #bootMsg .t { font-size: 13px; line-height: 1.6; margin: 0 0 14px; color: #6a5a48; }
+  #bootMsg .row { display: flex; gap: 8px; }
+  #bootMsg button { flex: 1; font: inherit; font-weight: 900; font-size: 15px; border: 0; border-radius: 14px; padding: 11px 8px; background: #ff5d3a; color: #fff; box-shadow: 0 4px 0 #b8381c; }
+  #bootMsg button.sec { background: #fff; color: #2c3e57; box-shadow: 0 4px 0 #0002, 0 0 0 2px #e4d6c2 inset; }
+  #bootMsg .wait { font-size: 12px; margin-top: 10px; color: #8a7a66; }
+
+</style>
+</head>
+<body>
+<div id="bootMsg"><div class="card">
+  <h3></h3><p class="d"></p><p class="t"></p>
+  <div class="row"><button onclick="location.reload()">重新整理</button><button class="sec" onclick="navigator.clipboard && navigator.clipboard.writeText(location.href.split('#')[0]).then(() => this.textContent = '已複製 ✓', () => prompt('複製這個網址', location.href.split('#')[0]))">複製網址</button></div>
+  <div class="wait">還在載入的話，好了這張卡會自己消失</div>
+</div></div>
+
+<div id="loading"><div>🏀 午休鬥牛準備中…</div><div class="bar"><i id="loadBar"></i></div></div>
+
+<div id="hud">
+  <div id="board">
+    <div class="tm a"><div class="faces" id="facesA"></div><div class="sc" id="scA">0</div></div>
+    <div id="clockBox"><div id="clock">2:00</div><div id="clockSub">先到 21 分</div></div>
+    <div class="tm b"><div class="faces" id="facesB"></div><div class="sc" id="scB">0</div></div>
+  </div>
+  <div id="poss"></div>
+  <div id="btnsTop"><button id="bPause" aria-label="暫停">⏸</button><button id="bSound" aria-label="聲音">🔊</button></div>
+  <div id="ver"></div>
+  <div id="toast"></div>
+  <div id="banner"></div>
+  <div id="stickZone"><div id="stick"><div id="knob"></div></div></div>
+  <div id="pad">
+    <div class="kb" id="kShoot"><b>🏀</b><span>投籃</span></div>
+    <div class="kb" id="kPass"><b>👐</b><span>傳球</span></div>
+    <div class="kb" id="kSteal"><b>✋</b><span>抄截</span></div>
+    <div class="kb" id="kSp"><div class="ring"></div><div class="in"><span>大招</span></div></div>
+  </div>
+  <div id="kbHint"><b>WASD</b>移動　<b>J</b>投籃／蓋帽　<b>K</b>傳球／換人　<b>L</b>抄截　<b>I</b>大招　<b>P</b>暫停</div>
+</div>
+<div id="cutin"><div class="dim"></div><div class="band"><div class="face"></div><div class="txt"><div class="who"></div><div class="sp"></div><div class="q"></div></div></div></div>
+
+<div class="screen" id="sTitle"><div class="card">
+  <h1><small>上班啟示錄</small>午休鬥牛 2v2</h1>
+  <div class="row7" id="titleFaces"></div>
+  <p>午休 2 分鐘，頂樓球場半場鬥牛！<br>挑兩個同事組隊，先到 21 分或時間到分數高的贏。<br>每個人都有自己的大招！</p>
+  <div class="howto">
+    <div><b>🕹️</b>左邊搖桿移動<br>電腦用 WASD／方向鍵</div>
+    <div><b>🏀</b>三分線外 3 分<br>線內 2 分、籃下灌籃</div>
+    <div><b>🔄</b>搶到籃板、抄截<br>要先把球帶出三分線</div>
+    <div><b>⚡</b>傳球、得分、抄截<br>都會集大招</div>
+  </div>
+  <button class="big" id="bStart">選角色</button>
+  <button class="qbtn" id="qBtn">🎨 畫質：自動</button>
+</div></div>
+
+<div class="screen" id="sSelect"><div class="selWrap">
+  <h2>挑兩個同事組隊</h2>
+  <div class="hint" id="selHint">先點的是你一開始操作的人，對手由電腦隨機挑</div>
+  <div class="grid" id="grid"></div>
+  <div class="selBar"><div class="in"><button class="big sec" id="bRand">🎲 隨機</button><button class="big" id="bGo" disabled>開打！</button></div></div>
+</div></div>
+
+<div class="screen" id="sPause"><div class="card">
+  <h1>暫停</h1>
+  <p>喝口水，老闆不會發現的。</p>
+  <button class="big" id="bResume">繼續比賽</button>
+  <button class="big sec" id="bQuit">回到選角</button>
+</div></div>
+
+<div class="screen" id="sOver"><div class="card">
+  <h1 id="oTitle" style="font-size:30px">贏了！</h1>
+  <div class="final"><div class="s a" id="oA">0</div><div class="vs">：</div><div class="s b" id="oB">0</div></div>
+  <div class="mvp"><img id="oMvpF" alt=""><div><div class="t">⭐ 本場 MVP</div><div class="n" id="oMvpN"></div><div class="q" id="oMvpQ"></div></div></div>
+  <div class="statRow" id="oStats"></div>
+  <button class="big" id="bAgain">同一隊再來一場</button>
+  <button class="big sec" id="bReselect">重選角色</button>
+</div></div>
+
+<script type="importmap">
+{"imports":{"three":"./vendor/three/build/three.module.min.js","three/addons/":"./vendor/three/examples/jsm/"}}
+</script>
+<script type="module" src="js/main.js?v=0.1.0"></script>
+</body>
+</html>
