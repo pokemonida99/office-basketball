@@ -493,7 +493,6 @@ function doPass(p, to, opt = {}) {
 }
 function startShot(p, user = false) {
   if (!holding(p)) return;
-  if (user && !G.auto && hoopDist(p.x, p.z) >= 1.9) S.meter = { p, res: null, hideAt: 0 };
   const d = hoopDist(p.x, p.z);
   if (d < 1.9) {   // 上籃／灌籃
     const dunk = p.key === 'jie' || Math.random() < 0.45;
@@ -502,6 +501,7 @@ function startShot(p, user = false) {
   } else {
     p.act = { type: 'shoot', t: 0, sx: p.x, sz: p.z, rel: false, hold: user && !G.auto, relAt: user && !G.auto ? 9 : rand(0.25, 0.31) };
     p.vy = CFG.jumpV; p.y = 0.01;
+    if (user && !G.auto) S.meter = { p, act: p.act, res: null, hideAt: 0 };   // 記住是哪一次投籃：動作被打斷就收掉
   }
   p.face = Math.atan2(HOOP.x - p.x, HOOP.z - p.z);
   fx.sfx.jump();
@@ -553,7 +553,9 @@ function meterResult(r) { if (S.meter) { S.meter.res = r; S.meter.hideAt = perfo
 const _mv = new THREE.Vector3();
 function updateMeter() {
   const el = $('meter'), m = S.meter;
-  if (!m || (m.hideAt && performance.now() > m.hideAt) || S.mode !== 'play') { if (el.className) el.className = ''; if (m && m.hideAt) S.meter = null; return; }
+  // 被蓋火鍋、被暈、換球權、放大招……投籃動作沒走完就換成別的動作：時機條馬上收掉，不要黏著角色跑
+  const cut = m && !m.res && (m.p.act !== m.act || S.phase !== 'play' || S.cut);
+  if (!m || cut || (m.hideAt && performance.now() > m.hideAt) || S.mode !== 'play') { if (el.className) el.className = ''; if (m && (m.hideAt || cut)) S.meter = null; return; }
   const p = m.p, a = p.act, t = a && a.type === 'shoot' ? (a.press ?? a.t) : 0.62, T = 0.62, w = 0.045 * dif().green;
   el.className = 'on' + (m.res ? ' ' + m.res : '');
   el.querySelector('.f').style.height = Math.min(100, t / T * 100) + '%';
