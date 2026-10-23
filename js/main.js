@@ -460,7 +460,7 @@ function clearPoint(p) {
 // ---------- 拿球、傳球、投籃 ----------
 function gainBall(p, how) {
   const prev = S.poss;
-  B.mode = 'held'; B.owner = p; B.recv = null; p.holdT = 0; p.aiT = 0.25;
+  B.mode = 'held'; B.owner = p; B.recv = null; p.holdT = 0; p.aiT = 0.25; p.callT = 0;   // 上一次拿球時你喊的「給我」不算數
   if (prev !== p.team) {
     S.poss = p.team; S.possN = (S.possN || 0) + 1; S.mustClear = how !== 'check' && !isThree(p.x, p.z); S.onBall = [null, null];
     for (const q of oppsOf(p)) q.stealCd = Math.max(q.stealCd, 1.0);   // 剛換球權，對手先不能馬上抄回去
@@ -495,7 +495,6 @@ function doPass(p, to, opt = {}) {
 }
 function startShot(p, user = false) {
   if (!holding(p)) return;
-  if (user && !G.auto && hoopDist(p.x, p.z) >= 1.9) S.meter = { p, res: null, hideAt: 0 };
   const d = hoopDist(p.x, p.z);
   if (d < 1.9) {   // 上籃／灌籃
     const dunk = p.key === 'jie' || Math.random() < 0.45;
@@ -504,6 +503,7 @@ function startShot(p, user = false) {
   } else {
     p.act = { type: 'shoot', t: 0, sx: p.x, sz: p.z, rel: false, hold: user && !G.auto, relAt: user && !G.auto ? 9 : rand(0.25, 0.31) };
     p.vy = CFG.jumpV; p.y = 0.01;
+    if (user && !G.auto) S.meter = { p, act: p.act, res: null, hideAt: 0 };   // 記住是哪一次投籃：動作被打斷就收掉
   }
   p.face = Math.atan2(HOOP.x - p.x, HOOP.z - p.z);
   fx.sfx.jump();
@@ -556,7 +556,9 @@ function meterResult(r) { if (S.meter) { S.meter.res = r; S.meter.hideAt = perfo
 const _mv = new THREE.Vector3();
 function updateMeter() {
   const el = $('meter'), m = S.meter;
-  if (!m || (m.hideAt && performance.now() > m.hideAt) || S.mode !== 'play') { if (el.className) el.className = ''; if (m && m.hideAt) S.meter = null; return; }
+  // 被蓋火鍋、被暈、換球權、放大招……投籃動作沒走完就換成別的動作：時機條馬上收掉，不要黏著角色跑
+  const cut = m && !m.res && (m.p.act !== m.act || S.phase !== 'play' || S.cut);
+  if (!m || cut || (m.hideAt && performance.now() > m.hideAt) || S.mode !== 'play') { if (el.className) el.className = ''; if (m && (m.hideAt || cut)) S.meter = null; return; }
   const p = m.p, a = p.act, t = a && a.type === 'shoot' ? (a.press ?? a.t) : 0.62, T = 0.62, w = 0.045 * dif().green;
   el.className = 'on' + (m.res ? ' ' + m.res : '');
   el.querySelector('.f').style.height = Math.min(100, t / T * 100) + '%';
@@ -846,7 +848,8 @@ function doSpecial(p) {
       for (const q of opp) { q.stun = Math.max(q.stun, 1); q.act = null; }
       addIcon(p, '💰', 2.5, 2.25, 0.55);
       fx.toast(take ? `🤝 業務抽成：對手 -${take}、我方 +${take}` : '🤝 業務抽成：對手看傻了');
-      if (S.score[t] >= CFG.target) { S.endAfter = true; S.phase = 'score'; S.phaseT = 1.6; }
+      // 到 21 分、延長賽、時間到之後抽到分：跟進球一樣結束（不然延長賽被追平會變成平手判輸）
+      if (S.score[t] >= CFG.target || (take && (S.sudden || S.buzzer))) { S.endAfter = true; S.phase = 'score'; S.phaseT = 1.6; }
       break;
     }
     case 'de':   // 預算砍半：對手跑速減半 6 秒，大招集氣砍一半
@@ -1882,7 +1885,13 @@ $('bRand').onclick = () => { fx.audioInit(); fx.sfx.click(); S.sel = shuffle(ROS
 $('bGo').onclick = () => { if (S.sel.length < S.size) return; if (fsOK && matchMedia('(pointer: coarse)').matches) goFull(true); S.pick = S.sel.slice(); startMatch(); };   // 手機按開打順便全螢幕
 for (const b of $('modeSeg').children) b.onclick = () => { fx.sfx.click(); const v = b.dataset.v; S.practice = v === 'p'; S.size = S.practice ? 1 : +v; store.set(MODE_KEY, v); S.sel = S.sel.slice(0, S.size); refreshSelect(); };
 for (const b of $('diffSeg').children) b.onclick = () => { fx.sfx.click(); S.diff = +b.dataset.v; store.set(DIFF_KEY, S.diff); refreshSelect(); };
-function toSelect() { S.prac = null; document.body.classList.remove('prac'); musicTheme(); S.mode = 'select'; document.body.classList.remove('playing'); show('select'); refreshSelect(); }
+function toSelect() { S.prac = null; document.body.classList.remove('prac'); musicTheme(); S.mode = 'select'; document.body.classList.remove('playing'); show('select'); refreshSelect(); clearCourt(); }
+// 比賽中途回選角：球員、防守扇形、Kevin 的無人機、大招過場、特寫鏡頭都收掉，不要定格留在選角背景的球場上
+function clearCourt() {
+  clearPlayers(); S.cut = null; S.meter = null; SC.t = 0; $('cutin').classList.remove('on'); $('flash').className = '';
+  if (guardFan) guardFan.visible = boxRing.visible = false;
+  if (KV.on) { scene.remove(KV.drone, KV.reticle, KV.laser); KV.on = false; } KV.zoom = 0;
+}
 function startMatch() {
   fx.audioInit(); soundIcon();
   newMatch(); S.mode = 'play'; show(null); document.body.classList.add('playing');
