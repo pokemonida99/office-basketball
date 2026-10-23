@@ -5,6 +5,7 @@ import { loadKind, loadClip, makeActor, addJog, updateActor, turnTo } from './as
 import * as fx from './fx.js?v=0.3.3';
 import { buildCourt, animateCourt, swishNet, C, COURT, HOOP, ARC_R, CORNER_X, TOP, WALL, isThree, hoopDist } from './court.js?v=0.3.3';
 import { music, musicStart, musicStop, musicTick, musicTheme, musicPause } from './music.js?v=0.3.3';
+import { openOP, replayOP, seekOP } from './op.js?v=0.3.3';
 
 const VERSION = '0.3.3';
 document.getElementById('ver').textContent = 'v' + VERSION;
@@ -1719,6 +1720,8 @@ function show(name) { for (const [k, el] of Object.entries(screens)) el.classLis
 $('kShoot').querySelector('span').id = 'kShootT'; $('kPass').querySelector('span').id = 'kPassT'; $('kSp').querySelector('.in span').id = 'kSpT';
 $('kSkill').querySelector('span').id = 'kSkillT'; $('kSkill').querySelector('small').id = 'kSkillS'; $('kSteal').querySelector('span').id = 'kStealT';
 $('bStart').onclick = () => { fx.audioInit(); fx.sfx.click(); toSelect(); };
+const OP_SFX = { init: fx.audioInit, whoosh: () => fx.sfx.whiff(), boss: () => fx.sfx.dunk() };
+$('bOP').onclick = () => { fx.audioInit(); replayOP(null, { sounds: OP_SFX }); };
 $('bResume').onclick = () => togglePause();
 $('bQuit').onclick = () => toSelect();
 $('bAgain').onclick = () => { S.keepOpp = false; startMatch(); };
@@ -1861,7 +1864,7 @@ const G = window.G = {
   skill(key) { const p = players.find(q => q.key === key); p.skillCd = 0; return doSkill(p)?.kind || 'dash/combo'; },
   art: actionArt, pl: (key) => players.find(q => q.key === key),
   give(key) { const p = players.find(q => q.key === key); gainBall(p, 'check'); S.mustClear = false; },
-  toSelect, finish,
+  toSelect, finish, seekOP,
 };
 
 // ---------- 開始 ----------
@@ -1875,6 +1878,9 @@ const G = window.G = {
   if (!matchMedia('(pointer: coarse)').matches) document.body.classList.add('kbd');
   updateCamera(V(0, 0.8, 4.5), 0, true);
   if (/[?&#]play/.test(location.href)) { S.pick = ['kui', 'jie']; startMatch(); }
-  else { S.mode = 'title'; show('title'); musicTheme(); }
+  else {
+    S.mode = 'title'; show('title'); musicTheme();
+    if (!/[?&#](auto|noop)/.test(location.href)) openOP(null, { sounds: OP_SFX });   // 開場 OP 蓋在標題畫面上，播完或跳過就看到標題
+  }
   requestAnimationFrame(frame);
 })();

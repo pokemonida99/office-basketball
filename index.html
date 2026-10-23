@@ -254,6 +254,65 @@
   #bootMsg .wait { font-size: 12px; margin-top: 10px; color: #8a7a66; }
 
   /* 橫式手機（畫面矮）：記分板、球權提示都靠左上，正中間留給籃框 */
+
+  /* ===== 開場 OP（js/op.js）：真人風劇照＋程式運鏡；a4 不想上班 × 香香籃球隊 聯名 ===== */
+  #op { position: fixed; inset: 0; z-index: 60; display: none; background: #0b0d12; overflow: hidden; color: #fff; }
+  #op.on { display: block; }
+  #opBg { position: absolute; inset: -40px; width: calc(100% + 80px); height: calc(100% + 80px); object-fit: cover; filter: blur(22px) brightness(.45) saturate(1.2); }
+  #opFrame { position: absolute; inset: 0; overflow: hidden; }
+  #opImg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform-origin: 50% 50%; will-change: transform; }
+  #op.brand #opBg, #op.brand #opFrame { display: none; }
+  #opFlash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
+  #op::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 50% 45%, transparent 55%, #0008 100%); }
+  #opCap { position: absolute; left: 0; bottom: 12%; padding: 10px 26px 10px calc(22px + env(safe-area-inset-left)); background: linear-gradient(90deg, #ff7a45 0%, #ff7a45 70%, #ff7a4500 100%); opacity: 0; z-index: 2; max-width: 86%; }
+  #opCap b { display: block; font-size: clamp(30px, 7vmin, 56px); font-weight: 900; line-height: 1; letter-spacing: 1px; text-shadow: 0 3px 0 #0003; font-variant-numeric: tabular-nums; }
+  #opCap span { display: block; margin-top: 4px; font-size: clamp(13px, 2.6vmin, 19px); font-weight: 700; opacity: .95; }
+  #op:not(.cap) #opCap { display: none; }
+  #opVs { position: absolute; left: 50%; top: 50%; z-index: 2; font: italic 900 clamp(70px, 22vmin, 170px)/1 sans-serif; color: #ffd34d; -webkit-text-stroke: 4px #2c3e57; text-shadow: 0 8px 0 #0006; opacity: 0; display: none; }
+  #op.vs #opVs { display: block; }
+  /* 聯名卡 */
+  #opBrand { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 4vmin; background: radial-gradient(circle at 50% 45%, #2c3e57, #0b0d12 70%); z-index: 3; }
+  #op.brand #opBrand { display: flex; }
+  .opLogos { display: flex; align-items: center; gap: clamp(14px, 4vmin, 40px); }
+  #opA4 { width: clamp(92px, 20vmin, 160px); aspect-ratio: 1 / 1.414; background: #fdfdf8; color: #1d1d1f; border-radius: 3px; box-shadow: 0 10px 30px #0008; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; padding-bottom: 6%; clip-path: polygon(0 0, 80% 0, 100% 14%, 100% 100%, 0 100%); }
+  #opA4::after { content: ''; position: absolute; right: 0; top: 0; width: 20%; height: 14%; background: linear-gradient(225deg, #0b0d12 50%, #d9d6cc 50%); }
+  #opA4 b { font: 900 clamp(46px, 10vmin, 82px)/.9 "Arial Black", sans-serif; letter-spacing: -2px; }
+  #opA4 span { margin-top: 6%; font-size: clamp(13px, 2.8vmin, 22px); font-weight: 900; color: #e0312b; border: 2px solid #e0312b; border-radius: 4px; padding: 1px 6px; transform: rotate(-6deg); }
+  #opX { font: 300 clamp(30px, 7vmin, 56px)/1 sans-serif; color: #fff9; }
+  #opXX { width: clamp(100px, 22vmin, 172px); aspect-ratio: 1; border-radius: 50%; position: relative; background: radial-gradient(circle at 35% 30%, #ffb070, #f2711c 55%, #b84c0c); box-shadow: 0 10px 30px #0008, inset 0 -6px 14px #0004; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  #opXX::before { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent 48.5%, #3a1a08 48.5%, #3a1a08 51.5%, transparent 51.5%), linear-gradient(0deg, transparent 48.5%, #3a1a08 48.5%, #3a1a08 51.5%, transparent 51.5%); opacity: .55; }
+  #opXX::after { content: ''; position: absolute; inset: 12% -40%; border: 3px solid #3a1a0888; border-radius: 50%; }
+  #opXX span { position: relative; z-index: 1; background: #fff; color: #e86aa6; font-weight: 900; font-size: clamp(14px, 3.2vmin, 24px); padding: 4px 8px; border-radius: 8px; transform: rotate(-8deg); box-shadow: 0 3px 0 #0003; line-height: 1.1; text-align: center; }
+  #opXX span small { display: block; font-size: .5em; letter-spacing: 2px; color: #283d8f; }
+  #opMade { font-size: clamp(13px, 2.8vmin, 20px); letter-spacing: .6em; padding-left: .6em; color: #ffd34d; font-weight: 700; display: flex; align-items: center; gap: 12px; }
+  #opMade::before, #opMade::after { content: ''; width: 36px; height: 1px; background: #ffd34d88; }
+  /* 片名 */
+  #opTitle { position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; pointer-events: none; background: radial-gradient(ellipse at 50% 50%, #0007, transparent 65%); }
+  #opTitle small { font-size: clamp(14px, 3vmin, 22px); font-weight: 800; letter-spacing: 6px; color: #fff; text-shadow: 0 2px 6px #000; }
+  #opTitleMain { font: 900 clamp(64px, 17vmin, 150px)/1.05 -apple-system, "PingFang TC", sans-serif; color: #ff7a45; -webkit-text-stroke: 3px #fff; text-shadow: 0 6px 0 #2c3e57, 0 12px 30px #000a; letter-spacing: 4px; }
+  #opTitleSub { margin-top: 1.4vmin; font-size: clamp(12px, 2.5vmin, 18px); font-weight: 700; color: #ffd34d; background: #0b0d12cc; padding: 5px 14px; border-radius: 99px; letter-spacing: 2px; }
+  /* 進度條、跳過 */
+  #opBarWrap { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: #fff2; z-index: 4; }
+  #opBar { height: 100%; background: #ffd34d; transform-origin: 0 50%; transform: scaleX(0); }
+  #opSkip { position: absolute; top: calc(12px + env(safe-area-inset-top)); right: calc(12px + env(safe-area-inset-right)); z-index: 5; border: 1px solid #fff6; background: #0007; color: #fff; font-size: 14px; font-weight: 700; border-radius: 99px; padding: 8px 16px; }
+  /* 開場前：等玩家點（瀏覽器要點過才能出聲） */
+  #opGate { position: absolute; left: 0; right: 0; bottom: max(9%, calc(20px + env(safe-area-inset-bottom))); z-index: 6; display: none; flex-direction: column; align-items: center; gap: 10px; }
+  #op.gate #opGate { display: flex; }
+  #op.gate #opSkip, #op.gate #opBarWrap { display: none; }
+  #opPlay { border: 0; border-radius: 99px; padding: 14px 34px; font-size: 20px; font-weight: 900; color: #2c3e57; background: #ffd34d; box-shadow: 0 5px 0 #c99a1c, 0 10px 24px #0008; animation: glow .8s infinite alternate; }
+  #opNo { border: 0; background: none; color: #fffb; font-size: 14px; text-decoration: underline; padding: 6px; }
+  /* 直式手機：劇照放中間，上下用模糊的同一張墊底，字幕放在下面的空間 */
+  @media (orientation: portrait) {
+    #opFrame { top: 21%; bottom: auto; height: 46%; box-shadow: 0 10px 40px #000a; }
+    #opImg { width: 175%; left: -37.5%; }
+    #opCap { bottom: 15%; }
+    #opVs { top: 44%; }
+  }
+  /* 標題畫面的聯名字樣 */
+  .collab { display: inline-flex; align-items: center; gap: 6px; margin: 2px 0 4px; font-size: 12px; font-weight: 800; color: #2c3e57; background: #fff; border-radius: 99px; padding: 4px 12px 4px 4px; box-shadow: 0 2px 0 #0001; }
+  .collab i { font-style: normal; background: #1d1d1f; color: #fff; border-radius: 99px; padding: 2px 8px; font-family: "Arial Black", sans-serif; }
+  .collab em { font-style: normal; color: #e86aa6; }
+  .opAgain { display: block; margin: 8px auto 0; border: 0; background: none; color: #ff7a45; font-weight: 800; font-size: 14px; text-decoration: underline; }
   @media (orientation: landscape) and (max-height: 560px) {
     #board { left: calc(8px + env(safe-area-inset-left)); transform: none; top: calc(4px + env(safe-area-inset-top)); gap: 4px; }
     .tm { padding: 2px 6px 2px 3px; gap: 4px; } .tm.b { padding: 2px 3px 2px 6px; }
@@ -302,6 +361,7 @@
 
 <div class="screen" id="sTitle"><div class="card">
   <h1><small>上班啟示錄</small>午休鬥牛</h1>
+  <div class="collab"><i>a4</i>不想上班 × <em>香香籃球隊</em> 聯名製作</div>
   <div class="row7" id="titleFaces"></div>
   <p>午休 2 分鐘，頂樓球場半場鬥牛！<br>上班族＋香香籃球隊 8 個人任你挑，2v2 或 3v3，<br>先到 21 分或時間到分數高的贏。每個人都有自己的大招！</p>
   <div class="howto">
@@ -312,8 +372,29 @@
   </div>
   <button class="big" id="bStart">選角色</button>
   <button class="qbtn" id="qBtn">🎨 畫質：自動</button>
+  <button class="opAgain" id="bOP">▶ 再看一次開場</button>
   <p class="iosTip" id="iosTip">📱 iPhone：Safari 按「分享 → 加入主畫面」，從主畫面打開就能全螢幕玩</p>
 </div></div>
+
+<div id="op" aria-label="開場">
+  <img id="opBg" alt="">
+  <div id="opFrame"><img id="opImg" alt=""></div>
+  <div id="opFlash"></div>
+  <div id="opCap"><b id="opCapB"></b><span id="opCapS"></span></div>
+  <div id="opVs">VS</div>
+  <div id="opBrand">
+    <div class="opLogos">
+      <div id="opA4"><b>a4</b><span>不想上班</span></div>
+      <div id="opX">×</div>
+      <div id="opXX"><span>香香籃球隊<small>XIANGXIANG</small></span></div>
+    </div>
+    <div id="opMade">聯名製作</div>
+  </div>
+  <div id="opTitle"><small>上班啟示錄 番外</small><div id="opTitleMain">午休鬥牛</div><div id="opTitleSub">a4 不想上班 × 香香籃球隊　聯名製作</div></div>
+  <div id="opBarWrap"><div id="opBar"></div></div>
+  <button id="opSkip">跳過 ›</button>
+  <div id="opGate"><button id="opPlay">▶ 播放開場</button><button id="opNo">直接開始</button></div>
+</div>
 
 <div class="screen" id="sSelect"><div class="selWrap">
   <h2 id="selTitle">挑兩個同事組隊</h2>
