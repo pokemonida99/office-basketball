@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="午休鬥牛">
 <meta name="theme-color" content="#ff7a45">
-<title>上班啟示錄：午休鬥牛 2v2</title>
+<title>上班啟示錄：午休鬥牛</title>
 <link rel="apple-touch-icon" href="icons/kui-180.png">
 <link rel="icon" type="image/png" href="icons/kui-192.png">
 <script>
@@ -99,6 +99,16 @@
   #banner .b-stars { color: #ffd34d; font-size: 28px; letter-spacing: 4px; text-shadow: 0 3px 0 #b8860b, 0 0 18px #ffd34d; }
   #banner .b-title { font-size: 32px; font-weight: 900; color: #fff; background: var(--bc); padding: 8px 24px; border-radius: 20px; box-shadow: 0 6px 0 #0003, 0 0 40px var(--bc); white-space: nowrap; }
   #banner .b-sub { margin-top: 10px; font-size: 15px; font-weight: 900; color: var(--bc); background: #fff; display: inline-block; padding: 5px 16px; border-radius: 14px; box-shadow: 0 3px 0 #0002; white-space: nowrap; }
+  /* 投籃時機條：按住投籃鍵出現，綠色區放開最準 */
+  #meter { position: absolute; width: 16px; height: 86px; margin: -43px 0 0 0; border-radius: 9px; background: #2c3e57d0; border: 3px solid #fff; box-shadow: 0 3px 8px #0004; overflow: hidden; display: none; }
+  #meter.on { display: block; }
+  #meter .g { position: absolute; left: 0; right: 0; background: #4cd964; box-shadow: 0 0 8px #4cd964; }
+  #meter .f { position: absolute; left: 2px; right: 2px; bottom: 0; height: 0; border-radius: 6px; background: #ffd34d; }
+  #meter.perfect { border-color: #4cd964; animation: mpop .4s; } #meter.perfect .f { background: #4cd964; }
+  #meter.good .f { background: #3fa7ff; } #meter.bad .f { background: #e0413b; }
+  @keyframes mpop { 50% { transform: scale(1.3); } }
+  .kb.hot { animation: hot .35s infinite alternate; }
+  @keyframes hot { to { box-shadow: 0 5px 0 #0003, 0 0 22px #fff; transform: scale(1.06); } }
   /* 大招過場 */
   #cutin { position: fixed; inset: 0; pointer-events: none; display: none; z-index: 5; overflow: hidden; }
   #cutin.on { display: block; }
@@ -150,8 +160,8 @@
   .card h1 { margin: 6px 0 2px; font-size: 36px; line-height: 1.1; color: #ff7a45; text-shadow: 0 3px 0 #fff, 0 5px 0 #0001; }
   .card h1 small { display: block; font-size: 17px; color: #2c3e57; margin-bottom: 4px; }
   .card p { margin: 8px 0; font-weight: 700; font-size: 15px; line-height: 1.5; }
-  .row7 { display: flex; justify-content: center; margin: 10px 0 4px; }
-  .row7 img { width: 54px; height: 54px; border-radius: 50%; border: 3px solid #fff; background: #ffcf8a; margin: 0 -5px; box-shadow: 0 3px 8px #c4501f33; }
+  .row7 { display: flex; flex-wrap: wrap; justify-content: center; margin: 10px auto 4px; max-width: 340px; }
+  .row7 img { width: 50px; height: 50px; border-radius: 50%; border: 3px solid #fff; background: #ffcf8a; margin: 0 -3px -6px; box-shadow: 0 3px 8px #c4501f33; }
   .big { display: block; width: 100%; margin: 12px 0 0; padding: 15px; font-size: 22px; font-weight: 900; color: #fff; background: #ff7a45; border: 0; border-radius: 20px; box-shadow: 0 6px 0 #c4501f; }
   .big:active { transform: translateY(3px); box-shadow: 0 3px 0 #c4501f; }
   .big:disabled { background: #c9b8a6; box-shadow: 0 6px 0 #9c8a78; }
@@ -165,6 +175,12 @@
   .selWrap { width: min(860px, 100%); margin: 0 auto; color: #2c3e57; text-align: center; }
   .selWrap h2 { margin: 4px 0 2px; font-size: 24px; color: #ff7a45; }
   .selWrap .hint { font-weight: 800; font-size: 14px; margin-bottom: 10px; }
+  .segs { display: flex; justify-content: center; gap: 8px; margin: 2px 0 8px; flex-wrap: wrap; }
+  .seg { display: flex; background: #fff; border-radius: 14px; padding: 3px; box-shadow: 0 2px 6px #c4501f22; }
+  .seg button { border: 0; background: none; font: inherit; font-weight: 900; font-size: 14px; color: #8a7a66; padding: 6px 14px; border-radius: 11px; }
+  .seg button.on { background: #ff7a45; color: #fff; }
+  #board.three .pf { width: 27px; height: 33px; } #board.three .pf .f { width: 27px; height: 27px; }
+  #board.three .faces { gap: 2px; }
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
   .ch { position: relative; background: #fff; border-radius: 18px; padding: 10px; display: flex; gap: 10px; align-items: center; text-align: left; box-shadow: 0 3px 10px #c4501f22; border: 3px solid transparent; cursor: pointer; transition: transform .1s; }
   .ch:active { transform: scale(.97); }
@@ -190,7 +206,7 @@
   .mvp .t { font-size: 12px; font-weight: 900; color: #b8860b; }
   .mvp .n { font-size: 20px; font-weight: 900; }
   .mvp .q { font-size: 13px; font-weight: 700; opacity: .75; }
-  .statRow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .statRow { display: grid; grid-template-columns: repeat(var(--n, 4), 1fr); gap: 6px; }
   .statRow div { background: #fff; border-radius: 12px; padding: 6px 2px; font-size: 12px; font-weight: 800; }
   .statRow img { width: 36px; height: 36px; border-radius: 50%; background: #ffcf8a; display: block; margin: 0 auto 2px; }
   .statRow .b img { background: #bfe0ff; }
@@ -231,6 +247,7 @@
   <div id="poss"></div>
   <div id="btnsTop"><button id="bPause" aria-label="暫停">⏸</button><button id="bSound" aria-label="聲音">🔊</button></div>
   <div id="ver"></div>
+  <div id="meter"><i class="g"></i><i class="f"></i></div>
   <div id="toast"></div>
   <div id="banner"></div>
   <div id="stickZone"><div id="stick"><div id="knob"></div></div></div>
@@ -240,26 +257,27 @@
     <div class="kb" id="kSteal"><b>✋</b><span>抄截</span></div>
     <div class="kb" id="kSp"><div class="ring"></div><div class="in"><span>大招</span></div></div>
   </div>
-  <div id="kbHint"><b>WASD</b>移動　<b>J</b>投籃／蓋帽　<b>K</b>傳球／換人　<b>L</b>抄截　<b>I</b>大招　<b>P</b>暫停</div>
+  <div id="kbHint"><b>WASD</b>移動　<b>J</b>按住投籃（綠區放開）／蓋帽　<b>K</b>傳球／換人　<b>L</b>抄截　<b>I</b>大招　<b>P</b>暫停</div>
 </div>
 <div id="cutin"><div class="dim"></div><div class="band"><div class="face"></div><div class="txt"><div class="who"></div><div class="sp"></div><div class="q"></div></div></div></div>
 
 <div class="screen" id="sTitle"><div class="card">
-  <h1><small>上班啟示錄</small>午休鬥牛 2v2</h1>
+  <h1><small>上班啟示錄</small>午休鬥牛</h1>
   <div class="row7" id="titleFaces"></div>
-  <p>午休 2 分鐘，頂樓球場半場鬥牛！<br>挑兩個同事組隊，先到 21 分或時間到分數高的贏。<br>每個人都有自己的大招！</p>
+  <p>午休 2 分鐘，頂樓球場半場鬥牛！<br>11 個同事任你挑，2v2 或 3v3，<br>先到 21 分或時間到分數高的贏。每個人都有自己的大招！</p>
   <div class="howto">
     <div><b>🕹️</b>左邊搖桿移動<br>電腦用 WASD／方向鍵</div>
-    <div><b>🏀</b>三分線外 3 分<br>線內 2 分、籃下灌籃</div>
-    <div><b>🔄</b>搶到籃板、抄截<br>要先把球帶出三分線</div>
-    <div><b>⚡</b>傳球、得分、抄截<br>都會集大招</div>
+    <div><b>🏀</b>按住投籃、跳到最高<br>綠色區放開最準</div>
+    <div><b>🔄</b>搶到籃板、抄截<br>要先把球帶出三分線</div><div><b>⚡</b>傳球、得分、抄截<br>都會集大招</div><div><b>🎯</b>三分線外 3 分<br>線內 2 分、籃下灌籃</div>
+    <div><b>✋</b>貼近、球彈到地上<br>抄截鍵發亮時最好抄</div>
   </div>
   <button class="big" id="bStart">選角色</button>
   <button class="qbtn" id="qBtn">🎨 畫質：自動</button>
 </div></div>
 
 <div class="screen" id="sSelect"><div class="selWrap">
-  <h2>挑兩個同事組隊</h2>
+  <h2 id="selTitle">挑兩個同事組隊</h2>
+  <div class="segs"><div class="seg" id="modeSeg"><button data-v="2">2v2</button><button data-v="3">3v3</button></div><div class="seg" id="diffSeg"><button data-v="0">簡單</button><button data-v="1">普通</button><button data-v="2">困難</button></div></div>
   <div class="hint" id="selHint">先點的是你一開始操作的人，對手由電腦隨機挑</div>
   <div class="grid" id="grid"></div>
   <div class="selBar"><div class="in"><button class="big sec" id="bRand">🎲 隨機</button><button class="big" id="bGo" disabled>開打！</button></div></div>
@@ -284,6 +302,6 @@
 <script type="importmap">
 {"imports":{"three":"./vendor/three/build/three.module.min.js","three/addons/":"./vendor/three/examples/jsm/"}}
 </script>
-<script type="module" src="js/main.js?v=0.1.0"></script>
+<script type="module" src="js/main.js?v=0.2.0"></script>
 </body>
 </html>

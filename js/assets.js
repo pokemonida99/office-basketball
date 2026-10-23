@@ -84,6 +84,8 @@ function fixLean(base, clip, amount) {
   a.stop(); mixer.uncacheRoot(base);
   fixed.forEach((q, k) => q.toArray(v, k * 4));
 }
+// 只載動畫（tools/strip_anim.cjs 做出來的檔），套到同一套骨架的角色上
+export async function loadClip(url) { const g = await loader.loadAsync(url); return g.animations[0] || null; }
 // 掛上第二段動作（小跑步），之後依速度跟走路混合（小跑步要用 loadKind(url, 7) 載入，前傾已扶正）
 export function addJog(a, jogKind) {
   a.jog = a.mixer.clipAction(jogKind.clip).play(); a.jog.setEffectiveWeight(0);
@@ -134,6 +136,13 @@ export function updateActor(a, dt, t) {
     a.jk = (a.jk ?? 0) + (k - (a.jk ?? 0)) * Math.min(1, dt * 8);
     a.action.setEffectiveWeight(a.w * (1 - a.jk)); a.jog.setEffectiveWeight(a.w * a.jk);
     if (moving) a.jog.timeScale = a.speed / (a.jogNatural * a.root.scale.x) * (a.animMul ?? 1);
+  }
+  if (a.sig) {   // 招牌動作（大招時播一次）：權重 sigW 蓋過走路和小跑步
+    a.sigW = (a.sigW ?? 0) + ((a.sigOn ? 1 : 0) - (a.sigW ?? 0)) * Math.min(1, dt * 12);
+    a.sig.setEffectiveWeight(a.sigW);
+    if (a.action) a.action.setEffectiveWeight(a.action.getEffectiveWeight() * (1 - a.sigW));
+    if (a.jog) a.jog.setEffectiveWeight(a.jog.getEffectiveWeight() * (1 - a.sigW));
+    if (!a.sigOn && a.sigW < 0.01) { a.sig.stop(); a.sig = null; a.sigW = 0; }
   }
   a.mixer.update(dt);
   a.model.scale.y = 1 + (1 - a.w) * 0.015 * Math.sin(t * 3 + a.phase);

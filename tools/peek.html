@@ -1,0 +1,37 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>peek</title>
+<style>body{margin:0;background:#ccd}canvas{display:block}</style>
+<script type="importmap">{"imports":{"three":"../vendor/three/build/three.module.min.js","three/addons/":"../vendor/three/examples/jsm/"}}</script>
+</head><body>
+<script type="module">
+// 模型檢查：一排模型從 +z 方向拍（臉應該朝鏡頭）。?f=a.glb,b.glb  &anim=1 播動畫  &t=秒 停在某一格
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+const q = new URLSearchParams(location.search), files = (q.get('f') || '').split(',').filter(Boolean);
+const r = new THREE.WebGLRenderer({ antialias: true }); r.setSize(innerWidth, innerHeight); r.outputColorSpace = THREE.SRGBColorSpace; document.body.appendChild(r.domElement);
+const sc = new THREE.Scene(); sc.background = new THREE.Color(0xccccdd);
+sc.add(new THREE.HemisphereLight(0xffffff, 0x888888, 2.5)); const d = new THREE.DirectionalLight(0xffffff, 2); d.position.set(2, 3, 4); sc.add(d);
+const cam = new THREE.PerspectiveCamera(30, innerWidth / innerHeight, 0.01, 100);
+const side = q.get('side');
+const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
+const mixers = []; window.info = [];
+const gs = await Promise.all(files.map(f => loader.loadAsync(f)));
+// &clips=a.glb,b.glb：用另外的動畫檔（只有動畫）套到對應的模型上
+const clipFiles = (q.get('clips') || '').split(',').filter(Boolean);
+if (clipFiles.length) { const cs = await Promise.all(clipFiles.map(f => loader.loadAsync(f))); cs.forEach((c, i) => { if (gs[i]) gs[i].animations = c.animations; }); }
+gs.forEach((g, i) => {
+  g.scene.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(g.scene), s = 1 / (box.max.y - box.min.y);
+  const grp = new THREE.Group(); grp.add(g.scene); g.scene.scale.multiplyScalar(s); g.scene.position.y = -box.min.y * s;
+  grp.position.x = (i - (gs.length - 1) / 2) * 0.9; sc.add(grp);
+  if (g.animations[0] && q.get('anim')) { const m = new THREE.AnimationMixer(g.scene); const a = m.clipAction(g.animations[0]).play(); if (q.get('t')) { a.time = +q.get('t'); m.update(0); a.paused = true; } mixers.push(m); }
+  window.info.push({ f: files[i], anims: g.animations.map(a => a.name + ' ' + a.duration.toFixed(2) + 's ' + a.tracks.length), box: [box.min.toArray(), box.max.toArray()] });
+});
+const n = Math.max(1, gs.length);
+cam.position.set(side ? n * 1.4 : 0, 0.55, side ? 0 : n * 1.0 + 1); cam.lookAt(0, 0.5, 0);
+let last = performance.now();
+(function loop(now) { requestAnimationFrame(loop); const dt = (now - last) / 1000; last = now; mixers.forEach(m => m.update(q.get('t') ? 0 : dt)); r.render(sc, cam); })(last);
+window.ready = true;
+</script>
+</body></html>

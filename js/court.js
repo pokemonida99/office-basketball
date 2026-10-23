@@ -1,6 +1,6 @@
 // 球場：辦公室頂樓的半場籃球場（木地板＋白線＋白板籃板），後面是落地窗和城市
 import * as THREE from 'three';
-import { scene, rbox, box, cyl, sphere, mat, canvasTex, roundRect, FONT, labelSprite } from './world.js?v=0.1.0';
+import { scene, rbox, box, cyl, sphere, mat, canvasTex, roundRect, FONT, labelSprite } from './world.js?v=0.2.0';
 
 // 尺寸（1 單位 ≈ 角色身高的 0.8）
 export const COURT = { x: 6, z0: 0, z1: 10.5 };            // x 從 -6 到 6，底線 z=0，半場線 z=10.5
@@ -129,7 +129,7 @@ export function buildCourt() {
   for (const s of [-1, 1]) {
     const x = s * 7.4;
     for (let z = 0.5; z < 11; z += 2.6) rbox(0.2, 1.0, 2.4, 0xbfd7ea, x, 0.5, z);
-    rbox(0.9, 0.42, 4.6, 0xffcf8a, s * 6.75, 0.21, 6.2);   // 長椅（觀眾站在這）
+    rbox(0.9, 0.42, 5.8, 0xffcf8a, s * 6.75, 0.21, 6.0);   // 長椅（觀眾站在這）
     const plant = (px, pz) => { cyl(0.28, 0.22, 0.45, 0xff8a5c, px, 0.22, pz); for (let i = 0; i < 5; i++) { const l = sphere(0.28, 0x47b35a, px + Math.cos(i * 1.3) * 0.16, 0.62 + (i % 2) * 0.22, pz + Math.sin(i * 1.3) * 0.16, scene, { roughness: 0.9 }); l.scale.y = 1.25; } };
     plant(s * 7.0, -0.9); plant(s * 7.2, 11.3);
   }
