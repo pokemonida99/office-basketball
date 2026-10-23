@@ -1,6 +1,6 @@
 // 開場 OP：真人風劇照（tools/gen_op.sh 用 GPT 畫，op/*.webp）＋程式運鏡、字幕、聯名卡、片名
 // 每一格自己算畫面（不用 CSS 動畫），跳過、重看、測試跳到某一秒都一樣
-import { playTrack } from './music.js?v=0.4.2';
+import { playTrack } from './music.js?v=0.4.3';
 
 // d 秒數；oy 畫面太寬被裁上下時，往上／往下保留哪裡（%，臉通常在上面）；z 起訖縮放；x 起訖橫移（圖寬 %，直式手機會放大三倍來回掃）；cap 字幕 [大字, 小字]
 // flash 開頭白閃；shake 抖動；brand 聯名卡；vs 對決字；title 片名
@@ -28,7 +28,7 @@ let root, imgs = {}, raf = 0, t0 = 0, playing = false, onEnd = null, lastShot = 
 function build() {
   if (root) return;
   root = $('op');
-  for (const s of SHOTS) if (s.img) { const im = new Image(); im.decoding = 'async'; im.src = `op/${s.img}.webp?v=0.4.2`; imgs[s.img] = im; }
+  for (const s of SHOTS) if (s.img) { const im = new Image(); im.decoding = 'async'; im.src = `op/${s.img}.webp?v=0.4.3`; imgs[s.img] = im; }
   $('opSkip').onclick = () => finish();
   $('opPlay').onclick = () => start();
   $('opNo').onclick = () => { playTrack('theme'); finish(); };

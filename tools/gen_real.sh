@@ -29,6 +29,15 @@ ACT[phone]="standing firmly with feet apart, left hand pressing her headset micr
 ACT[boss]="boss power pose: left hand on her hip, right index finger pointing up to the sky giving an order, chin up, proud bright smile."
 ACT[ai]="smug pose: giving a big thumbs-up toward the camera with his right hand while spinning the basketball on the index finger of his raised left hand, a tiny white quadcopter drone with a glowing blue light hovering beside his head, confident smirk."
 ACT[block]="powerful vertical jump to block a shot: both arms stretched high above her head with open palms swatting the basketball away, knees bent in the air, hair flying up, fierce confident face."
+# 選角卡：每個人一個帥氣站姿（各不相同，不要整批同一句），全身入鏡
+ACT[card_vivi]="boss runway pose showing off her shoes: one leg stepped forward with the champagne-gold high heel pointed toward the camera, hip popped, spinning the basketball on the tip of her raised right index finger, left hand on her hip, chin up with a glamorous confident smile."
+ACT[card_kui]="cheerful mid-stride walk toward the camera: holding a takeaway coffee cup raised high in her right hand like a trophy, the basketball tucked under her left arm, big bright grin, one boot lifted mid-step."
+ACT[card_jie]="cool center pose: standing tall and relaxed, the basketball held against his hip with his left hand, right index finger pushing up his round glasses, slight smirk, chest out."
+ACT[card_mi]="three-point shooter follow-through: just released a jump shot, right arm extended high with the wrist flicked down (goose-neck follow-through), landing on her toes, eyes following the ball out of frame above, headset on, focused confident smile; the basketball high above near the top edge."
+ACT[card_kevin]="product-demo pose: left hand in his pocket, right hand presenting the basketball on his open palm toward the camera like unveiling a new gadget, tapping nothing, smug half-smile, slight lean."
+ACT[card_lin]="low aggressive crossover: crouched very low in a wide stance, dribbling the basketball between her legs, one hand down near the floor, intense sharp eyes on the camera, hair flicking."
+ACT[card_yuan]="dominant center pose: standing tall and powerful, palming the basketball high above her head with her right hand (arm straight up), left fist clenched by her side, the mandala tattoo on her arm clearly visible, fierce calm stare."
+ACT[card_hu]="playful trick pose: arms stretched out to both sides at shoulder height, the basketball rolling across her shoulders behind her neck, winking at the camera with a playful open-mouth smile, ponytail swinging."
 gen() {
   local n=${1%%:*} a=${1##*:}
   $CODEX exec --skip-git-repo-check "Generate one image with your image generation tool, portrait 2:3: $STYLE${ACT[$a]} ${EXTRA[$n]} Do not run any shell commands." -i ${PHOTO[$n]} < /dev/null > work/art/real-$n-$a.log 2>&1

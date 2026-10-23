@@ -1,13 +1,13 @@
 // 上班啟示錄：午休鬥牛 2v2 —— 頂樓半場籃球。玩家挑兩個同事，電腦控制隊友和對手；每個人都有自己的大招
 import * as THREE from 'three';
-import { scene, render, updateCamera, cam, camera, CAMS, camMode, labelSprite, V, quality, setQuality, setQualityPref, canvasTex, FONT, sphere, mat } from './world.js?v=0.4.2';
-import { loadKind, loadClip, makeActor, addJog, updateActor, turnTo } from './assets.js?v=0.4.2';
-import * as fx from './fx.js?v=0.4.2';
-import { buildCourt, animateCourt, swishNet, C, COURT, HOOP, ARC_R, CORNER_X, TOP, WALL, isThree, hoopDist } from './court.js?v=0.4.2';
-import { music, musicStart, musicStop, musicTick, musicTheme, musicPause } from './music.js?v=0.4.2';
-import { openOP, replayOP, seekOP } from './op.js?v=0.4.2';
+import { scene, render, updateCamera, cam, camera, CAMS, camMode, labelSprite, V, quality, setQuality, setQualityPref, canvasTex, FONT, sphere, mat } from './world.js?v=0.4.3';
+import { loadKind, loadClip, makeActor, addJog, updateActor, turnTo } from './assets.js?v=0.4.3';
+import * as fx from './fx.js?v=0.4.3';
+import { buildCourt, setCourt, animateCourt, swishNet, C, COURT, HOOP, ARC_R, CORNER_X, TOP, WALL, isThree, hoopDist } from './court.js?v=0.4.3';
+import { music, musicStart, musicStop, musicTick, musicTheme, musicPause } from './music.js?v=0.4.3';
+import { openOP, replayOP, seekOP } from './op.js?v=0.4.3';
 
-const VERSION = '0.4.2';
+const VERSION = '0.4.3';
 document.getElementById('ver').textContent = 'v' + VERSION;
 
 // ---------- 數值（調手感只改這裡） ----------
@@ -124,7 +124,7 @@ const st = (p, k, d = 1) => p.def[k] ?? d;   // 角色數值（沒寫就用預�
 const ART_ACTS = ['dunk', 'three', 'fade', 'steal'];
 const SP_ART = { kui: 'coffee', jie: 'dunk', mi: 'phone', vivi: 'boss', kevin: 'ai', lin: 'cross', yuan: 'block', hu: 'fade' };
 const hasArt = (k) => k in SP_ART;
-const artUrl = (k, a) => `art/${k}_${a}.webp?v=0.4.2`;
+const artUrl = (k, a) => `art/${k}_${a}.webp?v=0.4.3`;
 function preloadArt(keys) { for (const k of keys) if (hasArt(k)) for (const a of [...ART_ACTS, SP_ART[k]]) { const im = new Image(); im.src = artUrl(k, a); } }
 let flashUntil = 0, flashTimer = 0;
 // 動作立繪從旁邊滑進來一下（我方在左、對手在右），2 秒內只跳一次
@@ -1966,7 +1966,8 @@ function soundIcon() { $('bSound').textContent = music.on ? '🔊' : '🔇'; con
 soundIcon();
 
 function buildSelect() {
-  $('grid').innerHTML = ROSTER.map(k => { const c = CHARS[k]; return `<div class="ch" data-k="${k}" style="--cc:${c.color}"><span class="badge"></span><img src="${FACE[k]}" alt=""><div><div class="nm">${c.name}<small>${c.role}</small></div><span class="spn">⚡ ${c.sp.name}</span><span class="skn">🏀 ${c.skill.name}</span><div class="d">${c.sp.desc}</div><div class="st">${c.stat}</div></div></div>`; }).join('');
+  // 選角卡：真人風全身照（art/<人>_card.webp，tools/gen_real.sh 的 card_* 姿勢，每個人不一樣）＋位置標籤
+  $('grid').innerHTML = ROSTER.map(k => { const c = CHARS[k], [job, pos] = c.role.split('・'); return `<div class="ch" data-k="${k}" style="--cc:${c.color}"><span class="badge"></span><div class="pic"><span class="pos">${pos || job}</span><img src="art/${k}_card.webp?v=0.4.3" alt="${c.name}" onerror="this.src='${FACE[k]}'"></div><div class="info"><div class="nm">${c.name}<small>${pos ? job : ''}</small></div><span class="spn">⚡ ${c.sp.name}</span><span class="skn">🏀 ${c.skill.name}</span><div class="d">${c.sp.desc}</div><div class="st">${c.stat}</div></div></div>`; }).join('');
   for (const el of $('grid').children) el.onclick = () => {
     fx.audioInit(); fx.sfx.click();
     const k = el.dataset.k, i = S.sel.indexOf(k);
@@ -1988,13 +1989,17 @@ function refreshSelect() {
   for (const b of $('modeSeg').children) b.classList.toggle('on', b.dataset.v === (pr ? 'p' : String(n)));
   $('diffSeg').style.visibility = pr ? 'hidden' : '';
   for (const b of $('diffSeg').children) b.classList.toggle('on', +b.dataset.v === S.diff);
+  for (const b of $('courtSeg').children) b.classList.toggle('on', b.dataset.v === S.court);
 }
-const MODE_KEY = 'office-basketball-mode', DIFF_KEY = 'office-basketball-diff';
+const MODE_KEY = 'office-basketball-mode', DIFF_KEY = 'office-basketball-diff', COURT_KEY = 'office-basketball-court';
 S.sel = []; { const m = store.get(MODE_KEY); S.practice = m === 'p'; S.size = m === '3' ? 3 : m === '2' || !m ? 2 : 1; } S.diff = ['0', '1', '2'].includes(store.get(DIFF_KEY)) ? +store.get(DIFF_KEY) : 1;
 $('bRand').onclick = () => { fx.audioInit(); fx.sfx.click(); S.sel = shuffle(ROSTER.slice()).slice(0, S.size); refreshSelect(); };
 $('bGo').onclick = () => { if (S.sel.length < S.size) return; if (fsOK && matchMedia('(pointer: coarse)').matches) goFull(true); S.pick = S.sel.slice(); startMatch(); };   // 手機按開打順便全螢幕
 for (const b of $('modeSeg').children) b.onclick = () => { fx.sfx.click(); const v = b.dataset.v; S.practice = v === 'p'; S.size = S.practice ? 1 : +v; store.set(MODE_KEY, v); S.sel = S.sel.slice(0, S.size); refreshSelect(); };
 for (const b of $('diffSeg').children) b.onclick = () => { fx.sfx.click(); S.diff = +b.dataset.v; store.set(DIFF_KEY, S.diff); refreshSelect(); };
+// 球場：辦公室頂樓／大橋尾球場（廟口），選了背景馬上換，會記住
+S.court = store.get(COURT_KEY) === 'temple' ? 'temple' : 'roof';
+for (const b of $('courtSeg').children) b.onclick = () => { fx.sfx.click(); S.court = b.dataset.v; store.set(COURT_KEY, S.court); setCourt(S.court); refreshSelect(); };
 function toSelect() { S.prac = null; document.body.classList.remove('prac'); musicTheme(); S.mode = 'select'; document.body.classList.remove('playing'); show('select'); refreshSelect(); clearCourt(); }
 // 比賽中途回選角：球員、防守扇形、Kevin 的無人機、大招過場、特寫鏡頭都收掉，不要定格留在選角背景的球場上
 function clearCourt() {
@@ -2113,7 +2118,7 @@ const G = window.G = {
   try { await loadAll(k => { $('loadBar').style.width = Math.round(k * 100) + '%'; }); }
   catch (e) { $('loading').textContent = '載入失敗，請重新整理'; console.error(e); window.bootFail?.('角色模型下載失敗', '網路可能不穩，重新整理再試一次。（' + (e.message || e) + '）'); return; }
   window.bootOk?.(); updateQBtn();
-  buildCourt(); buildArc(); buildCaishen();
+  buildCourt(); setCourt(S.court); buildArc(); buildCaishen();
   makePortraits(); buildSelect(); buildCrowd();
   $('loading').remove();
   if (!matchMedia('(pointer: coarse)').matches) document.body.classList.add('kbd');
