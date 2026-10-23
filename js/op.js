@@ -1,18 +1,12 @@
-// 開場 OP：真人風劇照（tools/gen_op.sh 用 GPT 畫，op/*.webp）＋程式運鏡、字幕、聯名卡、片名
+// 開場 OP：三女對三女大合照（tools/gen_op.sh 用 GPT 畫，op/op9.webp）＋程式運鏡、片名砸下來。一打開就直接播，不用先點
+// （v0.5.5 使用者嫌太長，拿掉聯名卡和前面 6 顆鏡頭，只留最後這顆）
 // 每一格自己算畫面（不用 CSS 動畫），跳過、重看、測試跳到某一秒都一樣
-import { playTrack } from './music.js?v=0.5.4';
+import { playTrack } from './music.js?v=0.5.5';
 
 // d 秒數；oy 畫面太寬被裁上下時，往上／往下保留哪裡（%，臉通常在上面）；z 起訖縮放；x 起訖橫移（圖寬 %，直式手機會放大三倍來回掃）；cap 字幕 [大字, 小字]
-// flash 開頭白閃；shake 抖動；brand 聯名卡；vs 對決字；title 片名
+// flash 開頭白閃；shake 抖動；vs 對決字；title 片名
 const SHOTS = [
-  { brand: true, d: 2.8 },
-  { img: 'op3', oy: 12, d: 1.9, z: [1.12, 1.03], x: [3, -3], cap: ['頂樓集合', '老闆說：輸的請珍奶'], flash: true },
-  { img: 'op4', oy: 12, d: 2.5, z: [1.0, 1.1], x: [0, 0], cap: ['上班族隊', '阿傑・小米・Vivi・小葵・Kevin'], flash: true },
-  { img: 'op5', oy: 8, d: 2.5, z: [1.1, 1.0], x: [-3, 3], cap: ['香香籃球隊', '元小雨・林語彤・胡姬'] },
-  { img: 'op6', oy: 30, d: 1.9, z: [1.06, 1.22], x: [0, 0], vs: true, flash: true },
-  { img: 'op7', oy: 10, d: 1.4, z: [1.14, 1.03], x: [5, -5], shake: true, flash: true },
-  { img: 'op8', oy: 10, d: 1.4, z: [1.03, 1.14], x: [-5, 5], shake: true, flash: true },
-  { img: 'op9', oy: 14, d: 3.8, z: [1.14, 1.0], x: [0, 0], title: true, flash: true },
+  { img: 'op9', oy: 14, d: 3.6, z: [1.14, 1.0], x: [0, 0], title: true, flash: true },
 ];
 const START = []; let TOTAL = 0;
 for (const s of SHOTS) { START.push(TOTAL); TOTAL += s.d; }
@@ -26,10 +20,9 @@ let root, imgs = {}, raf = 0, t0 = 0, playing = false, onEnd = null, lastShot = 
 function build() {
   if (root) return;
   root = $('op');
-  for (const s of SHOTS) if (s.img) { const im = new Image(); im.decoding = 'async'; im.src = `op/${s.img}.webp?v=0.5.4`; imgs[s.img] = im; }
+  for (const s of SHOTS) if (s.img) { const im = new Image(); im.decoding = 'async'; im.src = `op/${s.img}.webp?v=0.5.5`; imgs[s.img] = im; }
   $('opSkip').onclick = () => finish();
-  $('opPlay').onclick = () => start();
-  $('opNo').onclick = () => { playTrack('theme'); finish(); };
+  root.onclick = (e) => { if (e.target === root || e.target.closest('#opFrame, #opTitle')) finish(); };   // 點畫面也能跳過
 }
 
 // 畫第 t 秒那一格
@@ -41,14 +34,13 @@ function frame(t) {
   if (i !== lastShot) {
     lastShot = i;
     root.dataset.shot = i;
-    root.classList.toggle('brand', !!s.brand);
     root.classList.toggle('vs', !!s.vs);
     root.classList.toggle('ttl', !!s.title);
     if (s.img) { $('opImg').src = imgs[s.img].src; $('opBg').src = imgs[s.img].src; $('opImg').style.objectPosition = `50% ${s.oy}%`; $('opImg').style.transformOrigin = `50% ${s.oy}%`; }
     $('opCapB').textContent = s.cap ? s.cap[0] : '';
     $('opCapS').textContent = s.cap ? s.cap[1] : '';
     root.classList.toggle('cap', !!s.cap);
-    if (playing && sfx && i > 0) (s.title ? sfx.boss : s.flash ? sfx.whoosh : null)?.();
+    if (playing && sfx) (s.title ? sfx.boss : s.flash ? sfx.whoosh : null)?.();
   }
   // 運鏡
   if (s.img) {
@@ -65,16 +57,6 @@ function frame(t) {
   const ci = clamp01(lt / 0.28), co = clamp01((s.d - lt) / 0.2);
   $('opCap').style.transform = `translateX(${(1 - ease(ci)) * -110}%) skewX(-8deg)`;
   $('opCap').style.opacity = Math.min(ci * 2, co);
-  // 聯名卡：a4 從左、香香從右，× 彈出來，「聯名製作」最後淡入
-  if (s.brand) {
-    const a = ease(clamp01(lt / 0.45)), b = ease(clamp01((lt - 0.2) / 0.45)), c = clamp01((lt - 0.6) / 0.25), d = clamp01((lt - 0.9) / 0.4);
-    const out = clamp01((s.d - lt) / 0.3);
-    $('opA4').style.transform = `translateX(${(1 - a) * -60}vw) rotate(${-8 + (1 - a) * -40}deg)`;
-    $('opXX').style.transform = `translateX(${(1 - b) * 60}vw) rotate(${(1 - b) * 360}deg)`;
-    $('opX').style.transform = `scale(${c < 1 ? c * 1.4 : 1})`;
-    $('opMade').style.opacity = d;
-    $('opBrand').style.opacity = out;
-  }
   // 對決字
   if (s.vs) { const v = clamp01(lt / 0.2); $('opVs').style.transform = `translate(-50%, -50%) scale(${3 - 2 * ease(v)}) rotate(-8deg)`; $('opVs').style.opacity = v; }
   // 片名：0.5 秒後砸下來，畫面抖一下
@@ -97,32 +79,26 @@ function loop() {
   raf = requestAnimationFrame(loop);
 }
 
-// 開場：先停在聯名卡，等玩家點「播放開場」（瀏覽器要點過才能出聲）
+// 開場：一打開就直接播（還沒點過畫面的話瀏覽器不給出聲，就安靜播）
 export function openOP(done, { sounds } = {}) {
   build(); onEnd = done; sfx = sounds || null;
-  playing = false; lastShot = -1; cancelAnimationFrame(raf);
-  root.classList.add('on', 'gate'); root.style.opacity = 1;
-  frame(1.5);
-}
-function start() {
-  root.classList.remove('gate'); playing = true; lastShot = -1;
+  root.classList.add('on'); root.style.opacity = 1; playing = true; lastShot = -1;
   sfx?.init?.();
   playTrack('theme', true);
   t0 = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(loop);
 }
 function finish() {
   cancelAnimationFrame(raf); playing = false;
-  root.classList.remove('on', 'gate');
+  root.classList.remove('on');
   const f = onEnd; onEnd = null; f?.();
 }
-// 重看開場：直接播（按鈕已經是點擊了）
-export function replayOP(done, opts) { openOP(done, opts); start(); }
+// 重看開場
+export const replayOP = openOP;
 // 測試用：停在第 t 秒
-export function seekOP(t) { build(); root.classList.add('on'); root.classList.remove('gate'); playing = false; cancelAnimationFrame(raf); lastShot = -1; frame(t); }
+export function seekOP(t) { build(); root.classList.add('on'); playing = false; cancelAnimationFrame(raf); lastShot = -1; frame(t); }
 export const opPlaying = () => !!root && root.classList.contains('on');
-// 電腦：Esc 跳過；還在等點擊時 Enter／空白鍵＝播放
+// 電腦：Esc、Enter、空白鍵跳過
 addEventListener('keydown', (e) => {
   if (!opPlaying()) return;
-  if (e.key === 'Escape') { e.preventDefault(); root.classList.contains('gate') ? $('opNo').click() : finish(); }
-  else if ((e.key === 'Enter' || e.key === ' ') && root.classList.contains('gate')) { e.preventDefault(); start(); }
+  if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') { e.preventDefault(); finish(); }
 });
