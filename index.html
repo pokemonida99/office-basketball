@@ -91,14 +91,17 @@
     #clockBox { min-width: 54px; padding: 3px 6px; } #clock { font-size: 19px; }
   }
   #ver { position: absolute; left: 10px; top: calc(8px + env(safe-area-inset-top)); font-size: 10px; color: #2c3e57; opacity: .4; font-weight: 700; }
-  #toast { position: absolute; left: 50%; top: 70%; transform: translate(-50%, -50%) scale(.8); background: #2c3e57; color: #fff; font-weight: 900; font-size: 17px; padding: 8px 18px; border-radius: 16px; opacity: 0; transition: all .25s; white-space: nowrap; box-shadow: 0 4px 0 #0003; }
-  #toast.on { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-  #banner { --bc: #ff7a45; position: absolute; left: 50%; top: 56%; transform: translate(-50%, -50%) scale(.3); opacity: 0; text-align: center; pointer-events: none; }
-  #banner.on { animation: bannerIn 2.6s cubic-bezier(.2,1.4,.4,1) forwards; }
-  @keyframes bannerIn { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.3) rotate(-6deg); } 12% { opacity: 1; transform: translate(-50%, -50%) scale(1.12) rotate(2deg); } 20% { transform: translate(-50%, -50%) scale(1) rotate(0); } 85% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -60%) scale(.95); } }
-  #banner .b-stars { color: #ffd34d; font-size: 28px; letter-spacing: 4px; text-shadow: 0 3px 0 #b8860b, 0 0 18px #ffd34d; }
-  #banner .b-title { font-size: 32px; font-weight: 900; color: #fff; background: var(--bc); padding: 8px 24px; border-radius: 20px; box-shadow: 0 6px 0 #0003, 0 0 40px var(--bc); white-space: nowrap; }
-  #banner .b-sub { margin-top: 10px; font-size: 15px; font-weight: 900; color: var(--bc); background: #fff; display: inline-block; padding: 5px 16px; border-radius: 14px; box-shadow: 0 3px 0 #0002; white-space: nowrap; }
+  /* 提示和橫幅都不要放畫面中間（會擋到球場）：提示在左上角記分板下面，橫幅在下方 */
+  #toast { position: absolute; left: calc(10px + env(safe-area-inset-left)); top: calc(56px + env(safe-area-inset-top)); max-width: min(46vw, 300px); transform: translateX(-12px); background: #2c3e57e6; color: #fff; font-weight: 900; font-size: 13px; line-height: 1.35; padding: 5px 12px; border-radius: 12px; opacity: 0; transition: all .2s; box-shadow: 0 3px 0 #0003; }
+  #toast.on { opacity: 1; transform: translateX(0); }
+  #banner { --bc: #ff7a45; position: absolute; left: 50%; bottom: calc(54px + env(safe-area-inset-bottom)); transform: translateX(-50%) scale(.3); opacity: 0; text-align: center; pointer-events: none; }
+  #banner.on { animation: bannerIn 2.2s cubic-bezier(.2,1.4,.4,1) forwards; }
+  @keyframes bannerIn { 0% { opacity: 0; transform: translateX(-50%) scale(.3); } 12% { opacity: 1; transform: translateX(-50%) scale(1.08); } 20% { transform: translateX(-50%) scale(1); } 85% { opacity: 1; transform: translateX(-50%) scale(1); } 100% { opacity: 0; transform: translateX(-50%) translateY(10px) scale(.95); } }
+  #banner .b-stars { color: #ffd34d; font-size: 16px; letter-spacing: 3px; text-shadow: 0 2px 0 #b8860b; }
+  #banner .b-title { font-size: 20px; font-weight: 900; color: #fff; background: var(--bc); padding: 5px 16px; border-radius: 14px; box-shadow: 0 4px 0 #0003; white-space: nowrap; display: inline-block; }
+  #banner .b-sub { margin-left: 6px; font-size: 13px; font-weight: 900; color: var(--bc); background: #fff; display: inline-block; padding: 4px 10px; border-radius: 10px; box-shadow: 0 3px 0 #0002; white-space: nowrap; vertical-align: middle; }
+  body:not(.kbd) #banner { bottom: calc(236px + env(safe-area-inset-bottom)); }   /* 手機：在按鈕上面 */
+  @media (max-width: 560px) { #toast { top: calc(56px + env(safe-area-inset-top)); max-width: 40vw; } #banner .b-sub { display: block; margin: 6px auto 0; width: fit-content; } }
   /* 投籃時機條：按住投籃鍵出現，綠色區放開最準 */
   #meter { position: absolute; width: 16px; height: 86px; margin: -43px 0 0 0; border-radius: 9px; background: #2c3e57d0; border: 3px solid #fff; box-shadow: 0 3px 8px #0004; overflow: hidden; display: none; }
   #meter.on { display: block; }
@@ -276,7 +279,7 @@
     <div class="kb" id="kSteal"><b>✋</b><span>抄截</span></div>
     <div class="kb" id="kSp"><div class="ring"></div><div class="in"><span>大招</span></div></div>
   </div>
-  <div id="kbHint"><b>WASD</b>移動　<b>J</b>按住投籃（綠區放開）／蓋帽　<b>K</b>傳球／換人　<b>U</b>技能・按住防守／卡位　<b>L</b>抄截／假動作　<b>I</b>大招　<b>P</b>暫停</div>
+  <div id="kbHint"><b>WASD</b>移動　<b>J</b>按住投籃（綠區放開）／蓋帽　<b>K</b>傳球／要球／包夾　<b>U</b>技能・按住防守／卡位　<b>L</b>抄截／假動作　<b>I</b>大招　<b>P</b>暫停</div>
 </div>
 <div id="flash"><img alt=""><div class="ft"></div></div>
 <div id="cutin"><div class="dim"></div><div class="band"><div class="face"></div><img class="art" alt=""><div class="txt"><div class="who"></div><div class="sp"></div><div class="q"></div></div></div></div>
@@ -298,7 +301,7 @@
 <div class="screen" id="sSelect"><div class="selWrap">
   <h2 id="selTitle">挑兩個同事組隊</h2>
   <div class="segs"><div class="seg" id="modeSeg"><button data-v="2">2v2</button><button data-v="3">3v3</button></div><div class="seg" id="diffSeg"><button data-v="0">簡單</button><button data-v="1">普通</button><button data-v="2">困難</button></div></div>
-  <div class="hint" id="selHint">先點的是你一開始操作的人，對手由電腦隨機挑</div>
+  <div class="hint" id="selHint">先點的就是你整場操作的人（頭上有「▼ 你」），對手由電腦隨機挑</div>
   <div class="grid" id="grid"></div>
   <div class="selBar"><div class="in"><button class="big sec" id="bRand">🎲 隨機</button><button class="big" id="bGo" disabled>開打！</button></div></div>
 </div></div>
@@ -322,6 +325,6 @@
 <script type="importmap">
 {"imports":{"three":"./vendor/three/build/three.module.min.js","three/addons/":"./vendor/three/examples/jsm/"}}
 </script>
-<script type="module" src="js/main.js?v=0.3.0"></script>
+<script type="module" src="js/main.js?v=0.3.1"></script>
 </body>
 </html>
