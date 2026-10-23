@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="午休鬥牛">
+<meta name="apple-mobile-web-app-title" content="下班先鬥牛">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#ff7a45">
-<title>上班啟示錄：午休鬥牛</title>
+<title>上班啟示錄：下班先鬥牛</title>
 <link rel="apple-touch-icon" id="lnkTouch" href="icons/kui-180.png">
 <link rel="icon" type="image/png" id="lnkIcon" href="icons/kui-192.png">
 <script>
@@ -277,6 +277,10 @@
   #op.gate #opSkip, #op.gate #opBarWrap { display: none; }
   #opPlay { border: 0; border-radius: 99px; padding: 14px 34px; font-size: 20px; font-weight: 900; color: #2c3e57; background: #ffd34d; box-shadow: 0 5px 0 #c99a1c, 0 10px 24px #0008; animation: glow .8s infinite alternate; }
   #opNo { border: 0; background: none; color: #fffb; font-size: 14px; text-decoration: underline; padding: 6px; }
+  /* 畫面比劇照（3:2）寬很多時（橫式手機、寬螢幕）：整張劇照放中間不裁上下（不然頭會被切掉），兩邊用模糊的同一張墊底 */
+  @media (min-aspect-ratio: 5/3) {
+    #opFrame { left: 50%; right: auto; width: min(100vw, calc(100vh * 1.5)); transform: translateX(-50%); box-shadow: 0 0 40px #000a; }
+  }
   /* 橫式手機太矮：聯名卡往上，播放鍵縮小，不要蓋到「聯名製作」 */
   @media (max-height: 500px) {
     #op.gate #opBrand { justify-content: flex-start; padding-top: 9vh; gap: 3vh; }
@@ -362,7 +366,10 @@
 
   /* ===== 選角卡：上面是真人風上半身特寫（角色色底＋集中線、位置標籤），下面是名字、大招、技能 ===== */
   #grid { grid-template-columns: repeat(4, 1fr); gap: 10px; }
-  #grid .ch { display: flex; flex-direction: column; align-items: stretch; gap: 0; padding: 0; overflow: hidden; border-radius: 18px; }
+  #grid .ch { display: flex; flex-direction: column; align-items: stretch; gap: 0; padding: 0; overflow: hidden; border-radius: 18px; isolation: isolate; }
+  /* 卡片的圖不要疊到下面的「隨機／開打」：按鈕列放最上層，清單底下留空間可以捲上來 */
+  .selBar { z-index: 20; }
+  #sSelect { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
   #grid .ch .pic { position: relative; aspect-ratio: 4 / 5; overflow: hidden; background: radial-gradient(circle at 50% 38%, color-mix(in srgb, var(--cc) 45%, #fff), var(--cc) 75%); }
   #grid .ch .pic::before { content: ''; position: absolute; inset: 0; background: repeating-conic-gradient(from 0deg at 50% 38%, #ffffff26 0 3deg, transparent 3deg 11deg); }
   #grid .ch .pic::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 30%; background: linear-gradient(transparent, #0000002e); }
@@ -381,6 +388,7 @@
   }
   /* 橫式手機：8 張瘦長卡排一排，資訊疊在照片下緣 */
   @media (orientation: landscape) and (max-height: 560px) {
+    #sSelect { padding-bottom: calc(60px + env(safe-area-inset-bottom)); }
     #grid { grid-template-columns: repeat(8, 1fr); gap: 5px; }
     #grid .ch { display: block; height: calc(100vh - 128px - env(safe-area-inset-bottom)); min-height: 180px; border-radius: 12px; }
     #grid .ch .pic { position: absolute; inset: 0; height: auto; aspect-ratio: auto; }
@@ -632,7 +640,7 @@
   <div class="wait">還在載入的話，好了這張卡會自己消失</div>
 </div></div>
 
-<div id="loading"><div>🏀 午休鬥牛準備中…</div><div class="bar"><i id="loadBar"></i></div></div>
+<div id="loading"><div>🏀 下班先鬥牛準備中…</div><div class="bar"><i id="loadBar"></i></div></div>
 
 <div id="hud">
   <div id="board">
@@ -667,10 +675,10 @@
 </div>
 
 <div class="screen" id="sTitle"><div class="card">
-  <h1><small>上班啟示錄</small>午休鬥牛</h1>
+  <h1><small>上班啟示錄</small>下班先鬥牛</h1>
   <div class="collab"><i>a4</i>不想上班 × <em>香香籃球隊</em> 聯名製作</div>
   <div class="row7" id="titleFaces"></div>
-  <p>午休 2 分鐘，頂樓球場半場鬥牛！<br>上班族＋香香籃球隊 8 個人任你挑，2v2 或 3v3，<br>先到 21 分或時間到分數高的贏。每個人都有自己的大招！</p>
+  <p>頂樓、廟口球場半場鬥牛！<br>上班族＋香香籃球隊 8 個人任你挑，1v1 到 3v3，<br>先到 21 分或時間到分數高的贏。每個人都有自己的大招！</p>
   <div class="howto">
     <div><b>🕹️</b>左邊搖桿移動<br>電腦用 WASD／方向鍵</div>
     <div><b>🏀</b>按住投籃、跳到最高<br>綠色區放開最準</div>
@@ -698,7 +706,7 @@
     </div>
     <div id="opMade">聯名製作</div>
   </div>
-  <div id="opTitle"><small>上班啟示錄 番外</small><div id="opTitleMain">午休鬥牛</div><div id="opTitleSub">a4 不想上班 × 香香籃球隊　聯名製作</div></div>
+  <div id="opTitle"><small>上班啟示錄 番外</small><div id="opTitleMain">下班先鬥牛</div><div id="opTitleSub">a4 不想上班 × 香香籃球隊　聯名製作</div></div>
   <div id="opBarWrap"><div id="opBar"></div></div>
   <button id="opSkip">跳過 ›</button>
   <div id="opGate"><button id="opPlay">▶ 播放開場</button><button id="opNo">直接開始</button></div>
@@ -738,6 +746,6 @@
 <script type="importmap">
 {"imports":{"three":"./vendor/three/build/three.module.min.js","three/addons/":"./vendor/three/examples/jsm/"}}
 </script>
-<script type="module" src="js/main.js?v=0.4.4"></script>
+<script type="module" src="js/main.js?v=0.4.5"></script>
 </body>
 </html>

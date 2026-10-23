@@ -1,19 +1,17 @@
 // 開場 OP：真人風劇照（tools/gen_op.sh 用 GPT 畫，op/*.webp）＋程式運鏡、字幕、聯名卡、片名
 // 每一格自己算畫面（不用 CSS 動畫），跳過、重看、測試跳到某一秒都一樣
-import { playTrack } from './music.js?v=0.4.4';
+import { playTrack } from './music.js?v=0.4.5';
 
 // d 秒數；oy 畫面太寬被裁上下時，往上／往下保留哪裡（%，臉通常在上面）；z 起訖縮放；x 起訖橫移（圖寬 %，直式手機會放大三倍來回掃）；cap 字幕 [大字, 小字]
 // flash 開頭白閃；shake 抖動；brand 聯名卡；vs 對決字；title 片名
 const SHOTS = [
   { brand: true, d: 2.8 },
-  { img: 'op1', oy: 55, d: 2.3, z: [1.2, 1.06], x: [0, 0], cap: ['11:59', '距離午休，還有 1 分鐘'] },
-  { img: 'op2', oy: 28, d: 2.1, z: [1.04, 1.14], x: [-2, 2], cap: ['12:00', '午休開始！衝了！'], flash: true },
-  { img: 'op3', oy: 22, d: 1.9, z: [1.14, 1.04], x: [3, -3], cap: ['頂樓集合', '老闆說：輸的請珍奶'] },
-  { img: 'op4', oy: 30, d: 2.5, z: [1.0, 1.12], x: [0, 0], cap: ['上班族隊', '阿傑・小米・Vivi・小葵・Kevin'], flash: true },
-  { img: 'op5', oy: 38, d: 2.5, z: [1.15, 1.03], x: [-3, 3], cap: ['香香籃球隊', '元小雨・林語彤・胡姬'] },
+  { img: 'op3', oy: 12, d: 1.9, z: [1.12, 1.03], x: [3, -3], cap: ['頂樓集合', '老闆說：輸的請珍奶'], flash: true },
+  { img: 'op4', oy: 12, d: 2.5, z: [1.0, 1.1], x: [0, 0], cap: ['上班族隊', '阿傑・小米・Vivi・小葵・Kevin'], flash: true },
+  { img: 'op5', oy: 8, d: 2.5, z: [1.1, 1.0], x: [-3, 3], cap: ['香香籃球隊', '元小雨・林語彤・胡姬'] },
   { img: 'op6', oy: 30, d: 1.9, z: [1.06, 1.22], x: [0, 0], vs: true, flash: true },
-  { img: 'op7', oy: 30, d: 1.4, z: [1.22, 1.08], x: [5, -5], shake: true, flash: true },
-  { img: 'op8', oy: 22, d: 1.4, z: [1.08, 1.22], x: [-5, 5], shake: true, flash: true },
+  { img: 'op7', oy: 10, d: 1.4, z: [1.14, 1.03], x: [5, -5], shake: true, flash: true },
+  { img: 'op8', oy: 10, d: 1.4, z: [1.03, 1.14], x: [-5, 5], shake: true, flash: true },
   { img: 'op9', oy: 14, d: 3.8, z: [1.14, 1.0], x: [0, 0], title: true, flash: true },
 ];
 const START = []; let TOTAL = 0;
@@ -28,7 +26,7 @@ let root, imgs = {}, raf = 0, t0 = 0, playing = false, onEnd = null, lastShot = 
 function build() {
   if (root) return;
   root = $('op');
-  for (const s of SHOTS) if (s.img) { const im = new Image(); im.decoding = 'async'; im.src = `op/${s.img}.webp?v=0.4.4`; imgs[s.img] = im; }
+  for (const s of SHOTS) if (s.img) { const im = new Image(); im.decoding = 'async'; im.src = `op/${s.img}.webp?v=0.4.5`; imgs[s.img] = im; }
   $('opSkip').onclick = () => finish();
   $('opPlay').onclick = () => start();
   $('opNo').onclick = () => { playTrack('theme'); finish(); };

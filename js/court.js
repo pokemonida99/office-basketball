@@ -1,7 +1,7 @@
 // 球場：可以選「辦公室頂樓」（木地板＋白板籃板＋落地窗城市）或「大橋尾球場」（廟口球場：綠色水泥地、後面是廟）
 // 籃框、籃網兩邊共用；地板、籃板圖案、周圍場景各一組，setCourt() 切換
 import * as THREE from 'three';
-import { scene, rbox, box, cyl, sphere, mat, canvasTex, roundRect, FONT, labelSprite } from './world.js?v=0.4.4';
+import { scene, rbox, box, cyl, sphere, mat, canvasTex, roundRect, FONT, labelSprite } from './world.js?v=0.4.5';
 
 // 尺寸（1 單位 ≈ 角色身高的 0.8）
 export const COURT = { x: 6, z0: 0, z1: 10.5 };            // x 從 -6 到 6，底線 z=0，半場線 z=10.5
@@ -108,7 +108,7 @@ export function buildCourt() {
   for (let x = -14; x <= 14; x += 3.5) rbox(0.22, 6.8, 0.3, 0xfff3e0, x, 3.4, 0.05, wall);
   box(28, 0.4, 0.4, 0xfff3e0, 0, 6.9, 0, wall);
   // 牆上的時鐘與標語
-  const sign = labelSprite('🏀 午休時間 2v2 鬥牛賽', { bg: '#ff7a45', size: 0.55 }); sign.position.set(-6.2, 5.6, 0.3); wall.add(sign);
+  const sign = labelSprite('🏀 頂樓鬥牛賽', { bg: '#ff7a45', size: 0.55 }); sign.position.set(-6.2, 5.6, 0.3); wall.add(sign);
   const clock = cyl(0.55, 0.55, 0.1, 0xffffff, 6.4, 5.4, 0.25, wall); clock.rotation.x = Math.PI / 2;
   const hand = box(0.05, 0.38, 0.03, 0x2c3e57, 6.4, 5.4, 0.32, wall); hand.geometry = hand.geometry.clone(); hand.geometry.translate(0, 0.17, 0);
   C.clockHand = hand;
