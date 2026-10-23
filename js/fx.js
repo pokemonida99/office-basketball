@@ -144,7 +144,7 @@ export function camKick(k = 1) { cam.kick = Math.max(cam.kick, k); }
 
 // ---------- DOM：橫幅與提示 ----------
 const toastEl = document.getElementById('toast'); let toastTimer = 0;
-export function toast(t) { toastEl.textContent = t; toastEl.classList.add('on'); clearTimeout(toastTimer); toastTimer = setTimeout(() => toastEl.classList.remove('on'), 2200); }
+export function toast(t, color = '#ffd34d') { toastEl.textContent = t; toastEl.style.setProperty('--tc', color); toastEl.classList.add('on'); clearTimeout(toastTimer); toastTimer = setTimeout(() => toastEl.classList.remove('on'), 2200); }
 const bannerEl = document.getElementById('banner'); let bannerTimer = 0;
 // 大橫幅：升級、升職時用（標題＋副標＋星星）
 export function banner(title, sub = '', stars = 0, color = '#ff7a45') {

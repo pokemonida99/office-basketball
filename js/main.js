@@ -128,14 +128,19 @@ let flashUntil = 0, flashTimer = 0;
 // 動作立繪從旁邊滑進來一下（我方在左、對手在右），2 秒內只跳一次
 function actionArt(p, act) {
   if (!hasArt(p.key) || S.cut || performance.now() < flashUntil) return;
-  const el = $('flash'), NAME = { dunk: '灌籃！', three: '三分！', fade: '後仰跳投', steal: '抄截！' };
+  const el = $('flash'), NAME = { dunk: ['灌籃！', 'SLAM DUNK'], three: ['三分！', '3 POINTER'], fade: ['後仰！', 'FADEAWAY'], steal: ['抄截！', 'STEAL'] };
   flashUntil = performance.now() + 2000;
   el.querySelector('img').src = artUrl(p.key, act);
-  el.querySelector('.ft').textContent = `${p.def.name} ${NAME[act]}`;
+  el.style.setProperty('--art', `url(${artUrl(p.key, act)})`);
+  el.querySelector('.ft b').textContent = NAME[act][0];
+  el.querySelector('.ft i').textContent = `${p.def.name}・${NAME[act][1]}`;
   el.style.setProperty('--fc', p.def.color);
+  if (act === 'dunk' || act === 'steal') hitStop(0.07);
   el.className = ''; void el.offsetWidth; el.className = 'on ' + (p.team === 0 ? 'l' : 'r');
   clearTimeout(flashTimer); flashTimer = setTimeout(() => { el.className = ''; }, 1150);
 }
+// 打擊定格：遊戲時間幾乎停住一下（不是 0，走路動畫會除以 dt）
+function hitStop(d) { S.hitT = Math.max(S.hitT || 0, d); }
 // 播一段共用動作（閃身、轉身、後撤步、卡位推人、踉蹌、搶板、火鍋…），用同一個「招牌動作」通道蓋過走路
 function playMove(p, name, { speed = 1, dur } = {}) {
   const clip = MOVES[name]; if (!clip) return;
@@ -714,8 +719,9 @@ function scored(p, pts, kind) {
 }
 function bumpScore(t, txt) {
   const el = $(t ? 'scB' : 'scA'); el.textContent = S.score[t]; el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump');
+  const tm = el.parentNode; tm.classList.remove('hit'); void tm.offsetWidth; if (txt[0] !== '-') tm.classList.add('hit');
   const r = el.getBoundingClientRect(), s = document.createElement('div');
-  s.className = 'pts'; s.textContent = txt; s.style.color = txt[0] === '-' ? '#e0413b' : TEAM_COLOR[t];
+  s.className = 'pts' + (+txt.slice(1) >= 3 ? ' big' : ''); s.textContent = txt; s.style.setProperty('--pc', txt[0] === '-' ? '#e0413b' : TEAM_COLOR[t]);
   s.style.left = (r.left + r.width / 2 - 14) + 'px'; s.style.top = (r.bottom + 2) + 'px'; $('hud').appendChild(s); setTimeout(() => s.remove(), 1500);
 }
 // 換球權：進攻方在三分線外弧頂發球，其他人站好位置
@@ -739,7 +745,7 @@ function checkBall() {
   gainBall(h, 'check'); S.onBall = [null, null];
   S.phase = 'check'; S.phaseT = 0.9;
   fx.sfx.whistle();
-  fx.toast(h.team === 0 ? '🏀 我方球權' : '🛡️ 對手球權，回防！');
+  fx.toast(h.team === 0 ? '🏀 我方球權' : '🛡️ 對手球權，回防！', TEAM_COLOR[h.team]);
 }
 
 // ---------- 大招 ----------
@@ -764,15 +770,18 @@ function alleyMate(p) {
 function startSpecial(p) {
   if (specialBlock(p) !== null) return false;
   p.gauge = 0; S.cut = { p, t: 0 }; S.ts = 0.06; S.spPoss = S.possN; log(`special ${p.key}`);
-  const el = $('cutin'), band = el.querySelector('.band');
-  band.style.setProperty('--cc', p.def.color);
+  hitStop(0.08);
+  const el = $('cutin');
+  el.style.setProperty('--cc', p.def.color); el.style.setProperty('--tc', TEAM_COLOR[p.team]);
   el.querySelector('.face').style.backgroundImage = `url(${FACE[p.key]})`;
-  el.classList.toggle('hasArt', hasArt(p.key)); if (hasArt(p.key)) el.querySelector('.art').src = artUrl(p.key, SP_ART[p.key]);
+  el.classList.toggle('hasArt', hasArt(p.key));
+  if (hasArt(p.key)) { const u = artUrl(p.key, SP_ART[p.key]); el.querySelector('.art').src = u; el.style.setProperty('--art', `url(${u})`); }
   $('flash').className = '';
-  el.querySelector('.who').textContent = `${p.team === 0 ? '我方' : '對手'}　${p.def.role} ${p.def.name}`;
+  el.querySelector('.who').innerHTML = `<b>${p.team === 0 ? '我方' : '對手'}</b>${p.def.role}　${p.def.name}`;
   el.querySelector('.sp').textContent = p.def.sp.name;
+  el.querySelector('.bgw').textContent = Array(3).fill(p.def.sp.name).join('　');
   el.querySelector('.q').textContent = '「' + p.def.quote.replace(/\p{Extended_Pictographic}|\uFE0F/gu, '').trim() + '」';
-  el.classList.remove('on'); void el.offsetWidth; el.classList.add('on');
+  el.className = ''; void el.offsetWidth; el.className = 'on' + (hasArt(p.key) ? ' hasArt' : '') + (p.team ? ' opp' : '');
   fx.sfx.cutin();
   return true;
 }
@@ -1578,13 +1587,25 @@ function showOver() {
   S.mode = 'over'; document.body.classList.remove('playing'); musicTheme();
   const win = S.score[0] > S.score[1];
   $('oTitle').textContent = win ? '🏆 我們贏了！' : '😵 輸了…午休結束';
-  $('oA').textContent = S.score[0]; $('oB').textContent = S.score[1];
   const mvp = players.filter(p => p.team === (win ? 0 : 1)).sort((a, b) => b.pts - a.pts)[0];
   $('oMvpF').src = FACE[mvp.key]; $('oMvpN').textContent = `${mvp.def.role} ${mvp.def.name}　${mvp.pts} 分`; $('oMvpQ').textContent = '「' + mvp.def.quote + '」';
   $('oStats').style.setProperty('--n', players.length > 4 ? 3 : 4);
-  $('oStats').innerHTML = players.map(p => `<div class="${p.team ? 'b' : ''}"><img src="${FACE[p.key]}" alt=""><b>${p.pts}</b>${p.def.name}</div>`).join('');
+  $('oStats').innerHTML = players.map((p, i) => `<div class="${p.team ? 'b' : ''}${p === mvp ? ' star' : ''}" style="--i:${i}"><img src="${FACE[p.key]}" alt=""><b>${p.pts}</b>${p.def.name}</div>`).join('');
+  // 結算畫面：贏的隊伍色當底、MVP 的大招立繪當主視覺（沒立繪的人只留卡片）
+  const ov = $('sOver'), art = hasArt(mvp.key) ? artUrl(mvp.key, SP_ART[mvp.key]) : '';
+  ov.className = 'screen' + (win ? '' : ' lose') + (art ? '' : ' noart');
+  ov.style.setProperty('--mc', mvp.def.color);
+  if (art) { $('oArt').src = art; ov.querySelector('.ov-art').style.setProperty('--art', `url(${art})`); }
   show('over');
+  countUp($('oA'), S.score[0]); countUp($('oB'), S.score[1]);
 }
+// 比分從 0 跑上去
+function countUp(el, to, dur = 700, delay = 350) {
+  const t0 = performance.now() + delay; el.textContent = '0';
+  const tick = (now) => { const k = Math.min(1, Math.max(0, (now - t0) / dur)); el.textContent = Math.round(to * (1 - (1 - k) ** 3)); if (k < 1) requestAnimationFrame(tick); };
+  requestAnimationFrame(tick);
+}
+function clockBuzz() { const el = $('clockBox'); el.classList.remove('buzz'); void el.offsetWidth; el.classList.add('buzz'); }
 function updateFlow(dt) {
   if (S.phase === 'check') {
     S.phaseT -= dt;
@@ -1604,9 +1625,9 @@ function updateFlow(dt) {
       if (sec <= 10 && sec !== S.lastTick && sec > 0) { S.lastTick = sec; fx.sfx.tick(); }
       if (!S.caiDone && S.clock <= CFG.len / 2) { S.caiDone = true; startCaishen(); }
       if (S.clock <= 0 && !S.buzzer) {
-        S.buzzer = true; fx.sfx.buzzer();
+        S.buzzer = true; fx.sfx.buzzer(); clockBuzz();
         const shooting = B.mode === 'shot' || B.mode === 'net' || players.some(p => p.act && (p.act.type === 'jdunk' || (p.act.type === 'ai' && p.act.rel)));
-        if (!shooting) finish(); else fx.toast('⏰ 壓哨球！');
+        if (!shooting) finish(); else fx.banner('⏰ 壓哨球！', '進了就算', 0, '#e0413b');
       }
     }
     if (S.trapT > 0) S.trapT -= dt;
@@ -1706,6 +1727,8 @@ function hud() {
   $('kShoot').classList.toggle('dim', hold && S.mustClear);
   const sp = $('kSp'), pct = Math.floor(p.gauge);
   sp.style.setProperty('--p', pct + '%');
+  if (pct >= 100 && !sp.classList.contains('full')) { sp.classList.remove('pop'); void sp.offsetWidth; sp.classList.add('pop'); }
+  else if (pct < 100) sp.classList.remove('pop');
   sp.classList.toggle('full', pct >= 100);
   const why = pct >= 100 ? specialBlock(p) : null;
   sp.classList.toggle('dim', why !== null);
@@ -1788,10 +1811,11 @@ function step(dtReal) {
   // 大招過場：慢動作 1.15 秒後發動
   if (S.cut) {
     S.cut.t += dtReal;
-    if (S.cut.t >= 1.15) { const p = S.cut.p; S.cut = null; $('cutin').classList.remove('on'); S.ts = 1; cam.zoom = 1; doSpecial(p); }
+    if (S.cut.t >= 1.15) { const p = S.cut.p; S.cut = null; $('cutin').className = ''; S.ts = 1; cam.zoom = 1; doSpecial(p); }
   } else if (S.slowT > 0) { S.slowT -= dtReal; if (S.slowT <= 0) S.ts = 1; }
   else S.ts += (1 - S.ts) * Math.min(1, dtReal * 6);
-  const dt = dtReal * S.ts;
+  const dt = dtReal * (S.hitT > 0 ? 0.004 : S.ts);
+  if (S.hitT > 0) S.hitT -= dtReal;
   S.t += dt;
   const t = performance.now() / 1000;
   readKeys();
