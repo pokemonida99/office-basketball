@@ -1,13 +1,13 @@
 // 上班啟示錄：下班先鬥牛 2v2 —— 頂樓半場籃球。玩家挑兩個同事，電腦控制隊友和對手；每個人都有自己的大招
 import * as THREE from 'three';
-import { scene, render, updateCamera, cam, camera, CAMS, camMode, labelSprite, V, quality, setQuality, setQualityPref, canvasTex, FONT, sphere, mat } from './world.js?v=0.5.0';
-import { loadKind, loadClip, makeActor, addJog, updateActor, turnTo } from './assets.js?v=0.5.0';
-import * as fx from './fx.js?v=0.5.0';
-import { buildCourt, setCourt, animateCourt, swishNet, C, COURT, HOOP, ARC_R, CORNER_X, TOP, WALL, isThree, hoopDist } from './court.js?v=0.5.0';
-import { music, musicStart, musicStop, musicTick, musicTheme, musicPause } from './music.js?v=0.5.0';
-import { openOP, replayOP, seekOP } from './op.js?v=0.5.0';
+import { scene, render, updateCamera, cam, camera, CAMS, camMode, labelSprite, V, quality, setQuality, setQualityPref, canvasTex, FONT, sphere, mat } from './world.js?v=0.5.1';
+import { loadKind, loadClip, makeActor, addJog, updateActor, turnTo } from './assets.js?v=0.5.1';
+import * as fx from './fx.js?v=0.5.1';
+import { buildCourt, setCourt, animateCourt, swishNet, C, COURT, HOOP, ARC_R, CORNER_X, TOP, WALL, isThree, hoopDist } from './court.js?v=0.5.1';
+import { music, musicStart, musicStop, musicTick, musicTheme, musicPause } from './music.js?v=0.5.1';
+import { openOP, replayOP, seekOP } from './op.js?v=0.5.1';
 
-const VERSION = '0.5.0';
+const VERSION = '0.5.1';
 document.getElementById('ver').textContent = 'v' + VERSION;
 
 // ---------- 數值（調手感只改這裡） ----------
@@ -30,7 +30,7 @@ const CHARS = {
   kui: { name: '小葵', role: '新人實習生・後衛', skill: { name: '快步切入', kind: 'dash' }, model: 'kui_walk2', jog: 'kui_jog', color: '#ff9f43', spd: 1.16, sht: 0.98, stl: 1.3, blk: 0.85, str: 0.85,
     stat: '速度 ★★★★★　抄截 ★★★★★', quote: '我會努力的！☕',
     sp: { name: '咖啡衝刺', desc: '全隊 6 秒加速，傳球秒到不會被抄、抄截變強', need: false } },
-  jie: { name: '阿傑', role: '資深設計師・中鋒', skill: { name: '背身強打', kind: 'power' }, model: 'jie_walk', jog: 'jie_jog', color: '#8e5cf0', spd: 0.95, sht: 1.0, stl: 0.9, blk: 1.35, str: 1.5, reb: 1.45, reach: 1.3, inside: 1.25, three: 0.6,
+  jie: { name: '阿傑', role: '資深設計師・中鋒', skill: { name: '背身強打', kind: 'power' }, model: 'jie_walk', jog: 'jie_jog', color: '#8e5cf0', spd: 0.95, sht: 1.0, stl: 0.9, blk: 1.35, str: 1.5, reb: 1.45, reach: 1.3, inside: 1.25, three: 0.6, dunk: 0.85,
     stat: '籃下 ★★★★★　籃板 ★★★★★', quote: '這稿我一次就過。',
     sp: { name: '設計稿灌籃', desc: '從哪裡起跳都必進的飛天灌籃，三分線外起跳算 3 分', need: true } },
   mi: { name: '小米', role: '總機客服・射手', skill: { name: '換手運球', kind: 'dodge' }, model: 'mi_walk', color: '#b46bff', spd: 1.02, sht: 1.0, stl: 1.05, blk: 0.85, three: 1.5,
@@ -65,7 +65,7 @@ const CHARS = {
   lin: { name: '林語彤', role: '香香籃球隊・後衛', skill: { name: '閃身步', kind: 'dodge', big: true }, model: 'lin_walk', jog: 'lin_jog', color: '#1f8a5b', spd: 1.2, sht: 0.98, stl: 1.3, blk: 0.8, str: 0.8,
     stat: '速度 ★★★★★　抄截 ★★★★★', quote: '跟得上我再說。',
     sp: { name: '瞬影閃身', desc: '連續閃身過掉每一個防守者（對手全被晃倒），直接上籃得分', need: true } },
-  yuan: { name: '元小雨', role: '香香籃球隊・中鋒', skill: { name: '強力突破', kind: 'power' }, model: 'yuan_walk', jog: 'yuan_jog', color: '#283d8f', spd: 0.95, sht: 0.98, stl: 0.95, blk: 1.45, str: 1.6, reb: 1.6, reach: 1.45, inside: 1.25, three: 0.6,
+  yuan: { name: '元小雨', role: '香香籃球隊・中鋒', skill: { name: '強力突破', kind: 'power' }, model: 'yuan_walk', jog: 'yuan_jog', color: '#283d8f', spd: 0.95, sht: 0.98, stl: 0.95, blk: 1.45, str: 1.6, reb: 1.6, reach: 1.45, inside: 1.25, three: 0.6, dunk: 0.85,
     stat: '籃板 ★★★★★　火鍋 ★★★★★', quote: '籃下是我的。',
     sp: { name: '禁區女王', desc: '8 秒內對手的投籃她都飛過去蓋掉，籃板球自動被她吸走', need: false } },
   hu: { name: '胡姬', role: '香香籃球隊・射手', skill: { name: '多元進攻', kind: 'combo' }, model: 'hu_walk', jog: 'hu_jog', color: '#e86aa6', spd: 1.04, sht: 1.04, stl: 1.0, blk: 0.9, str: 0.95, three: 1.45,
@@ -124,7 +124,7 @@ const st = (p, k, d = 1) => p.def[k] ?? d;   // 角色數值（沒寫就用預�
 const ART_ACTS = ['dunk', 'three', 'fade', 'steal'];
 const SP_ART = { kui: 'coffee', jie: 'dunk', mi: 'phone', vivi: 'boss', kevin: 'ai', lin: 'cross', yuan: 'block', hu: 'fade' };
 const hasArt = (k) => k in SP_ART;
-const artUrl = (k, a) => `art/${k}_${a}.webp?v=0.5.0`;
+const artUrl = (k, a) => `art/${k}_${a}.webp?v=0.5.1`;
 function preloadArt(keys) { for (const k of keys) if (hasArt(k)) for (const a of [...ART_ACTS, SP_ART[k]]) { const im = new Image(); im.src = artUrl(k, a); } }
 let flashUntil = 0, flashTimer = 0;
 // 動作立繪從旁邊滑進來一下（我方在左、對手在右），2 秒內只跳一次
@@ -529,7 +529,7 @@ function startShot(p, user = false) {
   if (!holding(p)) return;
   const d = hoopDist(p.x, p.z);
   if (d < 1.9) {   // 上籃／灌籃
-    const dunk = p.key === 'jie' || Math.random() < 0.45;
+    const dunk = Math.random() < st(p, 'dunk', 0.1);   // 籃下出手：中鋒大多灌籃，後衛、射手大多上籃
     const fx_ = HOOP.x + (p.x - HOOP.x) / (d || 1) * 0.42, fz = Math.max(HOOP.z + 0.25, HOOP.z + (p.z - HOOP.z) / (d || 1) * 0.42);
     p.act = { type: 'lay', t: 0, sx: p.x, sz: p.z, tx: fx_, tz: fz, dunk, rel: false };
   } else {
@@ -1306,7 +1306,7 @@ function updateAct(p, dt) {
         a.rel = true;
         if (a.dunk && holding(p)) {
           const prob = shotProb(p, a.sx, a.sz, true);
-          if (Math.random() < prob + 0.05 || p.key === 'jie' && Math.random() < 0.5) { slam(p, 2, false); break; }
+          if (Math.random() < prob + 0.05 || st(p, 'dunk', 0.1) > 0.5 && Math.random() < 0.5) { slam(p, 2, false); break; }   // 中鋒灌籃比較不會失手
         }
         releaseShot(p, a.sure ? { sure: true } : {});
       }
@@ -1970,7 +1970,7 @@ soundIcon();
 
 function buildSelect() {
   // 選角卡：真人風全身照（art/<人>_card.webp，tools/gen_real.sh 的 card_* 姿勢，每個人不一樣）＋位置標籤
-  $('grid').innerHTML = ROSTER.map(k => { const c = CHARS[k], [job, pos] = c.role.split('・'); return `<div class="ch" data-k="${k}" style="--cc:${c.color}"><span class="badge"></span><div class="pic"><span class="pos">${pos || job}</span><img src="art/${k}_card.webp?v=0.5.0" alt="${c.name}" onerror="this.src='${FACE[k]}'"></div><div class="info"><div class="nm">${c.name}<small>${pos ? job : ''}</small></div><span class="spn">${c.sp.name}</span><span class="skn">${c.skill.name}</span><div class="d">${c.sp.desc}</div><div class="st">${c.stat}</div></div></div>`; }).join('');
+  $('grid').innerHTML = ROSTER.map(k => { const c = CHARS[k], [job, pos] = c.role.split('・'); return `<div class="ch" data-k="${k}" style="--cc:${c.color}"><span class="badge"></span><div class="pic"><span class="pos">${pos || job}</span><img src="art/${k}_card.webp?v=0.5.1" alt="${c.name}" onerror="this.src='${FACE[k]}'"></div><div class="info"><div class="nm">${c.name}<small>${pos ? job : ''}</small></div><span class="spn">${c.sp.name}</span><span class="skn">${c.skill.name}</span><div class="d">${c.sp.desc}</div><div class="st">${c.stat}</div></div></div>`; }).join('');
   for (const el of $('grid').children) el.onclick = () => {
     fx.audioInit(); fx.sfx.click();
     const k = el.dataset.k, i = S.sel.indexOf(k);
