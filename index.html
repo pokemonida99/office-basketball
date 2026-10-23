@@ -10,8 +10,12 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#ff7a45">
 <title>上班啟示錄：午休鬥牛</title>
-<link rel="apple-touch-icon" href="icons/kui-180.png">
-<link rel="icon" type="image/png" href="icons/kui-192.png">
+<link rel="apple-touch-icon" id="lnkTouch" href="icons/kui-180.png">
+<link rel="icon" type="image/png" id="lnkIcon" href="icons/kui-192.png">
+<script>
+  // 主畫面圖示：玩家在封面選的人（小葵／阿傑／林語彤／元小雨），一打開就換掉，這樣「加入主畫面」會用那張
+  try { const k = localStorage.getItem('office-basketball-icon'); if (/^(kui|jie|lin|yuan)$/.test(k)) { document.getElementById('lnkTouch').href = `icons/${k}-180.png`; document.getElementById('lnkIcon').href = `icons/${k}-192.png`; } } catch (e) {}
+</script>
 <script>
   // 開不起來時說清楚原因（不支援 3D、App 內建瀏覽器、檔案下載失敗、載入太久），不要一直停在「載入中…」
   (() => {
@@ -286,6 +290,14 @@
     #opCap { bottom: 15%; }
     #opVs { top: 44%; }
   }
+
+  /* 封面：選主畫面圖示 */
+  .iconPick { position: relative; display: flex; align-items: center; justify-content: center; gap: 8px; margin: 2px 0 0; font-size: 12px; font-weight: 800; color: #8a7a66; }
+  #iconPick { display: flex; gap: 6px; }
+  #iconPick button { width: 40px; height: 40px; padding: 0; border: 3px solid transparent; border-radius: 11px; background: center/cover; box-shadow: 0 2px 0 #0002; }
+  #iconPick button.on { border-color: #ff7a45; transform: scale(1.08); }
+  .iconHint { position: absolute; left: 50%; bottom: calc(100% + 4px); transform: translateX(-50%); width: max-content; max-width: 92vw; margin: 0; font-size: 11px; font-weight: 800; color: #fff; background: #2c3e57; border-radius: 99px; padding: 4px 10px; pointer-events: none; }
+  .iconHint:empty { display: none; }
   /* 標題畫面的聯名字樣 */
   .collab { display: inline-flex; align-items: center; gap: 6px; margin: 2px 0 4px; font-size: 12px; font-weight: 800; color: #2c3e57; background: #fff; border-radius: 99px; padding: 4px 12px 4px 4px; box-shadow: 0 2px 0 #0001; }
   .collab i { font-style: normal; background: #1d1d1f; color: #fff; border-radius: 99px; padding: 2px 8px; font-family: "Arial Black", sans-serif; }
@@ -636,6 +648,7 @@
   <button class="big" id="bStart">選角色</button>
   <button class="qbtn" id="qBtn">🎨 畫質：自動</button>
   <button class="opAgain" id="bOP">▶ 再看一次開場</button>
+  <div class="iconPick"><span>主畫面圖示</span><div id="iconPick"></div><p class="iconHint" id="iconHint"></p></div>
   <p class="iosTip" id="iosTip">📱 iPhone：Safari 按「分享 → 加入主畫面」，從主畫面打開就能全螢幕玩</p>
 </div></div>
 

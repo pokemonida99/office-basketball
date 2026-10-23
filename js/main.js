@@ -1863,6 +1863,21 @@ $('bSound').onclick = () => { music.on = !music.on; store.set(SOUND_KEY, music.o
 const SOUND_KEY = 'office-basketball-sound';
 const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
 music.on = store.get(SOUND_KEY) !== '0';
+// 主畫面圖示：選了就換掉 apple-touch-icon（iPhone）和 manifest（Android），之後「加入主畫面」就是這張
+const ICON_KEY = 'office-basketball-icon', ICONS = ['kui', 'jie', 'lin', 'yuan'];
+function setIcon(k) {
+  $('lnkTouch').href = `icons/${k}-180.png`; $('lnkIcon').href = `icons/${k}-192.png`;
+  const base = new URL('./', location.href).href;
+  const m = { name: '上班啟示錄：午休鬥牛', short_name: '午休鬥牛', start_url: base, scope: base, display: 'fullscreen', orientation: 'any', background_color: '#bfe6ff', theme_color: '#ff7a45',
+    icons: [192, 512].map(n => ({ src: `${base}icons/${k}-${n}.png`, sizes: `${n}x${n}`, type: 'image/png' })) };
+  const ln = document.querySelector('link[rel="manifest"]');
+  if (k === 'kui') ln.href = 'manifest.json';
+  else ln.href = URL.createObjectURL(new Blob([JSON.stringify(m)], { type: 'application/manifest+json' }));
+  for (const b of $('iconPick').children) b.classList.toggle('on', b.dataset.k === k);
+}
+$('iconPick').innerHTML = ICONS.map(k => `<button data-k="${k}" aria-label="${CHARS[k].name}" style="background-image:url(icons/${k}-180.png)"></button>`).join('');
+for (const b of $('iconPick').children) b.onclick = () => { fx.audioInit(); fx.sfx.click(); store.set(ICON_KEY, b.dataset.k); setIcon(b.dataset.k); $('iconHint').textContent = `換成${CHARS[b.dataset.k].name}了，現在「加入主畫面」就用這張`; clearTimeout(setIcon.t); setIcon.t = setTimeout(() => { $('iconHint').textContent = ''; }, 2600); };
+setIcon(ICONS.includes(store.get(ICON_KEY)) ? store.get(ICON_KEY) : 'kui');
 // 全螢幕：Android／電腦可以（藏掉網址列，直的橫的都滿版）；iPhone Safari 不支援，要「加入主畫面」從主畫面開才會全螢幕
 const fsOK = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
 function goFull(on = true) {
