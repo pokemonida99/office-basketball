@@ -1,5 +1,5 @@
 # 主畫面圖示：用遊戲裡的真人風立繪（work/art/real_*.png）合成，外圈金屬框＋右下角籃球徽章
-# 用法：python3 tools/make_icons.py [kui jie lin yuan]　→ icons/<key>-1024/512/192/180.png
+# 用法：python3 tools/make_icons.py [kui jie lin yuan]　→ icons/<key>-512/192/180.png（1024 大圖放 work/icons/）
 # 原則：不另外用 GPT 畫圖示，直接裁專案立繪（臉跟遊戲裡一致）
 import sys, math, subprocess, os
 from PIL import Image, ImageDraw, ImageFilter, ImageChops
@@ -81,7 +81,8 @@ def make(key):
   b = ball(104); img.alpha_composite(b, (S - b.width - 34, S - b.height - 34))
   os.makedirs('icons', exist_ok=True)
   flat = img.convert('RGB')
-  for n in (1024, 512, 192, 180):
+  flat.save(f'{TMP}/{key}-1024.png')   # 大圖留在 work/（宣傳用），網站只放用得到的尺寸
+  for n in (512, 192, 180):
     flat.resize((n, n), Image.LANCZOS).save(f'icons/{key}-{n}.png', optimize=True)
   print(key, 'ok')
 
