@@ -1,5 +1,5 @@
 // 程式配樂：街頭籃球的放克小節拍（WebAudio 合成，音量很小）。每幀呼叫 musicTick() 往前排 0.3 秒的音
-import { getAC, noise } from './fx.js';
+import { getAC, noise } from './fx.js?v=0.1.0';
 
 const BPM = 104, STEP = 60 / BPM / 4;   // 16 分音符
 const N = (n) => 440 * Math.pow(2, (n - 69) / 12);

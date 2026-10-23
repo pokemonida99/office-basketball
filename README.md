@@ -2,6 +2,8 @@
 
 《上班啟示錄》的番外：午休時間，大家跑到頂樓球場打半場 2v2 鬥牛。挑兩個同事組隊，電腦控制你的隊友和對手。每個人都有自己的大招。
 
+**線上玩：** https://pokemonida99.github.io/office-basketball/
+
 免費、不用登入，沒有儲值、等待時間或社群功能。手機直式、電腦都能玩。
 
 ![比賽](design/v0.1_比賽_電腦.jpg)
@@ -61,6 +63,7 @@
 
 ## 開發
 
+- 改了 js 之後，要一起改 `index.html` 和各 js 檔 import 後面的 `?v=` 版本號，不然 GitHub Pages 的快取會讓玩家拿到舊檔。
 - 純 HTML＋Three.js r170（`vendor/`，本機放好，不連 CDN），不用建置。
 - 本機預覽：`python3 tools/serve.py 4460 .`（不快取，改完重新整理就是新版）。也可以在上一層用 launch.json 的 `office-basketball`。
 - `js/main.js` 開頭的 `CFG` 是手感數值（比賽時間、目標分數、跑速、命中、抄截、大招集氣），`CHARS` 是七個角色的能力和大招說明。

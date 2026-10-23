@@ -1,10 +1,10 @@
 // 上班啟示錄：午休鬥牛 2v2 —— 頂樓半場籃球。玩家挑兩個同事，電腦控制隊友和對手；每個人都有自己的大招
 import * as THREE from 'three';
-import { scene, render, updateCamera, cam, camera, labelSprite, V, quality, setQuality, setQualityPref, canvasTex, FONT, sphere, mat } from './world.js';
-import { loadKind, makeActor, addJog, updateActor, turnTo } from './assets.js';
-import * as fx from './fx.js';
-import { buildCourt, animateCourt, swishNet, C, COURT, HOOP, ARC_R, CORNER_X, TOP, WALL, isThree, hoopDist } from './court.js';
-import { music, musicStart, musicStop, musicTick } from './music.js';
+import { scene, render, updateCamera, cam, camera, labelSprite, V, quality, setQuality, setQualityPref, canvasTex, FONT, sphere, mat } from './world.js?v=0.1.0';
+import { loadKind, makeActor, addJog, updateActor, turnTo } from './assets.js?v=0.1.0';
+import * as fx from './fx.js?v=0.1.0';
+import { buildCourt, animateCourt, swishNet, C, COURT, HOOP, ARC_R, CORNER_X, TOP, WALL, isThree, hoopDist } from './court.js?v=0.1.0';
+import { music, musicStart, musicStop, musicTick } from './music.js?v=0.1.0';
 
 const VERSION = '0.1.0';
 document.getElementById('ver').textContent = 'v' + VERSION;
