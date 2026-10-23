@@ -1811,7 +1811,7 @@ function step(dtReal) {
   // 大招過場：慢動作 1.15 秒後發動
   if (S.cut) {
     S.cut.t += dtReal;
-    if (S.cut.t >= 1.15) { const p = S.cut.p; S.cut = null; $('cutin').className = ''; S.ts = 1; cam.zoom = 1; doSpecial(p); }
+    if (S.cut.t >= 1.15) { const p = S.cut.p; S.cut = null; $('cutin').classList.remove('on'); S.ts = 1; cam.zoom = 1; doSpecial(p); }
   } else if (S.slowT > 0) { S.slowT -= dtReal; if (S.slowT <= 0) S.ts = 1; }
   else S.ts += (1 - S.ts) * Math.min(1, dtReal * 6);
   const dt = dtReal * (S.hitT > 0 ? 0.004 : S.ts);
