@@ -459,7 +459,7 @@ function clearPoint(p) {
 // ---------- 拿球、傳球、投籃 ----------
 function gainBall(p, how) {
   const prev = S.poss;
-  B.mode = 'held'; B.owner = p; B.recv = null; p.holdT = 0; p.aiT = 0.25;
+  B.mode = 'held'; B.owner = p; B.recv = null; p.holdT = 0; p.aiT = 0.25; p.callT = 0;   // 上一次拿球時你喊的「給我」不算數
   if (prev !== p.team) {
     S.poss = p.team; S.possN = (S.possN || 0) + 1; S.mustClear = how !== 'check' && !isThree(p.x, p.z); S.onBall = [null, null];
     for (const q of oppsOf(p)) q.stealCd = Math.max(q.stealCd, 1.0);   // 剛換球權，對手先不能馬上抄回去
@@ -841,7 +841,8 @@ function doSpecial(p) {
       for (const q of opp) { q.stun = Math.max(q.stun, 1); q.act = null; }
       addIcon(p, '💰', 2.5, 2.25, 0.55);
       fx.toast(take ? `🤝 業務抽成：對手 -${take}、我方 +${take}` : '🤝 業務抽成：對手看傻了');
-      if (S.score[t] >= CFG.target) { S.endAfter = true; S.phase = 'score'; S.phaseT = 1.6; }
+      // 到 21 分、延長賽、時間到之後抽到分：跟進球一樣結束（不然延長賽被追平會變成平手判輸）
+      if (S.score[t] >= CFG.target || (take && (S.sudden || S.buzzer))) { S.endAfter = true; S.phase = 'score'; S.phaseT = 1.6; }
       break;
     }
     case 'de':   // 預算砍半：對手跑速減半 6 秒，大招集氣砍一半
@@ -1773,7 +1774,13 @@ $('bRand').onclick = () => { fx.audioInit(); fx.sfx.click(); S.sel = shuffle(ROS
 $('bGo').onclick = () => { if (S.sel.length < S.size) return; if (fsOK && matchMedia('(pointer: coarse)').matches) goFull(true); S.pick = S.sel.slice(); startMatch(); };   // 手機按開打順便全螢幕
 for (const b of $('modeSeg').children) b.onclick = () => { fx.sfx.click(); S.size = +b.dataset.v; store.set(MODE_KEY, S.size); S.sel = S.sel.slice(0, S.size); refreshSelect(); };
 for (const b of $('diffSeg').children) b.onclick = () => { fx.sfx.click(); S.diff = +b.dataset.v; store.set(DIFF_KEY, S.diff); refreshSelect(); };
-function toSelect() { musicTheme(); S.mode = 'select'; document.body.classList.remove('playing'); show('select'); refreshSelect(); }
+function toSelect() { musicTheme(); S.mode = 'select'; document.body.classList.remove('playing'); show('select'); refreshSelect(); clearCourt(); }
+// 比賽中途回選角：球員、防守扇形、Kevin 的無人機、大招過場都收掉，不要定格留在選角背景的球場上
+function clearCourt() {
+  clearPlayers(); S.cut = null; S.meter = null; $('cutin').classList.remove('on'); $('flash').className = '';
+  if (guardFan) guardFan.visible = boxRing.visible = false;
+  if (KV.on) { scene.remove(KV.drone, KV.reticle, KV.laser); KV.on = false; } KV.zoom = 0;
+}
 function startMatch() {
   fx.audioInit(); soundIcon();
   newMatch(); S.mode = 'play'; show(null); document.body.classList.add('playing');
