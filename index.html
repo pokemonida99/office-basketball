@@ -313,6 +313,16 @@
   .collab i { font-style: normal; background: #1d1d1f; color: #fff; border-radius: 99px; padding: 2px 8px; font-family: "Arial Black", sans-serif; }
   .collab em { font-style: normal; color: #e86aa6; }
   .opAgain { display: block; margin: 8px auto 0; border: 0; background: none; color: #ff7a45; font-weight: 800; font-size: 14px; text-decoration: underline; }
+
+  /* ===== 練習場面板（右上，按鈕下面，不擋球場中間） ===== */
+  #pracBar { position: absolute; right: calc(8px + env(safe-area-inset-right)); top: calc(56px + env(safe-area-inset-top)); display: none; flex-direction: column; align-items: flex-end; gap: 5px; pointer-events: auto; }
+  body.prac #pracBar { display: flex; }
+  #pracBar button, #pracBar span { border: 0; font: inherit; font-weight: 900; font-size: 12px; border-radius: 99px; padding: 5px 11px; background: #2c3e57e6; color: #fff; box-shadow: 0 3px 0 #0003; white-space: nowrap; }
+  #pracBar #pOpp { background: #36b37e; }
+  #pracBar #pInf.on { background: #ff7a45; }
+  #pracBar span { background: #fffe; color: #2c3e57; font-size: 11px; }
+  #pracBar #pExit { background: #fff; color: #8a7a66; }
+  @media (orientation: portrait) { #pracBar { top: calc(190px + env(safe-area-inset-top)); } }
   @media (orientation: landscape) and (max-height: 560px) {
     #board { left: calc(8px + env(safe-area-inset-left)); transform: none; top: calc(4px + env(safe-area-inset-top)); gap: 4px; }
     .tm { padding: 2px 6px 2px 3px; gap: 4px; } .tm.b { padding: 2px 3px 2px 6px; }
@@ -341,6 +351,7 @@
     <div class="tm b"><div class="faces" id="facesB"></div><div class="sc" id="scB">0</div></div>
   </div>
   <div id="poss"></div>
+  <div id="pracBar"><button id="pOpp">對手：無</button><button id="pInf">大招無限：開</button><span id="pStat"></span><button id="pSwap">換對手</button><button id="pExit">結束練習</button></div>
   <div id="btnsTop"><button id="bPause" aria-label="暫停">⏸</button><button id="bSound" aria-label="聲音">🔊</button><button id="bFull" aria-label="全螢幕">⛶</button></div>
   <div id="ver"></div>
   <div id="meter"><i class="g"></i><i class="f"></i></div>
@@ -398,7 +409,7 @@
 
 <div class="screen" id="sSelect"><div class="selWrap">
   <h2 id="selTitle">挑兩個同事組隊</h2>
-  <div class="segs"><div class="seg" id="modeSeg"><button data-v="2">2v2</button><button data-v="3">3v3</button></div><div class="seg" id="diffSeg"><button data-v="0">簡單</button><button data-v="1">普通</button><button data-v="2">困難</button></div></div>
+  <div class="segs"><div class="seg" id="modeSeg"><button data-v="p">練習</button><button data-v="1">1v1</button><button data-v="2">2v2</button><button data-v="3">3v3</button></div><div class="seg" id="diffSeg"><button data-v="0">簡單</button><button data-v="1">普通</button><button data-v="2">困難</button></div></div>
   <div class="hint" id="selHint">先點的就是你整場操作的人（頭上有「▼ 你」），對手由電腦隨機挑</div>
   <div class="grid" id="grid"></div>
   <div class="selBar"><div class="in"><button class="big sec" id="bRand">🎲 隨機</button><button class="big" id="bGo" disabled>開打！</button></div></div>
