@@ -111,11 +111,43 @@ function measureNatural(base, clip) {
   return sp.length ? sp[sp.length >> 1] : 0.25;
 }
 
+// 卡通上色＋描邊（灌籃高手手遊那種）：材質換成三階光影的 MeshToonMaterial，外面再套一層「往外推、只畫背面」的深色外殼當描邊
+// 描邊和本體共用骨架，跟著動畫一起動；寬度照模型高度算（每個模型的原始單位不一樣）
+export const TOON = { on: true, outline: 0.009 };
+const toonRamp = (() => { const t = new THREE.DataTexture(new Uint8Array([105, 105, 105, 255, 178, 178, 178, 255, 255, 255, 255, 255]), 3, 1); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
+const toonCache = new Map(), outlineCache = new Map();
+function toonOf(m) {
+  if (!toonCache.has(m)) toonCache.set(m, new THREE.MeshToonMaterial({ map: m.map, color: m.color, gradientMap: toonRamp, transparent: m.transparent, alphaTest: m.alphaTest, side: m.side, emissive: m.emissive, emissiveMap: m.emissiveMap }));
+  return toonCache.get(m);
+}
+function outlineOf(geo) {
+  if (!outlineCache.has(geo)) {
+    geo.computeBoundingBox(); const h = geo.boundingBox.max.y - geo.boundingBox.min.y;
+    const m = new THREE.MeshBasicMaterial({ color: 0x1c140f, side: THREE.BackSide });
+    m.onBeforeCompile = (sh) => {   // 綁骨架前的位置沿法線往外推（normal 是綁定姿勢的法線，跟 transformed 同一個空間）
+      sh.uniforms.ow = { value: h * TOON.outline };
+      sh.vertexShader = 'uniform float ow;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  transformed += normalize( normal ) * ow;');
+    };
+    outlineCache.set(geo, m);
+  }
+  return outlineCache.get(geo);
+}
+function toonify(model) {
+  const skinned = []; model.traverse(o => { if (o.isSkinnedMesh) skinned.push(o); });
+  for (const o of skinned) {
+    o.material = Array.isArray(o.material) ? o.material.map(toonOf) : toonOf(o.material);
+    const ol = new THREE.SkinnedMesh(o.geometry, outlineOf(o.geometry));
+    ol.bind(o.skeleton, o.bindMatrix); ol.frustumCulled = false; ol.castShadow = false; ol.renderOrder = -1;
+    o.add(ol);
+  }
+}
+
 // 複製一個角色。speed 由遊戲每幀設定（每秒幾單位），updateActor 會換算動畫速度
 export function makeActor(kind, scale = 1) {
   const root = new THREE.Group();
   const model = SkeletonUtils.clone(kind.base);
   model.traverse(o => { if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; } });
+  if (TOON.on) toonify(model);
   root.add(model); root.scale.setScalar(scale);
   const mixer = new THREE.AnimationMixer(model);
   const action = kind.clip ? mixer.clipAction(kind.clip).play() : null;

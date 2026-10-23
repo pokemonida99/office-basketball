@@ -1,13 +1,13 @@
 // 上班啟示錄：下班先鬥牛 2v2 —— 頂樓半場籃球。玩家挑兩個同事，電腦控制隊友和對手；每個人都有自己的大招
 import * as THREE from 'three';
-import { scene, render, updateCamera, cam, camera, CAMS, camMode, labelSprite, V, quality, setQuality, setQualityPref, canvasTex, FONT, sphere, mat } from './world.js?v=0.5.1';
-import { loadKind, loadClip, makeActor, addJog, updateActor, turnTo } from './assets.js?v=0.5.1';
-import * as fx from './fx.js?v=0.5.1';
-import { buildCourt, setCourt, animateCourt, swishNet, C, COURT, HOOP, ARC_R, CORNER_X, TOP, WALL, isThree, hoopDist } from './court.js?v=0.5.1';
-import { music, musicStart, musicStop, musicTick, musicTheme, musicPause } from './music.js?v=0.5.1';
-import { openOP, replayOP, seekOP } from './op.js?v=0.5.1';
+import { scene, render, updateCamera, cam, camera, CAMS, camMode, labelSprite, V, quality, setQuality, setQualityPref, canvasTex, FONT, sphere, mat } from './world.js?v=0.5.2';
+import { loadKind, loadClip, makeActor, addJog, updateActor, turnTo } from './assets.js?v=0.5.2';
+import * as fx from './fx.js?v=0.5.2';
+import { buildCourt, setCourt, animateCourt, swishNet, C, COURT, HOOP, ARC_R, CORNER_X, TOP, WALL, isThree, hoopDist } from './court.js?v=0.5.2';
+import { music, musicStart, musicStop, musicTick, musicTheme, musicPause } from './music.js?v=0.5.2';
+import { openOP, replayOP, seekOP } from './op.js?v=0.5.2';
 
-const VERSION = '0.5.1';
+const VERSION = '0.5.2';
 document.getElementById('ver').textContent = 'v' + VERSION;
 
 // ---------- 數值（調手感只改這裡） ----------
@@ -90,7 +90,8 @@ const TEAM_COLOR = ['#ff7a45', '#3f7fd9'];
 const K = {}, FACE = {}, SIG = {}, MOVES = {};
 // 共用的細部動作（綁在小米身上一次，再套給每個人；高度交給遊戲物理）。窗口＝只播的那一段（秒）
 const MOVE_WIN = { dodge: [0.1, 0.9], spin: [0.1, 1.1], stepback: [0.1, 1.0], push: [0.2, 1.3], stumble: [0.2, 1.4], rebound: [0.6, 1.5], block: [0.5, 1.4], slam: [0.2, 0.8],
-  reach: [1.55, 2.2], sprint: [0, 0.6], knock: [0.5, 2.0], flop: [0.1, 1.6] };   // reach 抄截往前撲、sprint 持球衝刺、knock 被蓋倒、flop 撞人倒地
+  reach: [1.55, 2.2], sprint: [0, 0.6], knock: [0.5, 2.0], flop: [0.1, 1.6],
+  guard: [0, 7.3], back: [0, 1.7], stop: [0.5, 1.2] };   // guard 防守滑步（馬步側跳整段循環）、back 後退步、stop 衝刺急停   // reach 抄截往前撲、sprint 持球衝刺、knock 被蓋倒、flop 撞人倒地
 async function loadAll(progress) {
   const jogs = KEYS.filter(k => CHARS[k].jog).map(k => [k + 'Jog', CHARS[k].jog, 7]);
   const list = [...KEYS.map(k => [k, CHARS[k].model]), ...jogs, ['npcM', 'npc_m_walk'], ['npcF', 'npc_f_walk'], ['caishen', 'caishen_sit']];
@@ -124,7 +125,7 @@ const st = (p, k, d = 1) => p.def[k] ?? d;   // 角色數值（沒寫就用預�
 const ART_ACTS = ['dunk', 'three', 'fade', 'steal'];
 const SP_ART = { kui: 'coffee', jie: 'dunk', mi: 'phone', vivi: 'boss', kevin: 'ai', lin: 'cross', yuan: 'block', hu: 'fade' };
 const hasArt = (k) => k in SP_ART;
-const artUrl = (k, a) => `art/${k}_${a}.webp?v=0.5.1`;
+const artUrl = (k, a) => `art/${k}_${a}.webp?v=0.5.2`;
 function preloadArt(keys) { for (const k of keys) if (hasArt(k)) for (const a of [...ART_ACTS, SP_ART[k]]) { const im = new Image(); im.src = artUrl(k, a); } }
 let flashUntil = 0, flashTimer = 0;
 // 動作立繪從旁邊滑進來一下（我方在左、對手在右），2 秒內只跳一次
@@ -447,6 +448,13 @@ function actSpecial() {
 }
 
 // ---------- 規則小工具 ----------
+// 現在主要在播的移動動作（衝刺、小跑步、走路）：運球節奏跟它的腳步對齊
+function stepCycle(p) {
+  const a = p.actor;
+  if (a.sig && playingMove(p, 'sprint')) return a.sig;
+  if (a.w < 0.3) return null;
+  return a.jog && (a.jk ?? 0) > 0.5 ? a.jog : a.action;
+}
 function chestPos(p, out = V()) {
   const s = p.actor.root.scale.x;
   return out.set(p.x + Math.sin(p.face) * 0.18, p.y + 0.62 * s, p.z + Math.cos(p.face) * 0.18);
@@ -694,7 +702,10 @@ function updateDrive(p, dt) {
   p.driveT = ok ? (p.driveT || 0) + dt : 0;
   const was = p.driving; p.driving = p.driveT > 0.3;
   if (p.driving && !was) { playLoop(p, 'sprint', 1.2); fx.sfx.pass(); }
-  else if (!p.driving && was && playingMove(p, 'sprint')) stopSig(p);
+  else if (!p.driving && was && playingMove(p, 'sprint')) {
+    stopSig(p);
+    if (holding(p) && !busy(p) && p.stun <= 0) { playMove(p, 'stop', { dur: 0.45 }); p.vx *= 0.35; p.vz *= 0.35; fx.puff(V(p.x, 0.1, p.z), 0xffffff); }   // 急停：衝刺中放開搖桿或轉向
+  }
   if (!p.driving) return;
   if (Math.random() < 0.5) fx.puff(V(p.x - p.vx * 0.05, 0.1, p.z - p.vz * 0.05), 0xffffff);
   for (const q of oppsOf(p)) {
@@ -707,6 +718,20 @@ function updateDrive(p, dt) {
     else { p.stopT = 0.6; playMove(p, 'stumble', { dur: 0.6 }); fx.floatText(V(p.x, 2.3, p.z), '撞停！', TEAM_COLOR[q.team], 1); }
     break;
   }
+}
+// 防守腳步：面向持球的人往旁邊移＝防守滑步（馬步側跳），往後退＝後退步，其他時候照常走跑
+function updateFootwork(p) {
+  if (p.foot && !playingMove(p, p.foot)) p.foot = null;   // 被別的動作（抄截、蓋帽…）蓋掉了
+  const sp = Math.hypot(p.vx, p.vz);
+  let want = null;
+  if (S.phase === 'play' && !busy(p) && p.y <= 0 && p.stun <= 0 && B.mode === 'held' && B.owner.team !== p.team && dist2(p, B.owner) < 3.2 && sp > (p.foot ? 0.25 : 0.5)) {   // 開始要夠快、停要夠慢才換（不然速度在門檻附近會一直閃）
+    const along = (p.vx * Math.sin(p.face) + p.vz * Math.cos(p.face)) / sp;   // 1＝往臉的方向走、-1＝往後退、0＝橫移
+    want = along < (p.foot === 'back' ? -0.3 : -0.5) ? 'back' : Math.abs(along) < (p.foot === 'guard' ? 0.75 : 0.6) ? 'guard' : null;
+  }
+  if (want === p.foot) return;
+  if (p.foot && playingMove(p, p.foot)) stopSig(p);
+  p.foot = null;
+  if (want && !(p.sigT > 0)) { playLoop(p, want, want === 'guard' ? 1.3 : 1.2); p.foot = want; }
 }
 // Kevin 防守時一直碎念「用 AI 就好」：附近持球的人命中率下降（shotProb）
 const NAG = ['這個用 AI 就好…', 'AI 算過你投不進', '要不要先問一下 AI？', '命中率只有 12% 喔', '我用 GPT 模擬過了', '這球交給 AI 比較準'];
@@ -1440,12 +1465,15 @@ function updateBall(dt) {
     const a = p.act;
     if (!a || a.type === 'pass' || a.type === 'steal') {
       // 運球：右手，球在手和地板之間彈
+      // 一步拍一下：有在走／跑就照腳步的週期（走路、小跑步、衝刺動作一圈都是兩步），站著才用固定節奏
       const r = p.bones.RightHand;
-      const sp = Math.hypot(p.vx, p.vz);
-      const prev = B.drib % 1;
-      B.drib += dt * (2.2 + sp * 0.35);
-      const f = B.drib % 1, h = Math.abs(Math.cos(Math.PI * f));
-      if (prev < 0.5 && f >= 0.5) fx.sfx.dribble();
+      const prev = B.dribF ?? 0, cyc = stepCycle(p);
+      let f;
+      if (cyc) f = (cyc.time / cyc.getClip().duration * 2 + 0.25) % 1;
+      else { B.drib += dt * 1.9; f = B.drib % 1; }
+      B.dribF = f;
+      const h = Math.abs(Math.cos(Math.PI * f));
+      if (prev < 0.5 && f >= 0.5 || prev > f && f >= 0.5) fx.sfx.dribble();
       if (r) r.getWorldPosition(_hp); else chestPos(p, _hp);
       const fw = 0.16;
       B.pos.set(_hp.x + Math.sin(p.face) * fw, BR + Math.max(0, _hp.y - 0.12 - BR) * h, _hp.z + Math.cos(p.face) * fw);
@@ -1531,6 +1559,7 @@ function updatePlayers(dt, t) {
     if (p.cheer > 0) p.cheer -= dt;
     if (p.sigT > 0) { p.sigT -= dt; if (p.sigT <= 0) stopSig(p); }
     updateDrive(p, dt);
+    updateFootwork(p);
     if (p.def.nag) updateNag(p, dt);
     if (p.def.pretty && Math.random() < dt * 2.5) fx.sparkle(V(p.x + rand(-0.4, 0.4), p.y + rand(0.9, 1.7), p.z + rand(-0.3, 0.3)), 0xffc6e6, 0.28);   // 老闆：漂漂亮亮
     for (const k of ['skillCd', 'dashT', 'openT', 'stopT', 'fakeCd', 'boxedT']) if (p[k] > 0) p[k] = Math.max(0, p[k] - dt);
@@ -1638,7 +1667,7 @@ function armTarget(p, t) {   // 程式擺的手臂只抬到約 90°，再高會�
     case 'steal': return { rf: 1.5, lf: 0.3, sp: 0.35 };
     case 'pass': case 'lob': return { rf: 1.4, lf: 1.4 };
   }
-  if (holding(p)) return { rf: 0.55 + 0.45 * (B.dribH ?? 0.5), lf: 0.35 };
+  if (holding(p)) return { rf: 0.78 - 0.4 * (B.dribH ?? 0.5), lf: 0.4, sp: 0.16 };   // 運球：球在最高點碰到手（手在腰旁邊往下壓），球往下時手抬一點；身體微微前傾
   return {};
 }
 // 你操作的人頭上的大箭頭「▼ 你＋名字」：一眼找到自己
@@ -1970,7 +1999,7 @@ soundIcon();
 
 function buildSelect() {
   // 選角卡：真人風全身照（art/<人>_card.webp，tools/gen_real.sh 的 card_* 姿勢，每個人不一樣）＋位置標籤
-  $('grid').innerHTML = ROSTER.map(k => { const c = CHARS[k], [job, pos] = c.role.split('・'); return `<div class="ch" data-k="${k}" style="--cc:${c.color}"><span class="badge"></span><div class="pic"><span class="pos">${pos || job}</span><img src="art/${k}_card.webp?v=0.5.1" alt="${c.name}" onerror="this.src='${FACE[k]}'"></div><div class="info"><div class="nm">${c.name}<small>${pos ? job : ''}</small></div><span class="spn">${c.sp.name}</span><span class="skn">${c.skill.name}</span><div class="d">${c.sp.desc}</div><div class="st">${c.stat}</div></div></div>`; }).join('');
+  $('grid').innerHTML = ROSTER.map(k => { const c = CHARS[k], [job, pos] = c.role.split('・'); return `<div class="ch" data-k="${k}" style="--cc:${c.color}"><span class="badge"></span><div class="pic"><span class="pos">${pos || job}</span><img src="art/${k}_card.webp?v=0.5.2" alt="${c.name}" onerror="this.src='${FACE[k]}'"></div><div class="info"><div class="nm">${c.name}<small>${pos ? job : ''}</small></div><span class="spn">${c.sp.name}</span><span class="skn">${c.skill.name}</span><div class="d">${c.sp.desc}</div><div class="st">${c.stat}</div></div></div>`; }).join('');
   for (const el of $('grid').children) el.onclick = () => {
     fx.audioInit(); fx.sfx.click();
     const k = el.dataset.k, i = S.sel.indexOf(k);
