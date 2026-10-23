@@ -1,6 +1,6 @@
 // 特效與音效：飄字、彩帶、光柱、地面衝擊波、彈出放大、合成音效
 import * as THREE from 'three';
-import { scene, canvasTex, FONT, cam, V } from './world.js?v=0.5.2';
+import { scene, canvasTex, FONT, cam, V } from './world.js?v=0.5.3';
 
 const fxList = [];   // 每個特效自己有 update(dt) 回傳 false 就移除
 export function updateFx(dt) { for (let i = fxList.length - 1; i >= 0; i--) if (!fxList[i](dt)) fxList.splice(i, 1); }
@@ -182,13 +182,15 @@ export function noise(dur = 0.2, vol = 0.5, freq = 1200, q = 0.8, when = 0, type
   src.connect(f); f.connect(g); g.connect(master); src.start(t0); src.stop(t0 + dur + 0.05);
 }
 export const sfx = {
-  dribble() { tone(95, 0.07, 'sine', 0.55, 0, 0.6); noise(0.04, 0.12, 400, 1); },
+  // 運球：「咚」（球打地板的低音往下掉）＋「啪」（手拍皮球的高頻）＋一點中音的球聲和地板回音；v＝遠近
+  dribble(v = 1) { tone(150, 0.1, 'sine', 1.6 * v, 0, 0.38); noise(0.035, 0.7 * v, 1900, 1.3); tone(270, 0.06, 'triangle', 0.35 * v, 0, 0.7); noise(0.13, 0.22 * v, 480, 0.7, 0.02, 'lowpass'); },
   pass() { noise(0.16, 0.25, 900, 1.2, 0, 'bandpass', 2.5); },
   catch() { tone(180, 0.05, 'triangle', 0.4); },
   shoot() { tone(330, 0.12, 'triangle', 0.45, 0, 1.6); },
-  swish() { noise(0.35, 0.35, 3500, 0.7, 0, 'bandpass', 0.5); },
+  // 進籃：「刷」（網子的高頻沙沙聲往下滑）＋網子晃的細碎聲，球落地再彈兩下
+  swish() { noise(0.34, 0.9, 6500, 0.6, 0, 'highpass', 0.4); noise(0.22, 0.55, 3200, 0.8, 0.06, 'bandpass', 0.7); noise(0.1, 0.3, 8000, 1, 0.02, 'highpass'); [0.48, 0.82].forEach((w, i) => setTimeout(() => sfx.dribble(0.45 - i * 0.2), w * 1000)); },
   rim() { tone(520, 0.25, 'square', 0.22, 0, 0.92); tone(780, 0.18, 'triangle', 0.25, 0.01); },
-  bounce() { tone(110, 0.08, 'sine', 0.45, 0, 0.6); },
+  bounce() { sfx.dribble(0.5); },
   steal() { tone(880, 0.06, 'square', 0.3); tone(1320, 0.1, 'square', 0.3, 0.05); },
   block() { tone(160, 0.12, 'square', 0.6, 0, 0.5); noise(0.15, 0.4, 600, 1); },
   whiff() { noise(0.12, 0.15, 1500, 1, 0, 'bandpass', 0.6); },

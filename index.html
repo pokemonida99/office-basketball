@@ -667,7 +667,7 @@
   #sTitle { background: var(--ink); }
   #sTitle::before { content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
     background: linear-gradient(180deg, #121110 0%, #12111000 30%, #12111000 55%, #121110f2 100%), linear-gradient(90deg, #ff4d1a59, #12111000 45%, #ff9a1f40),
-      url(op/op9.webp?v=0.5.2) center 30% / cover; filter: grayscale(1) contrast(1.25) brightness(.62) sepia(.35); }
+      url(op/op9.webp?v=0.5.3) center 30% / cover; filter: grayscale(1) contrast(1.25) brightness(.62) sepia(.35); }
   #sTitle::after { background: var(--dots), var(--grain); opacity: .55; mix-blend-mode: multiply; }
   #sTitle .card h1 small, .logoH small { display: inline-block; font-family: var(--en); font-weight: 400; letter-spacing: 4px; font-size: 13px; color: var(--ink); background: var(--yolk); padding: 2px 10px; transform: rotate(-2deg); margin-bottom: 0; }
   .logoH small::before { content: 'STREETBALL 3ON3 · '; }
@@ -730,6 +730,10 @@
   #opBrand { background: var(--grain), radial-gradient(circle at 50% 45%, #2a2420, var(--ink) 70%); }
   #opPlay { border-radius: 0; background: var(--fire); color: var(--ink); transform: skewX(-8deg); box-shadow: 5px 5px 0 var(--paper); animation: none; font-style: italic; letter-spacing: 2px; }
   #opMade { color: var(--yolk); }
+  /* 連招：投籃鍵變成連招名稱並發亮 */
+  #kShoot.combo { box-shadow: 0 0 0 4px var(--yolk), 0 0 22px var(--yolk); animation: comboPulse .35s ease-in-out infinite alternate; }
+  #kShoot.combo span { font-size: 13px; }
+  @keyframes comboPulse { to { transform: scale(1.07); } }
 </style>
 </head>
 <body>
@@ -774,7 +778,7 @@
 </div>
 
 <div class="screen" id="sTitle"><div class="card">
-  <h1 class="logoH"><small>上班啟示錄</small><img class="logo" src="art/logo.webp?v=0.5.2" alt="下班先鬥牛"></h1>
+  <h1 class="logoH"><small>上班啟示錄</small><img class="logo" src="art/logo.webp?v=0.5.3" alt="下班先鬥牛"></h1>
   <div class="collab"><i>a4</i>不想上班 × <em>香香籃球隊</em> 聯名製作</div>
   <div class="row7" id="titleFaces"></div>
   <p>頂樓、廟口球場半場鬥牛！<br>上班族＋香香籃球隊 8 個人任你挑，1v1 到 3v3，<br>先到 21 分或時間到分數高的贏。每個人都有自己的大招！</p>
@@ -782,7 +786,7 @@
     <div><b>🕹️</b>左邊搖桿移動<br>電腦用 WASD／方向鍵</div>
     <div><b>🏀</b>按住投籃、跳到最高<br>綠色區放開最準</div>
     <div><b>🔄</b>搶到籃板、抄截<br>要先把球帶出三分線</div><div><b>⚡</b>傳球、得分、抄截<br>都會集大招</div><div><b>🎯</b>三分線外 3 分<br>線內 2 分、籃下灌籃</div>
-    <div><b>⚡</b>技能鍵：持球用招式過人<br>防守按住貼身、搶板按住卡位</div>
+    <div><b>⚡</b>招式、假動作中按投籃＝連招<br>（轉身上籃、後撤跳投…）</div>
   </div>
   <button class="big" id="bStart">選角色</button>
   <button class="qbtn" id="qBtn">🎨 畫質：自動</button>
@@ -805,7 +809,7 @@
     </div>
     <div id="opMade">聯名製作</div>
   </div>
-  <div id="opTitle"><small>上班啟示錄 番外</small><div id="opTitleMain"><img class="logo" src="art/logo.webp?v=0.5.2" alt="下班先鬥牛"></div><div id="opTitleSub">a4 不想上班 × 香香籃球隊　聯名製作</div></div>
+  <div id="opTitle"><small>上班啟示錄 番外</small><div id="opTitleMain"><img class="logo" src="art/logo.webp?v=0.5.3" alt="下班先鬥牛"></div><div id="opTitleSub">a4 不想上班 × 香香籃球隊　聯名製作</div></div>
   <div id="opBarWrap"><div id="opBar"></div></div>
   <button id="opSkip">跳過 ›</button>
   <div id="opGate"><button id="opPlay">▶ 播放開場</button><button id="opNo">直接開始</button></div>
@@ -845,6 +849,6 @@
 <script type="importmap">
 {"imports":{"three":"./vendor/three/build/three.module.min.js","three/addons/":"./vendor/three/examples/jsm/"}}
 </script>
-<script type="module" src="js/main.js?v=0.5.2"></script>
+<script type="module" src="js/main.js?v=0.5.3"></script>
 </body>
 </html>
