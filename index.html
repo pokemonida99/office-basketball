@@ -638,6 +638,99 @@
     #sOver .big { display: inline-block; width: calc(50% - 4px); margin-top: 8px; padding: 10px; font-size: 16px; }
   }
 </style>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
+<style id="flyer">
+  /* ===== 街頭鬥牛傳單風（v0.5.0）：墨黑、米白紙、火焰橘、訊號黃；紙紋＋網點；硬邊陰影、斜體粗字、膠帶貼紙。
+     不用粉彩漸層、大圓角、軟陰影（使用者說太 AI）。比賽中的轉播風（#matchUi）不動。 ===== */
+  :root { --ink: #121110; --paper: #efe6d2; --paper2: #e4d8bd; --fire: #ff4d1a; --fire2: #ff9a1f; --yolk: #ffd23f;
+    --grain: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .5 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    --dots: radial-gradient(#0000002e 1.1px, transparent 1.7px) 0 0 / 7px 7px;
+    --en: Anton, Impact, "Arial Narrow", sans-serif; }
+  body { background: var(--ink); }
+  /* 結算（#sOver）用比賽中轉播風自己的底，這裡只管封面、選角、暫停 */
+  #sTitle, #sSelect, #sPause { background: var(--grain), radial-gradient(ellipse at 50% 40%, #2a2420, var(--ink) 75%); color: var(--paper); }
+  #sTitle::after, #sSelect::after, #sPause::after { content: ''; position: fixed; inset: 0; pointer-events: none; background: var(--grain); opacity: .5; mix-blend-mode: overlay; z-index: 0; }
+  #sTitle > *, #sSelect > *, #sPause > * { position: relative; z-index: 1; }
+  .card { color: var(--paper); }
+
+  /* --- 按鈕：黑底米白字、斜切、橘色硬陰影 --- */
+  .big { background: var(--fire); color: var(--ink); border-radius: 0; font-family: inherit; font-weight: 900; font-style: italic; letter-spacing: 2px;
+    transform: skewX(-8deg); box-shadow: 5px 5px 0 var(--ink), 5px 5px 0 1.5px var(--paper); text-shadow: none; border: 0; }
+  .big:active { transform: skewX(-8deg) translate(3px, 3px); box-shadow: 2px 2px 0 var(--ink); }
+  .big:disabled { background: #6d655a; color: #a8a090; box-shadow: none; }
+  .big.sec { background: var(--paper); color: var(--ink); box-shadow: none; }
+  .qbtn, .opAgain { background: none !important; color: var(--paper) !important; border: 1.5px solid #efe6d266 !important; border-radius: 0 !important; font-weight: 800; letter-spacing: 1px; }
+  .opAgain { text-decoration: none !important; padding: 5px 12px !important; }
+
+  /* --- 標題畫面：大合照雙色調當底，上面火焰字 --- */
+  #sTitle { background: var(--ink); }
+  #sTitle::before { content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background: linear-gradient(180deg, #121110 0%, #12111000 30%, #12111000 55%, #121110f2 100%), linear-gradient(90deg, #ff4d1a59, #12111000 45%, #ff9a1f40),
+      url(op/op9.webp?v=0.5.0) center 30% / cover; filter: grayscale(1) contrast(1.25) brightness(.62) sepia(.35); }
+  #sTitle::after { background: var(--dots), var(--grain); opacity: .55; mix-blend-mode: multiply; }
+  #sTitle .card h1 small, .logoH small { display: inline-block; font-family: var(--en); font-weight: 400; letter-spacing: 4px; font-size: 13px; color: var(--ink); background: var(--yolk); padding: 2px 10px; transform: rotate(-2deg); margin-bottom: 0; }
+  .logoH small::before { content: 'STREETBALL 3ON3 · '; }
+  .row7 { display: none !important; }
+  .collab { background: var(--paper); color: var(--ink); border-radius: 0; padding: 5px 12px 5px 5px; transform: rotate(1.5deg); box-shadow: 4px 4px 0 var(--fire); position: relative; }
+  .collab::before { content: ''; position: absolute; left: 50%; top: -8px; width: 46px; height: 14px; margin-left: -23px; background: #ffffffb3; transform: rotate(-4deg); }
+  .collab i { border-radius: 0; background: var(--ink); }
+  .collab em { color: var(--fire); }
+  #sTitle .card > p:not(.iosTip):not(.iconHint) { background: var(--paper); color: var(--ink); padding: 8px 12px; font-size: 14px; line-height: 1.5; transform: rotate(-.6deg); box-shadow: 5px 5px 0 #000a; position: relative; }
+  .howto { counter-reset: h; }
+  .howto div { background: #12111099; color: var(--paper); border: 1.5px solid #efe6d24d; border-radius: 0; box-shadow: none; text-align: left; padding: 6px 8px 6px 34px; position: relative; font-size: 12px; backdrop-filter: blur(2px); }
+  .howto div b { position: absolute; left: 6px; top: 50%; transform: translateY(-50%); font-size: 0; }
+  .howto div b::before { counter-increment: h; content: counter(h, decimal-leading-zero); font-family: var(--en); font-size: 20px; color: var(--fire2); }
+  .iconPick { color: var(--paper) !important; }
+  #iconPick button { border-radius: 4px !important; }
+  #iconPick button.on { border-color: var(--yolk) !important; }
+  .iosTip { color: var(--paper2) !important; }
+
+  /* --- 選角 --- */
+  .selWrap { color: var(--paper); }
+  .selWrap h2 { color: var(--paper); font-style: italic; font-weight: 900; letter-spacing: 1px; text-shadow: 3px 3px 0 var(--fire); }
+  .selWrap h2::before { content: 'PICK YOUR CREW'; display: block; width: fit-content; margin: 0 auto 2px; font: 400 12px/1.3 var(--en); letter-spacing: 4px; color: var(--ink); background: var(--yolk); padding: 1px 8px; text-shadow: none; transform: rotate(-2deg); }
+  .selWrap .hint { color: var(--paper2); }
+  @media (orientation: landscape) and (max-height: 560px) { .selWrap h2::before { display: inline-block; margin: 0 8px 0 0; vertical-align: 3px; } .selWrap .segs { gap: 5px; flex-wrap: nowrap; } .seg button { letter-spacing: 0; padding: 3px 8px; } .seg { padding: 1px; } }
+  /* 結算畫面的按鈕：斜切按鈕字不要折行 */
+  #sOver .big { white-space: nowrap; font-size: clamp(15px, 2.4vw, 20px); }
+  .seg { background: none; border: 1.5px solid #efe6d266; border-radius: 0; box-shadow: none; padding: 2px; }
+  .seg button { color: var(--paper2); border-radius: 0; font-style: italic; }
+  .seg button.on { background: var(--fire); color: var(--ink); }
+  #grid .ch { background: var(--paper); color: var(--ink); border: 3px solid var(--ink); border-radius: 0; box-shadow: 6px 6px 0 #000c; }
+  #grid .ch:nth-child(odd) { transform: rotate(-.6deg); } #grid .ch:nth-child(even) { transform: rotate(.6deg); }
+  #grid .ch .pic { background: radial-gradient(color-mix(in srgb, var(--cc) 75%, #000) 1.3px, transparent 1.9px) 0 0 / 7px 7px, linear-gradient(160deg, color-mix(in srgb, var(--cc) 35%, var(--paper)), color-mix(in srgb, var(--cc) 70%, var(--paper2))); border-bottom: 3px solid var(--ink); }
+  #grid .ch .pic::before { background: var(--grain); opacity: .45; mix-blend-mode: multiply; }
+  #grid .ch .pic::after { display: none; }
+  #grid .ch .pic img { filter: drop-shadow(4px 4px 0 #12111055); }
+  #grid .ch .pos { background: var(--ink); color: var(--yolk); border-radius: 0; font-family: inherit; transform: rotate(-3deg); box-shadow: 2px 2px 0 var(--fire); }
+  #grid .ch .nm { font-style: italic; font-weight: 900; }
+  #grid .ch .nm small { color: #6b6152; opacity: 1; }
+  #grid .ch .spn { background: var(--ink); color: var(--paper); border-radius: 0; border-left: 4px solid var(--cc); }
+  #grid .ch .skn { background: none; color: var(--ink); border: 1.5px solid var(--ink); border-radius: 0; }
+  #grid .ch .spn::before, #grid .ch .skn::before { font: 400 10px/1 var(--en); letter-spacing: 1px; margin-right: 5px; vertical-align: 1px; }
+  #grid .ch .spn::before { content: 'SP'; color: var(--yolk); } #grid .ch .skn::before { content: 'SKILL'; color: var(--fire); }
+  .seg button { letter-spacing: 1px; }
+  #grid .ch .d { color: #3a342c; }
+  #grid .ch .st { color: #8a3a12; }
+  #grid .ch.sel { border-color: var(--fire); box-shadow: 6px 6px 0 var(--fire), 0 0 0 3px var(--ink); background: #fff7e6; }
+  #grid .ch .badge { background: var(--yolk); color: var(--ink); border-radius: 0; box-shadow: 2px 2px 0 var(--ink); }
+  .selBar { background: linear-gradient(#12111000, #121110 45%); }
+
+  /* --- 暫停 --- */
+  #sPause .card { background: var(--paper); color: var(--ink); padding: 18px 18px 22px; box-shadow: 8px 8px 0 var(--fire); position: relative; transform: rotate(-1deg); width: min(340px, 100%); }
+  #sPause .card::before { content: ''; position: absolute; left: 50%; top: -10px; width: 70px; height: 18px; margin-left: -35px; background: #ffffffb3; transform: rotate(3deg); }
+  #sPause .card h1 { color: var(--ink); font-style: italic; text-shadow: 3px 3px 0 var(--fire); }
+  #sPause .big.sec { background: var(--ink); color: var(--paper); }
+
+  /* --- 載入、開場前 --- */
+  #loading { background: var(--grain), var(--ink); color: var(--paper); font-style: italic; }
+  #loading .bar { border-radius: 0; background: #efe6d233; height: 8px; }
+  #loading .bar i { background: linear-gradient(90deg, var(--fire), var(--fire2), var(--yolk)); }
+  #opBrand { background: var(--grain), radial-gradient(circle at 50% 45%, #2a2420, var(--ink) 70%); }
+  #opPlay { border-radius: 0; background: var(--fire); color: var(--ink); transform: skewX(-8deg); box-shadow: 5px 5px 0 var(--paper); animation: none; font-style: italic; letter-spacing: 2px; }
+  #opMade { color: var(--yolk); }
+</style>
 </head>
 <body>
 <div id="bootMsg"><div class="card">
@@ -681,7 +774,7 @@
 </div>
 
 <div class="screen" id="sTitle"><div class="card">
-  <h1 class="logoH"><small>上班啟示錄</small><img class="logo" src="art/logo.webp?v=0.4.6" alt="下班先鬥牛"></h1>
+  <h1 class="logoH"><small>上班啟示錄</small><img class="logo" src="art/logo.webp?v=0.5.0" alt="下班先鬥牛"></h1>
   <div class="collab"><i>a4</i>不想上班 × <em>香香籃球隊</em> 聯名製作</div>
   <div class="row7" id="titleFaces"></div>
   <p>頂樓、廟口球場半場鬥牛！<br>上班族＋香香籃球隊 8 個人任你挑，1v1 到 3v3，<br>先到 21 分或時間到分數高的贏。每個人都有自己的大招！</p>
@@ -712,7 +805,7 @@
     </div>
     <div id="opMade">聯名製作</div>
   </div>
-  <div id="opTitle"><small>上班啟示錄 番外</small><div id="opTitleMain"><img class="logo" src="art/logo.webp?v=0.4.6" alt="下班先鬥牛"></div><div id="opTitleSub">a4 不想上班 × 香香籃球隊　聯名製作</div></div>
+  <div id="opTitle"><small>上班啟示錄 番外</small><div id="opTitleMain"><img class="logo" src="art/logo.webp?v=0.5.0" alt="下班先鬥牛"></div><div id="opTitleSub">a4 不想上班 × 香香籃球隊　聯名製作</div></div>
   <div id="opBarWrap"><div id="opBar"></div></div>
   <button id="opSkip">跳過 ›</button>
   <div id="opGate"><button id="opPlay">▶ 播放開場</button><button id="opNo">直接開始</button></div>
@@ -720,10 +813,10 @@
 
 <div class="screen" id="sSelect"><div class="selWrap">
   <h2 id="selTitle">挑兩個同事組隊</h2>
-  <div class="segs"><div class="seg" id="modeSeg"><button data-v="p">練習</button><button data-v="1">1v1</button><button data-v="2">2v2</button><button data-v="3">3v3</button></div><div class="seg" id="diffSeg"><button data-v="0">簡單</button><button data-v="1">普通</button><button data-v="2">困難</button></div><div class="seg" id="courtSeg"><button data-v="roof">🏢 頂樓</button><button data-v="temple">🏮 大橋尾</button></div></div>
+  <div class="segs"><div class="seg" id="modeSeg"><button data-v="p">練習</button><button data-v="1">1v1</button><button data-v="2">2v2</button><button data-v="3">3v3</button></div><div class="seg" id="diffSeg"><button data-v="0">簡單</button><button data-v="1">普通</button><button data-v="2">困難</button></div><div class="seg" id="courtSeg"><button data-v="roof">頂樓</button><button data-v="temple">大橋尾</button></div></div>
   <div class="hint" id="selHint">先點的就是你整場操作的人（頭上有「▼ 你」），對手由電腦隨機挑</div>
   <div class="grid" id="grid"></div>
-  <div class="selBar"><div class="in"><button class="big sec" id="bRand">🎲 隨機</button><button class="big" id="bGo" disabled>開打！</button></div></div>
+  <div class="selBar"><div class="in"><button class="big sec" id="bRand">隨機</button><button class="big" id="bGo" disabled>開打！</button></div></div>
 </div></div>
 
 <div class="screen" id="sPause"><div class="card">
@@ -743,7 +836,7 @@
       <div class="final"><div class="s a" id="oA">0</div><div class="vs">：</div><div class="s b" id="oB">0</div></div>
       <div class="mvp"><img id="oMvpF" alt=""><div><div class="t">⭐ 本場 MVP</div><div class="n" id="oMvpN"></div><div class="q" id="oMvpQ"></div></div></div>
       <div class="statRow" id="oStats"></div>
-      <button class="big" id="bAgain">同一隊再來一場</button>
+      <button class="big" id="bAgain">再來一場</button>
       <button class="big sec" id="bReselect">重選角色</button>
     </div>
   </div>
@@ -752,6 +845,6 @@
 <script type="importmap">
 {"imports":{"three":"./vendor/three/build/three.module.min.js","three/addons/":"./vendor/three/examples/jsm/"}}
 </script>
-<script type="module" src="js/main.js?v=0.4.6"></script>
+<script type="module" src="js/main.js?v=0.5.0"></script>
 </body>
 </html>
