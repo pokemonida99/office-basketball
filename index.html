@@ -270,7 +270,17 @@
     #opImg { width: 175%; left: -37.5%; }
     #opCap { bottom: 15%; }
     #opVs { top: 44%; }
+    /* 直式的隊伍照：直的照片鋪滿整個畫面；字幕放下面 */
+    #op.full #opFrame { top: 50%; bottom: auto; height: min(100%, 150vw); transform: translateY(-50%); box-shadow: 0 0 40px #000a; }   /* 照片寬度撐滿（三個人都入鏡），上下用模糊的同一張墊底 */
+    #op.full #opImg { width: 100%; left: 0; }
+    #op.full #opCap { bottom: 9%; }
   }
+  /* 直式最後一顆：三張隊伍照並排三欄，片名砸在上面 */
+  #opTri { position: absolute; inset: 0; display: none; grid-template-columns: repeat(3, 1fr); gap: 5px; background: #0b0d12; z-index: 1; }
+  #op.tri #opTri { display: grid; }
+  #op.tri #opFrame, #op.tri #opBg { display: none; }
+  #opTri > div { overflow: hidden; position: relative; }
+  #opTri img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 30%; filter: brightness(.8) saturate(1.1); }
 
   /* 封面：選主畫面圖示 */
   .iconPick { position: relative; display: flex; align-items: center; justify-content: center; gap: 8px; margin: 2px 0 0; font-size: 12px; font-weight: 800; color: #8a7a66; }
@@ -643,7 +653,7 @@
   #sTitle { background: var(--ink); }
   #sTitle::before { content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
     background: linear-gradient(180deg, #121110 0%, #12111000 30%, #12111000 55%, #121110f2 100%), linear-gradient(90deg, #ff4d1a59, #12111000 45%, #ff9a1f40),
-      url(op/op9.webp?v=0.5.5) center 30% / cover; filter: grayscale(1) contrast(1.25) brightness(.62) sepia(.35); }
+      url(op/op9.webp?v=0.5.6) center 30% / cover; filter: grayscale(1) contrast(1.25) brightness(.62) sepia(.35); }
   #sTitle::after { background: var(--dots), var(--grain); opacity: .55; mix-blend-mode: multiply; }
   #sTitle .card h1 small, .logoH small { display: inline-block; font-family: var(--en); font-weight: 400; letter-spacing: 4px; font-size: 13px; color: var(--ink); background: var(--yolk); padding: 2px 10px; transform: rotate(-2deg); margin-bottom: 0; }
   .logoH small::before { content: 'STREETBALL 3ON3 · '; }
@@ -798,7 +808,7 @@
 
 <div class="screen" id="sTitle"><div class="card tTitle">
   <div class="tMain">
-    <h1 class="logoH"><small>上班啟示錄</small><img class="logo" src="art/logo.webp?v=0.5.5" alt="下班先鬥牛"></h1>
+    <h1 class="logoH"><small>上班啟示錄</small><img class="logo" src="art/logo.webp?v=0.5.6" alt="下班先鬥牛"></h1>
     <div class="tTeams"><span class="t1">上班族</span><b>VS</b><span class="t2">香香籃球隊</span><b>VS</b><span class="t3">山頂國小</span></div>
     <div class="collab"><i>a4</i>不想上班 製作<span class="guest">友情參戰　<em>香香籃球隊</em>・<em>山頂國小</em></span></div>
   </div>
@@ -815,10 +825,11 @@
 <div id="op" aria-label="開場">
   <img id="opBg" alt="">
   <div id="opFrame"><img id="opImg" alt=""></div>
+  <div id="opTri"></div>
   <div id="opFlash"></div>
   <div id="opCap"><b id="opCapB"></b><span id="opCapS"></span></div>
   <div id="opVs">VS</div>
-  <div id="opTitle"><small>上班啟示錄 番外</small><div id="opTitleMain"><img class="logo" src="art/logo.webp?v=0.5.5" alt="下班先鬥牛"></div><div id="opTitleSub">a4 不想上班 製作<span>友情參戰　香香籃球隊・山頂國小</span></div></div>
+  <div id="opTitle"><small>上班啟示錄 番外</small><div id="opTitleMain"><img class="logo" src="art/logo.webp?v=0.5.6" alt="下班先鬥牛"></div><div id="opTitleSub">a4 不想上班 製作<span>友情參戰　香香籃球隊・山頂國小</span></div></div>
   <div id="opBarWrap"><div id="opBar"></div></div>
   <button id="opSkip">跳過 ›</button>
 </div>
@@ -857,6 +868,6 @@
 <script type="importmap">
 {"imports":{"three":"./vendor/three/build/three.module.min.js","three/addons/":"./vendor/three/examples/jsm/"}}
 </script>
-<script type="module" src="js/main.js?v=0.5.5"></script>
+<script type="module" src="js/main.js?v=0.5.6"></script>
 </body>
 </html>

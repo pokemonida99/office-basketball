@@ -1,7 +1,7 @@
 // 球場：可以選「辦公室頂樓」（木地板＋白板籃板＋落地窗城市）或「大橋尾球場」（廟口球場：綠色水泥地、後面是廟）
 // 籃框、籃網兩邊共用；地板、籃板圖案、周圍場景各一組，setCourt() 切換
 import * as THREE from 'three';
-import { scene, rbox, box, cyl, sphere, mat, canvasTex, roundRect, FONT, labelSprite } from './world.js?v=0.5.5';
+import { scene, rbox, box, cyl, sphere, mat, canvasTex, roundRect, FONT, labelSprite } from './world.js?v=0.5.6';
 
 // 尺寸（1 單位 ≈ 角色身高的 0.8）
 export const COURT = { x: 6, z0: 0, z1: 10.5 };            // x 從 -6 到 6，底線 z=0，半場線 z=10.5
