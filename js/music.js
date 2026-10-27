@@ -1,7 +1,7 @@
 // 配樂：使用者給的兩首 mp3。封面、選角、結算放「籃球主題」，比賽中放「籃球音樂」，都循環播放
 // 瀏覽器要有點擊之後才能出聲，所以第一次點畫面時才開始播
 export const music = { on: true, cur: null, want: null };
-const TRACKS = { theme: 'audio/theme.mp3?v=0.5.6', game: 'audio/game.mp3?v=0.5.6' };
+const TRACKS = { theme: 'audio/theme.mp3?v=0.5.7', game: 'audio/game.mp3?v=0.5.7' };
 const el = {};
 function track(name) {
   if (!el[name]) { const a = new Audio(TRACKS[name]); a.loop = true; a.preload = 'auto'; a.volume = name === 'game' ? 0.42 : 0.5; el[name] = a; }
