@@ -5,6 +5,8 @@
 # Q 版腿短，遊戲每秒要跑 3 個身高，所以踩地要很快：踩地時間＝步幅 ÷ 速度，一圈時間照腿長調，腿短的人步頻高一點。
 # 有背身強打、強力突破技能的人另外輸出 角色_push.glb：共用的 push 蹲得太低，只取骨頭轉動後整個人會縮成一團（阿傑的在 jie_moves.py）。
 # 每個人都有 角色_shot.glb：完整的跳投，遊戲在 0.30 秒（舉到頭上）停住等出手，出手後才接著播（時間在 js/main.js 的 SHOT_SET）。
+# 每個人也有 角色_lay.glb（上籃，阿傑的在 jie_moves.py）和 角色_pass.glb（傳球，遊戲只取上半身，邊跑邊傳腳不會停）。
+# 匯出後要跑 python3 tools/slim_clips.py models/moves/run 瘦身。
 # 寫法和 jie_moves.py 一樣：手臂寫方向、腳用 IK 寫腳踝位置，不寫骨頭角度（Tripo 綁的骨頭軸向不統一）。
 import bpy, sys, math, os
 from mathutils import Matrix, Vector, Quaternion
@@ -13,8 +15,8 @@ argv = sys.argv[sys.argv.index('--') + 1:]
 MODEL_DIR, OUT_DIR = argv[:2]
 PREVIEW = argv[2] if len(argv) > 2 else None
 FPS = 60
-MODELS = {'kui': 'kui_walk2', 'jie': 'jie_walk', 'mi': 'mi_walk', 'vivi': 'vivi_walk', 'kevin': 'kevin_walk', 'yan': 'yan_walk', 'heilun': 'heilun_walk',
-          'de': 'glasses_walk', 'momo': 'bob_walk', 'zhe': 'cap_walk', 'zhen': 'det_walk', 'lin': 'lin_walk', 'yuan': 'yuan_walk', 'hu': 'hu_walk',
+# 只做選角名單上的人和針筒超人；藏起來的角色遊戲不載入，要重新開放時把他們加回來（模型：yan_walk、heilun_walk、glasses_walk、bob_walk、cap_walk、det_walk）
+MODELS = {'kui': 'kui_walk2', 'jie': 'jie_walk', 'mi': 'mi_walk', 'vivi': 'vivi_walk', 'kevin': 'kevin_walk', 'lin': 'lin_walk', 'yuan': 'yuan_walk', 'hu': 'hu_walk',
           'tu': 'tu_walk', 'zhang': 'zhang_walk', 'bian': 'bian_walk', 'needle': 'needle_walk'}
 # speed 每秒幾個身高（遊戲的基本跑速約 3）、T 腿長 0.33 身高的人跑一圈幾秒、lean 上身前傾、amp 手臂擺幅、bend 手肘彎度
 # bob 上下彈的幅度、out 手臂離身體多開（都可以被 STYLE 蓋掉）
@@ -40,7 +42,7 @@ STYLE = {
     'zhang': dict(T=1.12, lean=4, amp=28, lift=0.42, bob=0.03, out=0.5), # 校長：挺著肚子、走跑都慢吞吞
     'bian': dict(T=0.94, lean=16, amp=56, lift=0.7),                     # 小編：趕著打卡
 }
-POWER = ['heilun', 'zhe', 'yuan', 'zhang']
+POWER = ['yuan', 'zhang']
 SPINE = ['Spine02', 'Spine01', 'Spine', 'neck', 'Head']   # 由下到上
 ARMS = ['LeftArm', 'LeftForeArm', 'RightArm', 'RightForeArm']
 LEGS = ['LeftUpLeg', 'LeftLeg', 'LeftFoot', 'RightUpLeg', 'RightLeg', 'RightFoot']
@@ -196,6 +198,41 @@ def build(key, file):
             PB['Hips'].keyframe_insert('location', frame=frame, group='Hips')
         return round(0.62 * FPS), 0
 
+    def posed(keys):
+        # 通用的關鍵格：秒、前傾、抬頭、上身轉、右肩抬、臀部高低、手、腿（None＝雙腳踩地）
+        k = L / 25.2
+        for t, lean, head, twist, shrug, up, dirs, leg in keys:
+            frame = round(t * FPS)
+            reset()
+            for b, share in zip(SPINE, (0.3, 0.3, 0.25, 0.1, 0.05)): rotate_world(b, Quaternion((1, 0, 0), math.radians(lean * share)))
+            if head: rotate_world('Head', Quaternion((1, 0, 0), math.radians(head)))
+            if twist:
+                for b in ('Spine01', 'Spine'): rotate_world(b, Quaternion((0, 0, 1), math.radians(twist * 0.5)))
+            if shrug: rotate_world('RightShoulder', Quaternion((0, 1, 0), math.radians(shrug)))
+            for name, d in zip(ARMS, dirs): aimv(name, D(*d))
+            m = PB['Hips'].matrix.copy(); m.translation += Vector((0, 0, up * k)); PB['Hips'].matrix = m
+            bpy.context.view_layer.update()
+            if leg is None:
+                leg_ik('Left', (WIDE, 4 * k, ANK), 0); leg_ik('Right', (-WIDE, -4 * k, ANK), 0)
+            else:
+                for name, d in zip(LEGS, leg): aimv(name, D(*d))
+            for b in ALL: PB[b].keyframe_insert('rotation_quaternion', frame=frame, group=b)
+            PB['Hips'].keyframe_insert('location', frame=frame, group='Hips')
+        return round(keys[-1][0] * FPS), 0
+    CHEST = ((0.45, 0.8, -0.2), (-0.5, 0.65, 0.55), (-0.45, 0.8, -0.2), (0.5, 0.65, 0.55))
+    TOE_L, TOE_R = (0.05, 0.55, -0.85), (-0.05, 0.55, -0.85)
+    def lay():   # 上籃：左腳蹬、右膝帶起來、右手把球往框上送（0.40 秒出手，和 js/main.js 的 case 'lay' 對齊）
+        return posed([
+            (0.00, 14, 0, 0, 0, -4.5, CHEST, None),
+            (0.15, 4, 0, -8, 12, 0, ((0.55, 0.65, -0.1), (0.1, 0.8, 0.45), (-0.7, 0.45, 0.45), (-0.45, 0.3, 0.8)), ((0.08, -0.15, -1), (0.03, -0.35, -0.95), TOE_L, (-0.1, 0.95, -0.3), (-0.05, -0.5, -0.85), TOE_R)),
+            (0.40, -6, -6, 0, 26, 0, ((0.8, 0.3, -0.45), (0.55, 0.6, -0.5), (-0.65, 0.35, 0.65), (-0.38, 0.4, 0.82)), ((0.1, -0.05, -1), (0.03, -0.75, -0.65), TOE_L, (-0.12, 0.7, -0.7), (-0.05, -0.35, -0.93), TOE_R)),
+            (0.60, 8, 0, 0, 0, 0, ((0.55, 0.15, -0.8), (0.3, 0.45, -0.85), (-0.55, 0.15, -0.8), (-0.3, 0.45, -0.85)), ((0.14, 0.2, -1), (0.05, -0.2, -1), TOE_L, (-0.14, 0.2, -1), (-0.05, -0.2, -1), TOE_R))])
+    def pass_():   # 胸前傳球：雙手推出去再收回來，身體跟著往前送（遊戲只取上半身）
+        return posed([
+            (0.00, 12, 0, 0, 0, 0, CHEST, None),
+            (0.09, 18, -6, 0, 0, 0, ((0.25, 0.95, 0.1), (0.2, 0.95, 0.15), (-0.25, 0.95, 0.1), (-0.2, 0.95, 0.15)), None),
+            (0.26, 10, -3, 0, 0, 0, ((0.42, 0.55, -0.7), (0.3, 0.8, -0.35), (-0.42, 0.55, -0.7), (-0.3, 0.8, -0.35)), None)])
+
     arm.animation_data_create()
     os.makedirs(OUT_DIR, exist_ok=True)
     style = STYLE.get(key, {})
@@ -205,12 +242,13 @@ def build(key, file):
         if g is GAITS['sprint']: o['lean'] += 7; o['amp'] += 8
         return o
     plan = {n: styled(g) for n, g in GAITS.items()}
-    if key != 'needle': plan['shot'] = None
+    if key != 'needle': plan['shot'] = plan['pass'] = None
+    if key not in ('needle', 'jie'): plan['lay'] = None
     if key in POWER: plan['push'] = None
     for name, g in plan.items():
         act = bpy.data.actions.new(f'{key}_{name}')
         arm.animation_data.action = act
-        n, stance = gait(g) if g else (shot() if name == 'shot' else push())
+        n, stance = gait(g) if g else {'shot': shot, 'push': push, 'lay': lay, 'pass': pass_}[name]()
         scene.frame_start, scene.frame_end = 0, n
         bpy.ops.object.mode_set(mode='OBJECT')
         bpy.ops.object.select_all(action='DESELECT'); arm.select_set(True); bpy.context.view_layer.objects.active = arm

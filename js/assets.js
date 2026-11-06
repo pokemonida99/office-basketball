@@ -126,10 +126,11 @@ function outlineOf(geo) {
   }
   return outlineCache.get(geo);
 }
-function toonify(model) {
+function toonify(model, outline = true) {
   const skinned = []; model.traverse(o => { if (o.isSkinnedMesh) skinned.push(o); });
   for (const o of skinned) {
     o.material = Array.isArray(o.material) ? o.material.map(toonOf) : toonOf(o.material);
+    if (!outline) continue;
     const ol = new THREE.SkinnedMesh(o.geometry, outlineOf(o.geometry));
     ol.bind(o.skeleton, o.bindMatrix); ol.frustumCulled = false; ol.castShadow = false; ol.renderOrder = -1;
     o.add(ol);
@@ -137,11 +138,12 @@ function toonify(model) {
 }
 
 // 複製一個角色。speed 由遊戲每幀設定（每秒幾單位），updateActor 會換算動畫速度
-export function makeActor(kind, scale = 1) {
+// lite：觀眾用，離鏡頭遠，不畫描邊和陰影（一個人少畫兩倍的三角形）
+export function makeActor(kind, scale = 1, { lite = false } = {}) {
   const root = new THREE.Group();
   const model = SkeletonUtils.clone(kind.base);
-  model.traverse(o => { if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; } });
-  if (TOON.on) toonify(model);
+  model.traverse(o => { if (o.isMesh) { o.castShadow = !lite; o.frustumCulled = false; } });
+  if (TOON.on) toonify(model, !lite);
   root.add(model); root.scale.setScalar(scale);
   const mixer = new THREE.AnimationMixer(model);
   const action = kind.clip ? mixer.clipAction(kind.clip).play() : null;

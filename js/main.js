@@ -1,13 +1,13 @@
 // 上班啟示錄：下班先鬥牛 2v2 —— 頂樓半場籃球。玩家挑兩個同事，電腦控制隊友和對手；每個人都有自己的大招
 import * as THREE from 'three';
-import { scene, render, updateCamera, cam, camera, CAMS, camMode, labelSprite, V, quality, setQuality, setQualityPref, canvasTex, FONT, sphere, mat } from './world.js?v=0.7.0';
-import { loadOwnClip, loadRun, loadKind, loadClip, makeActor, addJog, updateActor, turnTo } from './assets.js?v=0.7.0';
-import * as fx from './fx.js?v=0.7.0';
-import { buildCourt, setCourt, animateCourt, swishNet, C, COURT, HOOP, ARC_R, CORNER_X, TOP, WALL, isThree, hoopDist } from './court.js?v=0.7.0';
-import { music, musicStart, musicStop, musicTick, musicTheme, musicPause } from './music.js?v=0.7.0';
-import { openOP, replayOP, seekOP } from './op.js?v=0.7.0';
+import { scene, render, updateCamera, cam, camera, CAMS, camMode, labelSprite, V, quality, setQuality, setQualityPref, canvasTex, FONT, sphere, mat } from './world.js?v=0.8.0';
+import { loadOwnClip, loadRun, loadKind, loadClip, makeActor, addJog, updateActor, turnTo } from './assets.js?v=0.8.0';
+import * as fx from './fx.js?v=0.8.0';
+import { buildCourt, setCourt, animateCourt, swishNet, C, COURT, HOOP, ARC_R, CORNER_X, TOP, WALL, isThree, hoopDist } from './court.js?v=0.8.0';
+import { music, musicStart, musicStop, musicTick, musicTheme, musicPause } from './music.js?v=0.8.0';
+import { openOP, replayOP, seekOP } from './op.js?v=0.8.0';
 
-const VERSION = '0.7.0';
+const VERSION = '0.8.0';
 document.querySelectorAll('#ver, .verTag').forEach(el => { el.textContent = 'v' + VERSION; });
 
 // ---------- 數值（調手感只改這裡） ----------
@@ -82,8 +82,7 @@ const CHARS = {
     stat: '投籃 ★★★★　衝刺 ★★★★★', quote: '五點了，我要下班。',
     sp: { name: '下班衝刺', desc: '打卡下班的速度衝到籃下，路上的人全撞飛，必進上籃', need: true } },
 };
-const KEYS = Object.keys(CHARS);
-// 選角畫面只放這幾個人；其他人先藏起來（不在選角、封面、觀眾席出現），只有 3v3 對手湊不滿時才讓電腦用
+// 選角畫面只放這幾個人；其他人先藏起來（不在選角、封面、觀眾席出現，也不載入模型）
 const ROSTER = ['kui', 'jie', 'mi', 'vivi', 'kevin', 'lin', 'yuan', 'hu', 'tu', 'zhang', 'bian'];
 const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 // 難度：電腦的命中、跑速、抄截、蓋帽、集氣倍率；green 是玩家投籃時機綠色區的寬度倍率
@@ -106,27 +105,29 @@ const MOVE_WIN = { dodge: [0.1, 0.9], spin: [0.1, 1.1], stepback: [0.1, 1.0], pu
 // JIE 取代同名的共用動作；dunk、lay 只有他有。shoot 是投籃、舉手定格那一格（對應共用的 handsup）
 const JIE = {}, OVER_JIE = {}, JIE_MOVES = ['guard', 'back', 'stop', 'push', 'reach', 'block', 'rebound', 'stumble', 'knock', 'flop', 'dunk', 'lay'];
 const JIE_OVER = { handsup: 'shoot', guard: 'guard', hop: 'hop' };
-// OWN：每個人自己的持球衝刺、跳投、強力突破（tools/blender/runs.py）。變身成針筒超人時骨架換了，改用共用的
-const OWN = {};
+// OWN：每個人自己的持球衝刺、跳投、上籃、強力突破（tools/blender/runs.py）；OVER_OWN：傳球，只取上半身。變身成針筒超人時骨架換了，改用共用的
+const OWN = {}, OVER_OWN = {};
 const moveOf = (p, name) => (!p.base && OWN[p.key]?.[name]) || (p.key === 'jie' && JIE[name]) || MOVES[name];
 const SHOT_SET = 0.3, winOf = (p, name) => { const c = moveOf(p, name); return c === MOVES[name] ? MOVE_WIN[name] : [0, c.duration]; };
 async function loadAll(progress) {
   const JIE_CLIP = { jie: 'models/moves/jie/walk.glb' };
-  const list = [...KEYS.map(k => [k, CHARS[k].model]), ['npcM', 'npc_m_walk'], ['npcF', 'npc_f_walk'], ['caishen', 'caishen_sit'], ['needle', 'needle_walk']];
-  let n = 0; const RUNNERS = [...KEYS, 'needle'], all = list.length + KEYS.length + Object.keys(MOVE_WIN).length + JIE_MOVES.length + RUNNERS.length;
+  const list = [...ROSTER.map(k => [k, CHARS[k].model]), ['npcM', 'npc_m_walk'], ['npcF', 'npc_f_walk'], ['caishen', 'caishen_sit'], ['needle', 'needle_walk']];
+  let n = 0; const RUNNERS = [...ROSTER, 'needle'], all = list.length + ROSTER.length + Object.keys(MOVE_WIN).length + JIE_MOVES.length + RUNNERS.length;
   await Promise.all([
     ...list.map(async ([k, f]) => { K[k] = await loadKind(`models/${f}.glb`, JIE_CLIP[k]); progress(++n / all); }),
     ...JIE_MOVES.map(async k => { try { JIE[k] = await loadOwnClip(`models/moves/jie/${k}.glb`); } catch (e) { console.warn('jie', k, e); } progress(++n / all); }),
     ...Object.entries(JIE_OVER).map(async ([k, f]) => { try { OVER_JIE[k] = prepOver(await loadOwnClip(`models/moves/jie/${f}.glb`)); } catch (e) { console.warn('jie over', k, e); } }),
     // 招牌動作只是動畫，載不到也不影響比賽
-    ...KEYS.map(async k => { try { SIG[k] = await loadOwnClip(`models/sig/${k}.glb`); } catch (e) { console.warn('sig', k, e); } progress(++n / all); }),
+    ...ROSTER.map(async k => { try { SIG[k] = await loadOwnClip(`models/sig/${k}.glb`); } catch (e) { console.warn('sig', k, e); } progress(++n / all); }),
     ...Object.keys(MOVE_WIN).map(async k => { try { MOVES[k] = await loadOwnClip(`models/moves/${k}.glb`); } catch (e) { console.warn('move', k, e); } progress(++n / all); }),
-    ...Object.keys(OVER_WIN).map(async k => { try { OVER[k] = prepOver(await loadClip(`models/moves/${k}.glb`)); } catch (e) { console.warn('over', k, e); } }),
+    ...Object.keys(OVER_WIN).filter(k => k !== 'pass').map(async k => { try { OVER[k] = prepOver(await loadClip(`models/moves/${k}.glb`)); } catch (e) { console.warn('over', k, e); } }),
   ]);
   // 跑步要量腳掌速度，得等模型載完（每個人照自己腿長算的，見 tools/blender/runs.py）
   await Promise.all(RUNNERS.map(async k => {
     K[k + 'Jog'] = await loadRun(K[k], `models/moves/run/${k}_run.glb`);
     if (CHARS[k]) OWN[k] = { sprint: await loadOwnClip(`models/moves/run/${k}_sprint.glb`), shot: await loadOwnClip(`models/moves/run/${k}_shot.glb`) };
+    if (CHARS[k] && k !== 'jie') OWN[k].lay = await loadOwnClip(`models/moves/run/${k}_lay.glb`);
+    if (CHARS[k]) OVER_OWN[k] = prepOver(await loadOwnClip(`models/moves/run/${k}_pass.glb`));
     if (CHARS[k]?.skill.kind === 'power' && k !== 'jie') OWN[k].push = await loadOwnClip(`models/moves/run/${k}_push.glb`);
     progress(++n / all);
   }));
@@ -152,7 +153,7 @@ const st = (p, k, d = 1) => p.def[k] ?? d;   // 角色數值（沒寫就用預�
 const ART_ACTS = ['dunk', 'three', 'fade', 'steal'];
 const SP_ART = { kui: 'coffee', jie: 'dunk', mi: 'phone', vivi: 'boss', kevin: 'ai', lin: 'cross', yuan: 'block', hu: 'fade', tu: 'egg', zhang: 'hero', bian: 'sprint' };
 const hasArt = (k) => k in SP_ART;
-const artUrl = (k, a) => `art/${k}_${a}.webp?v=0.7.0`;
+const artUrl = (k, a) => `art/${k}_${a}.webp?v=0.8.0`;
 function preloadArt(keys) { for (const k of keys) if (hasArt(k)) for (const a of [...ART_ACTS, SP_ART[k]]) { const im = new Image(); im.src = artUrl(k, a); } }
 let flashUntil = 0, flashTimer = 0;
 // 動作立繪從旁邊滑進來一下（我方在左、對手在右），2 秒內只跳一次
@@ -217,7 +218,7 @@ function makePortraits() {
   sc.add(new THREE.HemisphereLight(0xffffff, 0xf2c99a, 2.0));
   const dl = new THREE.DirectionalLight(0xfff4e0, 2.2); dl.position.set(1, 2, 3); sc.add(dl);
   const cm = new THREE.PerspectiveCamera(24, 1, 0.1, 10); cm.position.set(0, 0.76, 1.45); cm.lookAt(0, 0.72, 0);
-  for (const k of KEYS) { const a = makeActor(K[k]); sc.add(a.root); r.render(sc, cm); FACE[k] = r.domElement.toDataURL(); sc.remove(a.root); }
+  for (const k of ROSTER) { const a = makeActor(K[k]); sc.add(a.root); r.render(sc, cm); FACE[k] = r.domElement.toDataURL(); sc.remove(a.root); }
   r.dispose(); r.forceContextLoss?.();
 }
 
@@ -270,7 +271,7 @@ function resetBones(rig) { for (const [b, q] of rig.rest) b.quaternion.copy(q); 
 // 不用程式直接轉肩膀：那樣只有手臂骨頭在轉，腋下的皮膚會被拉長（像蝴蝶袖）；動作庫的動作連鎖骨、脊椎一起動
 // OVER_WIN：[開始秒, 結束秒] 來回播；同一個數字＝定格在那一格（用 tools/peek.html 一格一格看過挑的）
 // guard 防守蹲低張手、handsup 雙手直直舉高（投籃、蓋帽、灌籃）、hop 雙手 V 字（歡呼）
-const OVER_WIN = { guard: [0.4, 1.0], handsup: [0.9, 0.9], hop: [1.05, 1.35] };
+const OVER_WIN = { guard: [0.4, 1.0], handsup: [0.9, 0.9], hop: [1.05, 1.35], pass: [0, 0.26] };   // pass 照傳球動作的時間播，不來回
 const UPPER = ['Spine', 'Spine01', 'Spine02', 'neck', 'Head', 'LeftShoulder', 'LeftArm', 'LeftForeArm', 'LeftHand', 'RightShoulder', 'RightArm', 'RightForeArm', 'RightHand'];
 const OVER = {}, _oq = new THREE.Quaternion();
 function prepOver(clip) { return clip.tracks.filter(t => t.name.endsWith('.quaternion') && UPPER.includes(t.name.split('.')[0])).map(t => ({ bone: t.name.split('.')[0], it: t.createInterpolant() })); }
@@ -280,8 +281,8 @@ function overlay(rig, tg, t, dt) {
   const ow = rig.ow || (rig.ow = {}), k = Math.min(1, dt * 12);
   for (const name in OVER_WIN) {
     const w = ow[name] = (ow[name] || 0) + ((tg === name ? 1 : 0) - (ow[name] || 0)) * k;
-    const tr = (rig.key === 'jie' && OVER_JIE[name]) || OVER[name]; if (!tr || w < 0.01) continue;
-    const tm = overTime(name, t + (rig.ph || 0));
+    const tr = name === 'pass' ? OVER_OWN[rig.key] : (rig.key === 'jie' && OVER_JIE[name]) || OVER[name]; if (!tr || w < 0.01) continue;
+    const tm = name === 'pass' ? Math.min(rig.act?.t ?? OVER_WIN.pass[1], OVER_WIN.pass[1]) : overTime(name, t + (rig.ph || 0));
     for (const o of tr) { const b = rig.bones[o.bone]; if (b) b.quaternion.slerp(_oq.fromArray(o.it.evaluate(tm)), w); }
   }
 }
@@ -356,10 +357,10 @@ function buildCrowd() {
   for (const c of crowd) scene.remove(c.actor.root);
   crowd = [];
   const out = ROSTER.filter(k => !S.pick.includes(k) && !S.opp.includes(k));
-  const list = [...out, 'npcM', 'npcF', 'npcM', 'npcF'].slice(0, 10);
+  const list = [...out, 'npcM', 'npcF', 'npcM', 'npcF'].slice(0, quality.level === 'low' ? 4 : 10);
   list.forEach((k, i) => {
     const side = i % 2 ? 1 : -1, slot = i >> 1;
-    const actor = makeActor(K[k], CFG.scale * 0.95);
+    const actor = makeActor(K[k], CFG.scale * 0.95, { lite: true });
     actor.root.position.set(side * 6.85, 0.42, 3.9 + slot * 1.05);
     actor.root.rotation.y = side > 0 ? -Math.PI / 2 : Math.PI / 2;
     scene.add(actor.root);
@@ -575,7 +576,7 @@ function handsPos(p, out = V()) {
   if (!r || !l) return chestPos(p, out);
   r.getWorldPosition(_hp); l.getWorldPosition(_hp2);
   out.copy(_hp).add(_hp2).multiplyScalar(0.5).add(_a.set(Math.sin(p.face) * 0.12, 0.04, Math.cos(p.face) * 0.12));
-  if ((p.act?.type === 'shoot' && playingMove(p, 'shot')) || (p.key === 'jie' && p.act?.type === 'lay')) {   // 手短頭大，球放在右手掌上才不會埋進頭髮
+  if ((p.act?.type === 'shoot' && playingMove(p, 'shot')) || (p.act?.type === 'lay' && playingMove(p, 'lay'))) {   // 手短頭大，球放在右手掌上才不會埋進頭髮
     p.bones.RightForeArm.getWorldPosition(_hp2);
     _hp.add(_hp2.subVectors(_hp, _hp2).normalize().multiplyScalar(BR + 0.03));
     out.lerp(_hp, THREE.MathUtils.clamp((p.act.t - 0.12) / 0.1, 0, 1));
@@ -658,7 +659,7 @@ function layAct(p, d, dunk) {
     playMove(p, 'dunk');
     return { type: 'lay', t: 0, sx: p.x, sz: p.z, tx: HOOP.x + nx * JIE_DUNK.rim + nz * JIE_DUNK.side, tz: Math.max(HOOP.z + 0.25, HOOP.z + nz * JIE_DUNK.rim - nx * JIE_DUNK.side), dunk, rel: false, big: true, face: Math.atan2(-nx, -nz) };
   }
-  playMove(p, 'lay', { dur: 0.6 });   // 只有阿傑有專屬上籃，其他人照舊疊上半身
+  if (!dunk) playMove(p, 'lay', { dur: 0.6 });   // 灌籃只有阿傑有全身動作，其他人照舊疊舉手
   return { type: 'lay', t: 0, sx: p.x, sz: p.z, tx: HOOP.x + nx * 0.42, tz: Math.max(HOOP.z + 0.25, HOOP.z + nz * 0.42), dunk, rel: false };
 }
 function updateJieDunk(p, a) {
@@ -1494,7 +1495,7 @@ function updateAct(p, dt) {
     case 'fake': if (a.t > 0.35) { p.act = null; if (a.then === 'combo' && holding(p)) runCombo(p, 'fake'); else { p.comboT = COMBO_WIN; p.comboKind = 'fake'; } } break;
     case 'shadow': {   // 林語彤的瞬影閃身：每段 0.28 秒，經過的防守者晃倒，最後上籃
       const SEG = 0.28, i = Math.floor(a.t / SEG), pt = a.pts[Math.min(i, a.pts.length - 1)], prev = i === 0 ? { x: a.sx, z: a.sz } : a.pts[i - 1];
-      if (i >= a.pts.length) { p.act = { type: 'lay', t: 0, sx: p.x, sz: p.z, tx: HOOP.x, tz: HOOP.z + 0.42, dunk: false, rel: false, sure: true }; break; }
+      if (i >= a.pts.length) { p.act = { type: 'lay', t: 0, sx: p.x, sz: p.z, tx: HOOP.x, tz: HOOP.z + 0.42, dunk: false, rel: false, sure: true }; playMove(p, 'lay', { dur: 0.6 }); break; }
       if (i !== a.seg) { a.seg = i; if (prev.q) { prev.q.stun = 1.2; prev.q.act = null; playMove(prev.q, 'stumble', { dur: 1.1 }); fx.floatText(V(prev.q.x, 2.3, prev.q.z), '晃倒！', p.def.color, 1); fx.sfx.whiff(); } playMove(p, 'dodge', { dur: SEG + 0.1 }); }
       const k = (a.t - i * SEG) / SEG;
       p.x = prev.x + (pt.x - prev.x) * k; p.z = prev.z + (pt.z - prev.z) * k;
@@ -1575,7 +1576,7 @@ function updateAct(p, dt) {
       break;
     case 'bsprint': {   // 小編下班衝刺：直線衝到籃下，路上的防守者被撞開，最後必進上籃
       const tx = HOOP.x, tz = HOOP.z + 1.15, dx = tx - p.x, dz = tz - p.z, d = Math.hypot(dx, dz);
-      if (d < 0.35 || a.t > 2.6 || !holding(p)) { stopSig(p); p.act = holding(p) ? { type: 'lay', t: 0, sx: p.x, sz: p.z, tx: HOOP.x, tz: HOOP.z + 0.42, dunk: false, rel: false, sure: true } : null; break; }
+      if (d < 0.35 || a.t > 2.6 || !holding(p)) { stopSig(p); p.act = holding(p) ? { type: 'lay', t: 0, sx: p.x, sz: p.z, tx: HOOP.x, tz: HOOP.z + 0.42, dunk: false, rel: false, sure: true } : null; if (p.act) playMove(p, 'lay', { dur: 0.6 }); break; }
       const sp = Math.min(d, 9 * dt); p.x += dx / d * sp; p.z += dz / d * sp; p.face = Math.atan2(dx, dz);
       for (const q of oppsOf(p)) if (q.stun <= 0 && dist2(q, p) < 0.9) { q.stun = 0.9; q.act = null; q.x += dz / d * 0.8; q.z -= dx / d * 0.8; playMove(q, 'stumble', { dur: 0.8 }); fx.floatText(V(q.x, 2.3, q.z), '撞飛！', p.def.color, 0.9); fx.sfx.block(); }
       if (Math.random() < 0.7) fx.puff(V(p.x, 0.1, p.z), 0xffffff);
@@ -1877,6 +1878,7 @@ function overTarget(p) {
   if (a) switch (a.type) {
     case 'shoot': case 'ai': case 'block': return 'handsup';
     case 'lay': return a.dunk ? 'handsup' : null;
+    case 'pass': case 'lob': return p.base ? null : 'pass';
     case 'jdunk': return a.t < 0.3 ? null : 'handsup';
     case 'egg': return 'handsup';
     case 'alley': return a.ph === 'jump' ? 'handsup' : null;
@@ -1940,8 +1942,8 @@ function updateCrowd(dt, t) {
 // ---------- 比賽流程 ----------
 function newMatch() {
   clearPlayers();
-  // 對手先從選角名單裡抽，不夠（3v3）再用藏起來的人補
-  const others = [...shuffle(ROSTER.filter(k => !S.pick.includes(k))), ...shuffle(KEYS.filter(k => !ROSTER.includes(k) && !S.pick.includes(k)))];
+  // 對手從選角名單裡抽。藏起來的人遊戲不載入，要開放時把他們加回 ROSTER（名單有 11 人，3v3 也夠用）
+  const others = shuffle(ROSTER.filter(k => !S.pick.includes(k)));
   if (!S.keepOpp) S.opp = others.slice(0, S.pick.length);
   S.keepOpp = false;
   players = [...S.pick.map(k => makePlayer(k, 0)), ...S.opp.map(k => makePlayer(k, 1))];
@@ -2287,7 +2289,7 @@ soundIcon();
 
 function buildSelect() {
   // 選角卡：真人風全身照（art/<人>_card.webp，tools/gen_real.sh 的 card_* 姿勢，每個人不一樣）＋位置標籤
-  $('grid').innerHTML = ROSTER.map(k => { const c = CHARS[k], [job, pos] = c.role.split('・'); return `<div class="ch" data-k="${k}" style="--cc:${c.color}"><span class="badge"></span><div class="pic"><span class="pos">${pos || job}</span><img src="art/${k}_card.webp?v=0.7.0" alt="${c.name}" onerror="this.src='${FACE[k]}'"></div><div class="info"><div class="nm">${c.name}<small>${pos ? job : ''}</small></div><span class="spn">${c.sp.name}</span><span class="skn">${c.skill.name}</span><div class="d">${c.sp.desc}</div><div class="st">${c.stat}</div></div></div>`; }).join('');
+  $('grid').innerHTML = ROSTER.map(k => { const c = CHARS[k], [job, pos] = c.role.split('・'); return `<div class="ch" data-k="${k}" style="--cc:${c.color}"><span class="badge"></span><div class="pic"><span class="pos">${pos || job}</span><img src="art/${k}_card.webp?v=0.8.0" alt="${c.name}" onerror="this.src='${FACE[k]}'"></div><div class="info"><div class="nm">${c.name}<small>${pos ? job : ''}</small></div><span class="spn">${c.sp.name}</span><span class="skn">${c.skill.name}</span><div class="d">${c.sp.desc}</div><div class="st">${c.stat}</div></div></div>`; }).join('');
   for (const el of $('grid').children) el.onclick = () => {
     fx.audioInit(); fx.sfx.click();
     const k = el.dataset.k, i = S.sel.indexOf(k);
