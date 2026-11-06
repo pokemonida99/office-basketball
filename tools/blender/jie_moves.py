@@ -180,8 +180,7 @@ def guard_arms(c): return GUARD_UP
 
 # ---------- 移動 ----------
 keyed('walk', gait(0.9, 0.6, 10.0, 4.0, -3.5, 0.8, 3, swing(18, 18)), loop=True)   # 步幅要夠大：遊戲照腳掌速度換算播放速度，步幅小腳就會抽得很快
-keyed('jog', gait(0.62, 0.32, 11.5, 7.0, -3.0, 1.4, 8, swing(30, 75, 0.35)), loop=True)
-keyed('sprint', gait(0.5, 0.36, 11.5, 8.5, -3.5, 1.6, 17, swing(42, 85, 0.35)), loop=True)
+# 跑步和持球衝刺在 runs.py（每個人都有）
 keyed('back', gait(0.8, 0.6, 6.0, 3.0, -3.0, 0.6, 9, lambda c: GUARD_UP, wide=8.5, rev=True, sway=0.6), loop=True)
 
 def guard_keys():

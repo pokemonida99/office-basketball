@@ -9,9 +9,8 @@ const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
 
 // 載入一個角色：縮成 1 單位高、腳踩地，順便量出不滑步的速度
 // 模型都要先轉正（臉朝 +z）再綁原地走路動作（見 tools/face_front.py）
-// keepLeanDeg：小跑步這類太前傾的動作，扶正到只剩幾度（要先扶正再修低頭）
-// clipUrl：走路或跑步動作改用另外的動畫檔（阿傑的 Blender 動作）
-export async function loadKind(url, keepLeanDeg = null, clipUrl = null) {
+// clipUrl：走路動作改用另外的動畫檔（阿傑的 Blender 動作）
+export async function loadKind(url, clipUrl = null) {
   const g = await loader.loadAsync(url);
   g.scene.updateMatrixWorld(true);   // 先更新矩陣，不然骨架節點的縮放沒算進去，高度會量錯
   const box = new THREE.Box3().setFromObject(g.scene), size = box.getSize(new THREE.Vector3());
@@ -25,7 +24,6 @@ export async function loadKind(url, keepLeanDeg = null, clipUrl = null) {
   base.traverse(o => { if (o.isBone) rest.push([o, o.position.clone(), o.quaternion.clone(), o.scale.clone()]); });
   const natural = clip ? measureNatural(base, clip) : 0.25;
   const lean = clip ? measureLean(base, clip) : 0;
-  if (clip && keepLeanDeg != null) fixLean(base, clip, lean - THREE.MathUtils.degToRad(keepLeanDeg));
   const headPitch = clip ? fixHead(base, clip) : 0;
   for (const [b, p, q, sc] of rest) { b.position.copy(p); b.quaternion.copy(q); b.scale.copy(sc); }
   return { base, clip, natural, lean, headPitch, rest };
@@ -68,23 +66,6 @@ function fixHead(base, clip) {
   return pitch();
 }
 
-// 小跑步原檔前傾太多（Q 版大頭像在鞠躬）：一樣在載入時把 Spine02 的關鍵格往後扶正，只留 keepDeg 度
-function fixLean(base, clip, amount) {
-  let spine; base.traverse(o => { if (o.isBone && o.name === 'Spine02') spine = o; });
-  const track = clip.tracks.find(t => t.name === 'Spine02.quaternion');
-  if (!spine || !track || amount <= 0) return;
-  const mixer = new THREE.AnimationMixer(base), a = mixer.clipAction(clip).play();
-  _q.setFromAxisAngle(_ax.set(1, 0, 0), -amount);   // 臉朝 +z，繞角色右手方向（+x）往後轉
-  const v = track.values, fixed = [];
-  for (let k = 0; k < track.times.length; k++) {
-    a.time = track.times[k]; mixer.update(0); base.updateMatrixWorld(true);
-    spine.parent.getWorldQuaternion(_pq);
-    const loc = new THREE.Quaternion().fromArray(v, k * 4);
-    fixed.push(_pq.clone().invert().multiply(_q).multiply(_pq).multiply(loc));
-  }
-  a.stop(); mixer.uncacheRoot(base);
-  fixed.forEach((q, k) => q.toArray(v, k * 4));
-}
 // 只載動畫（tools/strip_anim.cjs 做出來的檔），套到同一套骨架的角色上
 export async function loadClip(url) { const g = await loader.loadAsync(url); return g.animations[0] || null; }
 // 角色專屬動作：只留骨頭轉動和臀部位移，其他骨頭的長度維持角色自己的（不會被動作檔拉長）
@@ -93,7 +74,13 @@ export async function loadOwnClip(url) {
   if (clip) clip.tracks = clip.tracks.filter(t => t.name.endsWith('.quaternion') || t.name === 'Hips.position');
   return clip;
 }
-// 掛上第二段動作（小跑步），之後依速度跟走路混合（小跑步要用 loadKind(url, 7) 載入，前傾已扶正）
+// 角色自己的跑步：只載動畫，再用他的身體量不滑步的速度
+export async function loadRun(kind, url) {
+  const clip = await loadOwnClip(url), natural = measureNatural(kind.base, clip);
+  for (const [b, p, q, sc] of kind.rest) { b.position.copy(p); b.quaternion.copy(q); b.scale.copy(sc); }
+  return { clip, natural };
+}
+// 掛上跑步動作，之後依速度跟走路混合
 export function addJog(a, jogKind) {
   a.jog = a.mixer.clipAction(jogKind.clip).play(); a.jog.setEffectiveWeight(0);
   a.jogNatural = jogKind.natural;
@@ -170,8 +157,8 @@ export function updateActor(a, dt, t) {
     a.action.setEffectiveWeight(a.w);
     if (moving) a.action.timeScale = a.speed / (a.natural * a.root.scale.x) * (a.animMul ?? 1);
   }
-  if (a.jog) {   // 有掛小跑步的角色：慢走、快跑依速度混合
-    const k = a.forceJog ?? THREE.MathUtils.clamp((a.speed / a.root.scale.x - 1.3) / 0.8, 0, 1);
+  if (a.jog) {   // 慢走、快跑依速度混合（走路動作快放就像快走，所以很早就換成跑步）
+    const k = a.forceJog ?? THREE.MathUtils.clamp((a.speed / a.root.scale.x - 0.7) / 0.7, 0, 1);
     a.jk = (a.jk ?? 0) + (k - (a.jk ?? 0)) * Math.min(1, dt * 8);
     a.action.setEffectiveWeight(a.w * (1 - a.jk)); a.jog.setEffectiveWeight(a.w * a.jk);
     if (moving) a.jog.timeScale = a.speed / (a.jogNatural * a.root.scale.x) * (a.animMul ?? 1);
