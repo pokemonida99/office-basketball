@@ -10,7 +10,8 @@ const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
 // 載入一個角色：縮成 1 單位高、腳踩地，順便量出不滑步的速度
 // 模型都要先轉正（臉朝 +z）再綁原地走路動作（見 tools/face_front.py）
 // keepLeanDeg：小跑步這類太前傾的動作，扶正到只剩幾度（要先扶正再修低頭）
-export async function loadKind(url, keepLeanDeg = null) {
+// clipUrl：走路或跑步動作改用另外的動畫檔（阿傑的 Blender 動作）
+export async function loadKind(url, keepLeanDeg = null, clipUrl = null) {
   const g = await loader.loadAsync(url);
   g.scene.updateMatrixWorld(true);   // 先更新矩陣，不然骨架節點的縮放沒算進去，高度會量錯
   const box = new THREE.Box3().setFromObject(g.scene), size = box.getSize(new THREE.Vector3());
@@ -18,7 +19,7 @@ export async function loadKind(url, keepLeanDeg = null) {
   const base = new THREE.Group(); base.add(g.scene);
   g.scene.scale.multiplyScalar(s);
   g.scene.position.set(-(box.min.x + size.x / 2) * s, -box.min.y * s, -(box.min.z + size.z / 2) * s);
-  const clip = g.animations[0] || null;
+  const clip = clipUrl ? await loadOwnClip(clipUrl) : g.animations[0] || null;
   // 記下站姿（綁骨架時的 A 字站姿），量完步伐要還原；停下來時動畫權重降到 0 就會回到這個站姿
   const rest = [];
   base.traverse(o => { if (o.isBone) rest.push([o, o.position.clone(), o.quaternion.clone(), o.scale.clone()]); });
@@ -86,6 +87,12 @@ function fixLean(base, clip, amount) {
 }
 // 只載動畫（tools/strip_anim.cjs 做出來的檔），套到同一套骨架的角色上
 export async function loadClip(url) { const g = await loader.loadAsync(url); return g.animations[0] || null; }
+// 角色專屬動作：只留骨頭轉動和臀部位移，其他骨頭的長度維持角色自己的（不會被動作檔拉長）
+export async function loadOwnClip(url) {
+  const clip = await loadClip(url);
+  if (clip) clip.tracks = clip.tracks.filter(t => t.name.endsWith('.quaternion') || t.name === 'Hips.position');
+  return clip;
+}
 // 掛上第二段動作（小跑步），之後依速度跟走路混合（小跑步要用 loadKind(url, 7) 載入，前傾已扶正）
 export function addJog(a, jogKind) {
   a.jog = a.mixer.clipAction(jogKind.clip).play(); a.jog.setEffectiveWeight(0);

@@ -22,6 +22,8 @@
 
 ![比賽](design/v0.1_比賽_電腦.jpg)
 
+**v0.6.0**：阿傑全部動作改用 Blender 重做，修掉共用動作把他的腿和手拉長的問題；能力數值不變。
+
 **v0.5.9**：封面和選角畫面左上角顯示版本號。
 
 **v0.5.8**：阿傑一般灌籃換成 Blender 做的全身動作（單手戰斧式：蓄力、起跳、砸框、掛框盪腿、落地），手真的碰得到框；灌籃機率不變。
@@ -152,7 +154,7 @@
 - **山頂國小隊三人＋針筒超人**：使用者給的照片只當造型參考，GPT 畫原創公仔三視圖（`tools/gen_sheets.sh`）→ Tripo 轉 3D → 綁走路、小跑步、招牌動作（`work/3d/proc_rig.sh` 把綁好的檔案壓成 `models/<人>_walk/jog.glb` 和 `models/sig/<人>.glb`）。針筒超人前兩次 Tripo 轉出來背面也長了臉、披風只剩兩側，左右側面圖對調再轉一次才對（背面是紅披風）。
 - **香香籃球隊三人**：使用者的照片只裁「沒有臉的服裝」那半邊當造型參考（`tools/gen_sheets.sh`），GPT 畫原創公仔三視圖 → Tripo 轉 3D → 綁走路、小跑步、招牌動作。
 - **共用細部動作**（`models/moves/`）：閃身、轉身、後撤步、推人（卡位／強力突破）、踉蹌（被晃倒、被撞停）、搶板、火鍋、灌籃，在小米身上各綁一次，拿掉 Hips 位移（`strip_anim.cjs … flat`）後套給所有人，跳多高由遊戲物理決定。
-- **阿傑專屬灌籃**（`models/moves/jie_dunk.glb`）：`tools/blender/jie_dunk.py` 用 Blender 擺關鍵姿勢（寫每節骨頭要指向哪裡，不寫骨頭角度，因為 Tripo 綁的骨頭軸向不統一），另存可以手改的 `tools/blender/jie_dunk.blend`（姿勢預覽圖 `jie_dunk_poses.png`）。只能套在阿傑身上（含他的 Hips 高度）。Q 版頭大手短，手舉不過頭、比賽鏡頭又在後上方，所以做單手戰斧、手從頭髮右邊伸出去抓框。動畫時間要和 `main.js` 的 `JIE_DUNK` 對齊。重新匯出：`/Applications/Blender.app/Contents/MacOS/Blender -b -P tools/blender/jie_dunk.py -- $PWD/models/jie_walk.glb $PWD/models/moves/jie_dunk.glb $PWD/tools/blender/jie_dunk.blend`。
+- **阿傑的全部動作**（`models/moves/jie/`，共 17 段：走路、慢跑、持球衝刺、急停、防守滑步、後退步、背身強打、抄截、蓋帽、搶籃板、投籃舉手、上籃、灌籃、踉蹌、被蓋倒、撞倒、歡呼）：`tools/blender/jie_moves.py` 用 Blender 產生，另存可以手改的 `tools/blender/jie_moves.blend`（每段動作都在裡面）和側面預覽圖 `jie_moves_poses.png`。起因：共用動作（`models/moves/*.glb`）綁在小米身上，檔案裡有小米的骨頭位置，套到阿傑身上腿最多變 2.06 倍長；阿傑改用自己的動作後都是 1 倍，載入時也只留骨頭轉動和臀部位移（`loadOwnClip`）。**其他角色還在用共用動作，同樣的問題沒修。** 招牌動作 `models/sig/jie.glb` 是綁在阿傑自己身上的，沒有重做。腳本寫姿勢的方式：每節骨頭要指向哪裡、腳用 IK 寫腳踝位置（Tripo 綁的骨頭軸向不統一，不寫骨頭角度）。走路、慢跑的步幅不能太小，遊戲照腳掌速度換算播放速度，步幅小腳就會抽得很快。Q 版頭大手短，手都從頭髮外側伸，比賽鏡頭才看得到；投籃和上籃時球放在右手掌（`handsPos`）。灌籃時間要和 `main.js` 的 `JIE_DUNK` 對齊。`JIE` 取代同名共用動作（`moveOf`），`OVER_JIE` 取代上半身疊加。重新匯出：`/Applications/Blender.app/Contents/MacOS/Blender -b -P tools/blender/jie_moves.py -- $PWD/models/jie_walk.glb $PWD/models/moves/jie $PWD/tools/blender/jie_moves.blend`。
 - **真人風立繪**（`art/*.webp`）：`tools/gen_real.sh` 用使用者給的照片（香香三人的照片、`~/Downloads/人物集` 的上班族三視圖）讓 GPT 畫動作照，純綠背景 → `tools/make_art.sh` 去背轉 WebP（每張 15～55 KB）。Vivi 照主遊戲設定襯衫扣到領口。
 - **上半身疊 3D 動作**（`models/moves/guard.glb`、`handsup.glb`、`hop.glb`）：防守蹲低張手、投籃／蓋帽／灌籃雙手舉高、歡呼雙手 V 字，用 Higgsfield 動作庫綁在小米身上（橫向馬步跳、雙手舉高歡呼、舉手跳），遊戲裡只取上半身骨頭（脊椎、肩膀、手臂、頭）的轉動疊在走路／跑步上（`OVER_WIN`、`overlay()`）。以前用程式直接轉手臂骨頭，手抬高時腋下皮膚會被拉長（像蝴蝶袖），動作庫的動作連鎖骨、脊椎一起動就不會。
 - 運球、傳球、抄截、暈眩這些小幅度的手臂動作，還是用程式轉骨頭（最多抬到約 90°），加跳躍和壓扁。
