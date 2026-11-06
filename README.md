@@ -22,6 +22,8 @@
 
 ![比賽](design/v0.1_比賽_電腦.jpg)
 
+**v0.5.9**：封面和選角畫面左上角顯示版本號。
+
 **v0.5.8**：阿傑一般灌籃換成 Blender 做的全身動作（單手戰斧式：蓄力、起跳、砸框、掛框盪腿、落地），手真的碰得到框；灌籃機率不變。
 
 **v0.5.6**：直式手機的開場改成三張隊伍照（一隊一張）＋三欄砸片名。
@@ -150,7 +152,7 @@
 - **山頂國小隊三人＋針筒超人**：使用者給的照片只當造型參考，GPT 畫原創公仔三視圖（`tools/gen_sheets.sh`）→ Tripo 轉 3D → 綁走路、小跑步、招牌動作（`work/3d/proc_rig.sh` 把綁好的檔案壓成 `models/<人>_walk/jog.glb` 和 `models/sig/<人>.glb`）。針筒超人前兩次 Tripo 轉出來背面也長了臉、披風只剩兩側，左右側面圖對調再轉一次才對（背面是紅披風）。
 - **香香籃球隊三人**：使用者的照片只裁「沒有臉的服裝」那半邊當造型參考（`tools/gen_sheets.sh`），GPT 畫原創公仔三視圖 → Tripo 轉 3D → 綁走路、小跑步、招牌動作。
 - **共用細部動作**（`models/moves/`）：閃身、轉身、後撤步、推人（卡位／強力突破）、踉蹌（被晃倒、被撞停）、搶板、火鍋、灌籃，在小米身上各綁一次，拿掉 Hips 位移（`strip_anim.cjs … flat`）後套給所有人，跳多高由遊戲物理決定。
-- **阿傑專屬灌籃**（`models/moves/jie_dunk.glb`）：`tools/blender/jie_dunk.py` 用 Blender 擺關鍵姿勢（寫每節骨頭要指向哪裡，不寫骨頭角度，因為 Tripo 綁的骨頭軸向不統一），另存可以手改的 `work/blender/jie_dunk.blend`。只能套在阿傑身上（含他的 Hips 高度）。Q 版頭大手短，手舉不過頭、比賽鏡頭又在後上方，所以做單手戰斧、手從頭髮右邊伸出去抓框。動畫時間要和 `main.js` 的 `JIE_DUNK` 對齊。重新匯出：`/Applications/Blender.app/Contents/MacOS/Blender -b -P tools/blender/jie_dunk.py -- $PWD/models/jie_walk.glb $PWD/models/moves/jie_dunk.glb $PWD/work/blender/jie_dunk.blend`。
+- **阿傑專屬灌籃**（`models/moves/jie_dunk.glb`）：`tools/blender/jie_dunk.py` 用 Blender 擺關鍵姿勢（寫每節骨頭要指向哪裡，不寫骨頭角度，因為 Tripo 綁的骨頭軸向不統一），另存可以手改的 `tools/blender/jie_dunk.blend`（姿勢預覽圖 `jie_dunk_poses.png`）。只能套在阿傑身上（含他的 Hips 高度）。Q 版頭大手短，手舉不過頭、比賽鏡頭又在後上方，所以做單手戰斧、手從頭髮右邊伸出去抓框。動畫時間要和 `main.js` 的 `JIE_DUNK` 對齊。重新匯出：`/Applications/Blender.app/Contents/MacOS/Blender -b -P tools/blender/jie_dunk.py -- $PWD/models/jie_walk.glb $PWD/models/moves/jie_dunk.glb $PWD/tools/blender/jie_dunk.blend`。
 - **真人風立繪**（`art/*.webp`）：`tools/gen_real.sh` 用使用者給的照片（香香三人的照片、`~/Downloads/人物集` 的上班族三視圖）讓 GPT 畫動作照，純綠背景 → `tools/make_art.sh` 去背轉 WebP（每張 15～55 KB）。Vivi 照主遊戲設定襯衫扣到領口。
 - **上半身疊 3D 動作**（`models/moves/guard.glb`、`handsup.glb`、`hop.glb`）：防守蹲低張手、投籃／蓋帽／灌籃雙手舉高、歡呼雙手 V 字，用 Higgsfield 動作庫綁在小米身上（橫向馬步跳、雙手舉高歡呼、舉手跳），遊戲裡只取上半身骨頭（脊椎、肩膀、手臂、頭）的轉動疊在走路／跑步上（`OVER_WIN`、`overlay()`）。以前用程式直接轉手臂骨頭，手抬高時腋下皮膚會被拉長（像蝴蝶袖），動作庫的動作連鎖骨、脊椎一起動就不會。
 - 運球、傳球、抄截、暈眩這些小幅度的手臂動作，還是用程式轉骨頭（最多抬到約 90°），加跳躍和壓扁。

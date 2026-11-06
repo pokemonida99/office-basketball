@@ -667,7 +667,7 @@
   #sTitle { background: var(--ink); }
   #sTitle::before { content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
     background: linear-gradient(180deg, #121110 0%, #12111000 30%, #12111000 55%, #121110f2 100%), linear-gradient(90deg, #ff4d1a59, #12111000 45%, #ff9a1f40),
-      url(op/op9.webp?v=0.5.8) center 30% / cover; filter: grayscale(1) contrast(1.25) brightness(.62) sepia(.35); }
+      url(op/op9.webp?v=0.5.9) center 30% / cover; filter: grayscale(1) contrast(1.25) brightness(.62) sepia(.35); }
   #sTitle::after { background: var(--dots), var(--grain); opacity: .55; mix-blend-mode: multiply; }
   #sTitle .card h1 small, .logoH small { display: inline-block; font-family: var(--en); font-weight: 400; letter-spacing: 4px; font-size: 13px; color: var(--ink); background: var(--yolk); padding: 2px 10px; transform: rotate(-2deg); margin-bottom: 0; }
   .logoH small::before { content: 'STREETBALL 3ON3 · '; }
@@ -752,6 +752,8 @@
   .tTeams span.t2 { border-color: #ff6fae; } .tTeams span.t3 { border-color: #36b37e; }
   .tTeams b { font: 400 22px/1 var(--en); color: var(--yolk); text-shadow: 2px 2px 0 var(--ink); }
   #sTitle .tSide .big { width: min(380px, 100%); margin: 6px 0 0; }
+  #sTitle > .verTag, #sSelect > .verTag { position: fixed; left: max(10px, env(safe-area-inset-left)); top: calc(8px + env(safe-area-inset-top)); z-index: 2; padding: 2px 7px; background: var(--ink); color: var(--paper); font: 400 13px/1.2 var(--en); letter-spacing: 1px; pointer-events: none; }
+  @media (orientation: landscape) and (max-height: 500px) { #sSelect > .verTag { top: auto; bottom: calc(8px + env(safe-area-inset-bottom)); } }   /* 橫式選角上面放滿了，移到左下角 */
   #bStart { font-size: 30px; padding: 16px; letter-spacing: 8px; }
   #bTut { font-size: 18px; padding: 11px; }
   .tSmall { display: flex; gap: 8px; justify-content: center; }
@@ -820,9 +822,9 @@
   <div class="flashw"></div>
 </div>
 
-<div class="screen" id="sTitle"><div class="card tTitle">
+<div class="screen" id="sTitle"><div class="verTag"></div><div class="card tTitle">
   <div class="tMain">
-    <h1 class="logoH"><small>上班啟示錄</small><img class="logo" src="art/logo.webp?v=0.5.8" alt="下班先鬥牛"></h1>
+    <h1 class="logoH"><small>上班啟示錄</small><img class="logo" src="art/logo.webp?v=0.5.9" alt="下班先鬥牛"></h1>
     <div class="tTeams"><span class="t1">上班族</span><b>VS</b><span class="t2">香香籃球隊</span><b>VS</b><span class="t3">山頂國小</span></div>
     <div class="collab"><i>a4</i>不想上班 製作<span class="guest">友情參戰　<em>香香籃球隊</em>・<em>山頂國小</em></span></div>
   </div>
@@ -843,12 +845,12 @@
   <div id="opFlash"></div>
   <div id="opCap"><b id="opCapB"></b><span id="opCapS"></span></div>
   <div id="opVs">VS</div>
-  <div id="opTitle"><small>上班啟示錄 番外</small><div id="opTitleMain"><img class="logo" src="art/logo.webp?v=0.5.8" alt="下班先鬥牛"></div><div id="opTitleSub">a4 不想上班 製作<span>友情參戰　香香籃球隊・山頂國小</span></div></div>
+  <div id="opTitle"><small>上班啟示錄 番外</small><div id="opTitleMain"><img class="logo" src="art/logo.webp?v=0.5.9" alt="下班先鬥牛"></div><div id="opTitleSub">a4 不想上班 製作<span>友情參戰　香香籃球隊・山頂國小</span></div></div>
   <div id="opBarWrap"><div id="opBar"></div></div>
   <button id="opSkip">跳過 ›</button>
 </div>
 
-<div class="screen" id="sSelect"><div class="selWrap">
+<div class="screen" id="sSelect"><div class="verTag"></div><div class="selWrap">
   <h2 id="selTitle">挑兩個同事組隊</h2>
   <div class="segs"><div class="seg" id="modeSeg"><button data-v="p">練習</button><button data-v="1">1v1</button><button data-v="2">2v2</button><button data-v="3">3v3</button></div><div class="seg" id="diffSeg"><button data-v="0">簡單</button><button data-v="1">普通</button><button data-v="2">困難</button></div><div class="seg" id="courtSeg"><button data-v="roof">頂樓</button><button data-v="temple">大橋尾</button></div></div>
   <div class="hint" id="selHint">先點的就是你整場操作的人（頭上有「▼ 你」），對手由電腦隨機挑</div>
@@ -882,6 +884,6 @@
 <script type="importmap">
 {"imports":{"three":"./vendor/three/build/three.module.min.js","three/addons/":"./vendor/three/examples/jsm/"}}
 </script>
-<script type="module" src="js/main.js?v=0.5.8"></script>
+<script type="module" src="js/main.js?v=0.5.9"></script>
 </body>
 </html>
