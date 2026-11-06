@@ -4,6 +4,7 @@
 # 跑和走的差別是「兩腳同時離地」：踩地時間只佔一圈的兩成多，中間整個人騰空；踢腿時腳跟帶到屁股、膝蓋往前帶，上身前傾、手肘彎著擺。
 # Q 版腿短，遊戲每秒要跑 3 個身高，所以踩地要很快：踩地時間＝步幅 ÷ 速度，一圈時間照腿長調，腿短的人步頻高一點。
 # 有背身強打、強力突破技能的人另外輸出 角色_push.glb：共用的 push 蹲得太低，只取骨頭轉動後整個人會縮成一團（阿傑的在 jie_moves.py）。
+# 每個人都有 角色_shot.glb：完整的跳投，遊戲在 0.30 秒（舉到頭上）停住等出手，出手後才接著播（時間在 js/main.js 的 SHOT_SET）。
 # 寫法和 jie_moves.py 一樣：手臂寫方向、腳用 IK 寫腳踝位置，不寫骨頭角度（Tripo 綁的骨頭軸向不統一）。
 import bpy, sys, math, os
 from mathutils import Matrix, Vector, Quaternion
@@ -16,8 +17,29 @@ MODELS = {'kui': 'kui_walk2', 'jie': 'jie_walk', 'mi': 'mi_walk', 'vivi': 'vivi_
           'de': 'glasses_walk', 'momo': 'bob_walk', 'zhe': 'cap_walk', 'zhen': 'det_walk', 'lin': 'lin_walk', 'yuan': 'yuan_walk', 'hu': 'hu_walk',
           'tu': 'tu_walk', 'zhang': 'zhang_walk', 'bian': 'bian_walk', 'needle': 'needle_walk'}
 # speed 每秒幾個身高（遊戲的基本跑速約 3）、T 腿長 0.33 身高的人跑一圈幾秒、lean 上身前傾、amp 手臂擺幅、bend 手肘彎度
-GAITS = {'run': dict(speed=3.0, T=0.55, lean=11, amp=46, bend=85, lift=0.62),
-         'sprint': dict(speed=3.1, T=0.5, lean=18, amp=54, bend=90, lift=0.7)}
+# bob 上下彈的幅度、out 手臂離身體多開（都可以被 STYLE 蓋掉）
+GAITS = {'run': dict(speed=3.0, T=0.55, lean=11, amp=46, bend=85, lift=0.62, bob=0.05, out=0.35),
+         'sprint': dict(speed=3.1, T=0.5, lean=18, amp=54, bend=90, lift=0.7, bob=0.05, out=0.35)}
+# 每個人的跑姿，照角色個性調；T 是倍率，其他直接蓋掉。持球衝刺只多前傾、多擺手
+STYLE = {
+    'kui': dict(T=0.92, lift=0.72, amp=50, bob=0.07),                    # 新人：輕快、步頻高
+    'jie': dict(T=1.1, lean=8, amp=36, lift=0.5, bob=0.04, out=0.48),    # 中鋒：穩、手臂被身體撐開
+    'mi': dict(lean=9, amp=36, lift=0.56, out=0.26),                     # 總機：手收得近、動作小
+    'vivi': dict(T=1.06, lean=5, amp=26, bend=68, lift=0.48, out=0.2),   # 老闆：挺直、優雅
+    'kevin': dict(lean=14, amp=42, lift=0.6),                            # 特助：趕時間的前傾
+    'yan': dict(T=0.96, lean=13, amp=44),                                # PM：急件在身
+    'heilun': dict(lean=15, amp=52, out=0.42),                           # 業務：大動作
+    'de': dict(T=1.08, lean=6, amp=30, lift=0.46, bob=0.03),             # 財務長：省力
+    'momo': dict(T=0.96, amp=48, bob=0.08, lift=0.68),                   # 行銷：蹦蹦跳跳
+    'zhe': dict(T=1.04, lean=12, amp=34, out=0.28),                      # 工程師：手不太擺
+    'zhen': dict(T=0.94, lean=16, amp=46, lift=0.66),                    # 稽核：低頭往前追
+    'lin': dict(T=0.9, lean=16, amp=52, lift=0.76),                      # 後衛：全隊最快、膝蓋帶得高
+    'yuan': dict(T=1.08, lean=9, amp=40, lift=0.54, out=0.42),           # 中鋒：大步、有力
+    'hu': dict(lean=10, amp=42, lift=0.6, out=0.3),                      # 射手：省力、節奏穩
+    'tu': dict(T=0.94, lean=10, amp=48, lift=0.74, bob=0.09),            # 兔兔老師：彈跳感
+    'zhang': dict(T=1.12, lean=4, amp=28, lift=0.42, bob=0.03, out=0.5), # 校長：挺著肚子、走跑都慢吞吞
+    'bian': dict(T=0.94, lean=16, amp=56, lift=0.7),                     # 小編：趕著打卡
+}
 POWER = ['heilun', 'zhe', 'yuan', 'zhang']
 SPINE = ['Spine02', 'Spine01', 'Spine', 'neck', 'Head']   # 由下到上
 ARMS = ['LeftArm', 'LeftForeArm', 'RightArm', 'RightForeArm']
@@ -101,7 +123,7 @@ def build(key, file):
             return f, z, 35 + (-8 - 35) * smooth(u) + 15 * math.sin(math.pi * u)
         mid = (stance + 0.5) / 2                        # 騰空最高的時候
         def arm_dir(th, sign, bend):
-            return D(sign * 0.35, math.sin(th), -math.cos(th)), D(sign * 0.2, math.sin(th + bend), -math.cos(th + bend))
+            return D(sign * g['out'], math.sin(th), -math.cos(th)), D(sign * g['out'] * 0.6, math.sin(th + bend), -math.cos(th + bend))
         n = round(T * FPS)
         for i in range(n + 1):
             ph = i / n
@@ -117,7 +139,7 @@ def build(key, file):
             lu, lf = arm_dir(-amp * c, 1, bend); ru, rf = arm_dir(amp * c, -1, bend)
             for name, d in zip(ARMS, (lu, lf, ru, rf)): aimv(name, d)
             m = PB['Hips'].matrix.copy()
-            m.translation += Vector((0, 0, (-0.24 + 0.05 * math.cos(4 * math.pi * (ph - mid))) * L))
+            m.translation += Vector((0, 0, (-0.24 + g['bob'] * math.cos(4 * math.pi * (ph - mid))) * L))
             PB['Hips'].matrix = m
             bpy.context.view_layer.update()
             lf_, lz, lp = foot(ph); rf_, rz, rp = foot((ph + 0.5) % 1)
@@ -149,12 +171,46 @@ def build(key, file):
             PB['Hips'].keyframe_insert('location', frame=frame, group='Hips')
         return round(0.65 * FPS), 0
 
+    def shot():
+        # 跳投：起跳高度交給遊戲物理，這裡只管姿勢。手都從頭髮外側舉，球在右手
+        k = L / 25.2
+        CHEST = ((0.45, 0.8, -0.2), (-0.5, 0.65, 0.55), (-0.45, 0.8, -0.2), (0.5, 0.65, 0.55))
+        RISE = ((0.6, 0.7, 0.1), (-0.1, 0.75, 0.65), (-0.6, 0.6, 0.35), (0.1, 0.45, 0.85))
+        SET = ((0.72, 0.62, 0.3), (0.2, 0.72, 0.65), (-0.75, 0.25, 0.6), (-0.42, 0.25, 0.87))
+        FLICK = ((0.72, 0.55, 0.25), (0.5, 0.6, 0.6), (-0.5, 0.35, 0.8), (-0.2, 0.55, 0.8))
+        FOLLOW = ((0.75, 0.4, -0.1), (0.5, 0.65, -0.2), (-0.5, 0.35, 0.8), (-0.2, 0.6, 0.75))
+        # 秒、前傾、抬頭、右肩抬、臀部高低、手、腳離地、腳尖往下
+        KEYS = [(0.00, 8, 0, 0, -4, CHEST, 0, 0), (0.14, 2, -3, 10, 0, RISE, 4, 20), (0.30, -3, -6, 20, 0, SET, 6, 28),
+                (0.38, -2, -6, 24, 0, FLICK, 6, 30), (0.62, 2, -4, 14, 0, FOLLOW, 3, 14)]
+        for t, lean, head, shrug, up, dirs, lift, pitch in KEYS:
+            frame = round(t * FPS)
+            reset()
+            for b, share in zip(SPINE, (0.3, 0.3, 0.25, 0.1, 0.05)): rotate_world(b, Quaternion((1, 0, 0), math.radians(lean * share)))
+            rotate_world('Head', Quaternion((1, 0, 0), math.radians(head)))
+            if shrug: rotate_world('RightShoulder', Quaternion((0, 1, 0), math.radians(shrug)))
+            for name, d in zip(ARMS, dirs): aimv(name, D(*d))
+            m = PB['Hips'].matrix.copy(); m.translation += Vector((0, 0, up * k)); PB['Hips'].matrix = m
+            bpy.context.view_layer.update()
+            leg_ik('Left', (WIDE, 2.5 * k, ANK + lift * k), pitch); leg_ik('Right', (-WIDE, -2 * k, ANK + lift * k), pitch)
+            for b in ALL: PB[b].keyframe_insert('rotation_quaternion', frame=frame, group=b)
+            PB['Hips'].keyframe_insert('location', frame=frame, group='Hips')
+        return round(0.62 * FPS), 0
+
     arm.animation_data_create()
     os.makedirs(OUT_DIR, exist_ok=True)
-    for name, g in {**GAITS, **({'push': None} if key in POWER else {})}.items():
+    style = STYLE.get(key, {})
+    def styled(g):
+        o = {**g, **{a: b for a, b in style.items() if a != 'T'}}
+        o['T'] = g['T'] * style.get('T', 1)
+        if g is GAITS['sprint']: o['lean'] += 7; o['amp'] += 8
+        return o
+    plan = {n: styled(g) for n, g in GAITS.items()}
+    if key != 'needle': plan['shot'] = None
+    if key in POWER: plan['push'] = None
+    for name, g in plan.items():
         act = bpy.data.actions.new(f'{key}_{name}')
         arm.animation_data.action = act
-        n, stance = gait(g) if g else push()
+        n, stance = gait(g) if g else (shot() if name == 'shot' else push())
         scene.frame_start, scene.frame_end = 0, n
         bpy.ops.object.mode_set(mode='OBJECT')
         bpy.ops.object.select_all(action='DESELECT'); arm.select_set(True); bpy.context.view_layer.objects.active = arm

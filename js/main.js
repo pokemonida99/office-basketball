@@ -1,13 +1,13 @@
 // 上班啟示錄：下班先鬥牛 2v2 —— 頂樓半場籃球。玩家挑兩個同事，電腦控制隊友和對手；每個人都有自己的大招
 import * as THREE from 'three';
-import { scene, render, updateCamera, cam, camera, CAMS, camMode, labelSprite, V, quality, setQuality, setQualityPref, canvasTex, FONT, sphere, mat } from './world.js?v=0.6.1';
-import { loadOwnClip, loadRun, loadKind, loadClip, makeActor, addJog, updateActor, turnTo } from './assets.js?v=0.6.1';
-import * as fx from './fx.js?v=0.6.1';
-import { buildCourt, setCourt, animateCourt, swishNet, C, COURT, HOOP, ARC_R, CORNER_X, TOP, WALL, isThree, hoopDist } from './court.js?v=0.6.1';
-import { music, musicStart, musicStop, musicTick, musicTheme, musicPause } from './music.js?v=0.6.1';
-import { openOP, replayOP, seekOP } from './op.js?v=0.6.1';
+import { scene, render, updateCamera, cam, camera, CAMS, camMode, labelSprite, V, quality, setQuality, setQualityPref, canvasTex, FONT, sphere, mat } from './world.js?v=0.7.0';
+import { loadOwnClip, loadRun, loadKind, loadClip, makeActor, addJog, updateActor, turnTo } from './assets.js?v=0.7.0';
+import * as fx from './fx.js?v=0.7.0';
+import { buildCourt, setCourt, animateCourt, swishNet, C, COURT, HOOP, ARC_R, CORNER_X, TOP, WALL, isThree, hoopDist } from './court.js?v=0.7.0';
+import { music, musicStart, musicStop, musicTick, musicTheme, musicPause } from './music.js?v=0.7.0';
+import { openOP, replayOP, seekOP } from './op.js?v=0.7.0';
 
-const VERSION = '0.6.1';
+const VERSION = '0.7.0';
 document.querySelectorAll('#ver, .verTag').forEach(el => { el.textContent = 'v' + VERSION; });
 
 // ---------- 數值（調手感只改這裡） ----------
@@ -106,10 +106,10 @@ const MOVE_WIN = { dodge: [0.1, 0.9], spin: [0.1, 1.1], stepback: [0.1, 1.0], pu
 // JIE 取代同名的共用動作；dunk、lay 只有他有。shoot 是投籃、舉手定格那一格（對應共用的 handsup）
 const JIE = {}, OVER_JIE = {}, JIE_MOVES = ['guard', 'back', 'stop', 'push', 'reach', 'block', 'rebound', 'stumble', 'knock', 'flop', 'dunk', 'lay'];
 const JIE_OVER = { handsup: 'shoot', guard: 'guard', hop: 'hop' };
-// OWN：每個人自己的持球衝刺、強力突破（tools/blender/runs.py）。變身成針筒超人時骨架換了，改用共用的
+// OWN：每個人自己的持球衝刺、跳投、強力突破（tools/blender/runs.py）。變身成針筒超人時骨架換了，改用共用的
 const OWN = {};
 const moveOf = (p, name) => (!p.base && OWN[p.key]?.[name]) || (p.key === 'jie' && JIE[name]) || MOVES[name];
-const winOf = (p, name) => { const c = moveOf(p, name); return c === MOVES[name] ? MOVE_WIN[name] : [0, c.duration]; };
+const SHOT_SET = 0.3, winOf = (p, name) => { const c = moveOf(p, name); return c === MOVES[name] ? MOVE_WIN[name] : [0, c.duration]; };
 async function loadAll(progress) {
   const JIE_CLIP = { jie: 'models/moves/jie/walk.glb' };
   const list = [...KEYS.map(k => [k, CHARS[k].model]), ['npcM', 'npc_m_walk'], ['npcF', 'npc_f_walk'], ['caishen', 'caishen_sit'], ['needle', 'needle_walk']];
@@ -126,7 +126,7 @@ async function loadAll(progress) {
   // 跑步要量腳掌速度，得等模型載完（每個人照自己腿長算的，見 tools/blender/runs.py）
   await Promise.all(RUNNERS.map(async k => {
     K[k + 'Jog'] = await loadRun(K[k], `models/moves/run/${k}_run.glb`);
-    if (CHARS[k]) OWN[k] = { sprint: await loadOwnClip(`models/moves/run/${k}_sprint.glb`) };
+    if (CHARS[k]) OWN[k] = { sprint: await loadOwnClip(`models/moves/run/${k}_sprint.glb`), shot: await loadOwnClip(`models/moves/run/${k}_shot.glb`) };
     if (CHARS[k]?.skill.kind === 'power' && k !== 'jie') OWN[k].push = await loadOwnClip(`models/moves/run/${k}_push.glb`);
     progress(++n / all);
   }));
@@ -152,7 +152,7 @@ const st = (p, k, d = 1) => p.def[k] ?? d;   // 角色數值（沒寫就用預�
 const ART_ACTS = ['dunk', 'three', 'fade', 'steal'];
 const SP_ART = { kui: 'coffee', jie: 'dunk', mi: 'phone', vivi: 'boss', kevin: 'ai', lin: 'cross', yuan: 'block', hu: 'fade', tu: 'egg', zhang: 'hero', bian: 'sprint' };
 const hasArt = (k) => k in SP_ART;
-const artUrl = (k, a) => `art/${k}_${a}.webp?v=0.6.1`;
+const artUrl = (k, a) => `art/${k}_${a}.webp?v=0.7.0`;
 function preloadArt(keys) { for (const k of keys) if (hasArt(k)) for (const a of [...ART_ACTS, SP_ART[k]]) { const im = new Image(); im.src = artUrl(k, a); } }
 let flashUntil = 0, flashTimer = 0;
 // 動作立繪從旁邊滑進來一下（我方在左、對手在右），2 秒內只跳一次
@@ -240,13 +240,30 @@ function rotBone(b, axis, ang) {
 // rf/lf：手往前往上抬（弧度）；rs/ls：手往旁邊張開；sp：上身前傾
 function poseArms(rig, actor, tg, dt) {
   const a = rig.arm, k = Math.min(1, dt * 16);
-  for (const n of ['rf', 'lf', 'rs', 'ls', 'sp']) a[n] += ((tg[n] || 0) - a[n]) * k;
+  for (const n of ['rf', 'lf', 'rs', 'ls', 'sp', 'dr']) a[n] = (a[n] || 0) + ((tg[n] || 0) - (a[n] || 0)) * k;
   actor.root.updateMatrixWorld(true);
   actor.model.getWorldQuaternion(_mq);
   const b = rig.bones;
   rotBone(b.Spine02, AX, a.sp);
   rotBone(b.RightArm, AX, -a.rf); rotBone(b.LeftArm, AX, -a.lf);
   rotBone(b.RightArm, AZ, -a.rs); rotBone(b.LeftArm, AZ, a.ls);
+  if (a.dr > 0.01 && b.RightForeArm && b.RightHand) {   // 運球：右手不跟著跑步甩，手肘彎著在腰旁邊拍，球才不會左右亂飛
+    const h = B.dribH ?? 0.5;
+    aimBone(b.RightArm, b.RightForeArm, -0.42, -0.82, 0.25, a.dr);
+    aimBone(b.RightForeArm, b.RightHand, -0.16, -0.72 + 0.5 * h, 0.68 + 0.25 * h, a.dr);
+  }
+}
+// 把骨頭轉到指定方向（角色座標：臉朝 +z、右手在 -x），w 是轉多少。比寫角度準：每個人骨頭的軸向不一樣
+const _av = new THREE.Vector3(), _av2 = new THREE.Vector3(), _aq = new THREE.Quaternion(), _bq = new THREE.Quaternion();
+function aimBone(b, child, x, y, z, w) {
+  b.getWorldPosition(_av); child.getWorldPosition(_av2);
+  _av2.sub(_av).normalize();
+  _av.set(x, y, z).normalize().applyQuaternion(_mq);
+  _aq.setFromUnitVectors(_av2, _av);
+  b.parent.getWorldQuaternion(_pq);
+  _bq.copy(_pq).invert().multiply(_aq).multiply(_pq).multiply(b.quaternion);
+  b.quaternion.slerp(_bq, w);
+  b.updateMatrixWorld(true);
 }
 function resetBones(rig) { for (const [b, q] of rig.rest) b.quaternion.copy(q); }
 // 上半身疊 3D 動作（舉手、投籃、蓋帽、歡呼、防守張手）：用 Higgsfield 動作庫綁好的片段，只取上半身骨頭的轉動，疊在走路／跑步上
@@ -558,7 +575,7 @@ function handsPos(p, out = V()) {
   if (!r || !l) return chestPos(p, out);
   r.getWorldPosition(_hp); l.getWorldPosition(_hp2);
   out.copy(_hp).add(_hp2).multiplyScalar(0.5).add(_a.set(Math.sin(p.face) * 0.12, 0.04, Math.cos(p.face) * 0.12));
-  if (p.key === 'jie' && (p.act?.type === 'shoot' || p.act?.type === 'lay')) {   // 阿傑手短頭大，球放在右手掌上才不會埋進頭髮
+  if ((p.act?.type === 'shoot' && playingMove(p, 'shot')) || (p.key === 'jie' && p.act?.type === 'lay')) {   // 手短頭大，球放在右手掌上才不會埋進頭髮
     p.bones.RightForeArm.getWorldPosition(_hp2);
     _hp.add(_hp2.subVectors(_hp, _hp2).normalize().multiplyScalar(BR + 0.03));
     out.lerp(_hp, THREE.MathUtils.clamp((p.act.t - 0.12) / 0.1, 0, 1));
@@ -668,6 +685,7 @@ function startShot(p, user = false) {
     p.act = layAct(p, d, dunk);
   } else {
     p.act = { type: 'shoot', t: 0, sx: p.x, sz: p.z, rel: false, hold: user && !G.auto, relAt: user && !G.auto ? 9 : rand(0.25, 0.31) };
+    playMove(p, 'shot', { dur: 1 });
     p.vy = CFG.jumpV; p.y = 0.01;
     if (user && !G.auto) S.meter = { p, act: p.act, res: null, hideAt: 0 };   // 記住是哪一次投籃：動作被打斷就收掉
   }
@@ -940,6 +958,7 @@ function startFade(p, sure = false) {
   if (!holding(p)) return;
   const [fx_, fz_] = fwdOf(p);
   p.act = { type: 'shoot', t: 0, sx: p.x, sz: p.z, rel: false, hold: false, relAt: 0.3, fade: true, sure };
+  playMove(p, 'shot', { dur: 1 });
   p.vy = CFG.jumpV * 1.05; p.y = 0.01; p.vx = -fx_ * 2.2; p.vz = -fz_ * 2.2; p.openT = 0.6;
   p.face = Math.atan2(fx_, fz_); fx.sfx.jump();
   fx.floatText(V(p.x, 2.4, p.z), '後仰跳投', p.def.color, 0.8);
@@ -1457,7 +1476,7 @@ function updateAct(p, dt) {
     case 'shoot':
       if (a.hold && (a.t >= 0.62 || (a.t > 0.3 && p.y <= 0))) { a.hold = false; a.relAt = a.t; a.press = a.t; }   // 按太久：落地前自動出手（算太晚）
       if (!a.rel && !a.hold && a.t >= a.relAt) { a.rel = true; releaseShot(p, a.sure ? { sure: true } : {}); }
-      if (a.rel && a.t > 0.3 && p.y <= 0) p.act = null;
+      if (a.rel && a.t > 0.3 && p.y <= 0) { p.act = null; if (playingMove(p, 'shot')) stopSig(p); }
       break;
     case 'audit': {   // 小偵衝到持球者面前
       const k = Math.min(1, a.t / 0.35);
@@ -1821,6 +1840,10 @@ function updatePlayers(dt, t) {
     p.actor.speed = p.y > 0.05 || p.stun > 0 ? 0 : sp;
     p.actor.animMul = 1;
     resetBones(p);
+    if (a?.type === 'shoot' && playingMove(p, 'shot')) {   // 舉到頭上就停住等放手，手感由玩家決定，出手後才接著播
+      if (a.rel) a.relT ??= a.t;
+      p.actor.sig.timeScale = 0; p.actor.sig.time = a.rel ? SHOT_SET + a.t - a.relT : Math.min(a.t, SHOT_SET);
+    }
     updateActor(p.actor, dt, t);
     r.position.y += dropOf(p);
     // 蹲下起跳、落地的壓扁
@@ -1828,7 +1851,7 @@ function updatePlayers(dt, t) {
     p.actor.model.scale.y *= crouch;
     const sigOn = (p.actor.sigW || 0) > 0.3, ov = sigOn ? null : overTarget(p);
     overlay(p, ov, t, dt);
-    poseArms(p, p.actor, sigOn || ov ? {} : armTarget(p, t), dt);
+    poseArms(p, p.actor, (sigOn && !playingMove(p, 'sprint')) || ov ? {} : armTarget(p, t), dt);
     // 腳下的圈、名字
     p.ring.position.set(p.x, 0.02, p.z);
     const me = p === S.ctrl;
@@ -1875,7 +1898,7 @@ function armTarget(p, t) {   // 程式擺的手臂只抬到約 90°，再高會�
     case 'steal': return { rf: 1.5, lf: 0.3, sp: 0.35 };
     case 'pass': case 'lob': return { rf: 1.4, lf: 1.4 };
   }
-  if (holding(p)) return { rf: 0.78 - 0.4 * (B.dribH ?? 0.5), lf: 0.4, sp: 0.16 };   // 運球：球在最高點碰到手（手在腰旁邊往下壓），球往下時手抬一點；身體微微前傾
+  if (holding(p)) return { dr: 1, lf: 0.3, ls: 0.3, sp: 0.14 };   // 運球：右手交給 aimBone，左手微微張開護球，身體微微前傾
   return {};
 }
 // 你操作的人頭上的大箭頭「▼ 你＋名字」：一眼找到自己
@@ -2264,7 +2287,7 @@ soundIcon();
 
 function buildSelect() {
   // 選角卡：真人風全身照（art/<人>_card.webp，tools/gen_real.sh 的 card_* 姿勢，每個人不一樣）＋位置標籤
-  $('grid').innerHTML = ROSTER.map(k => { const c = CHARS[k], [job, pos] = c.role.split('・'); return `<div class="ch" data-k="${k}" style="--cc:${c.color}"><span class="badge"></span><div class="pic"><span class="pos">${pos || job}</span><img src="art/${k}_card.webp?v=0.6.1" alt="${c.name}" onerror="this.src='${FACE[k]}'"></div><div class="info"><div class="nm">${c.name}<small>${pos ? job : ''}</small></div><span class="spn">${c.sp.name}</span><span class="skn">${c.skill.name}</span><div class="d">${c.sp.desc}</div><div class="st">${c.stat}</div></div></div>`; }).join('');
+  $('grid').innerHTML = ROSTER.map(k => { const c = CHARS[k], [job, pos] = c.role.split('・'); return `<div class="ch" data-k="${k}" style="--cc:${c.color}"><span class="badge"></span><div class="pic"><span class="pos">${pos || job}</span><img src="art/${k}_card.webp?v=0.7.0" alt="${c.name}" onerror="this.src='${FACE[k]}'"></div><div class="info"><div class="nm">${c.name}<small>${pos ? job : ''}</small></div><span class="spn">${c.sp.name}</span><span class="skn">${c.skill.name}</span><div class="d">${c.sp.desc}</div><div class="st">${c.stat}</div></div></div>`; }).join('');
   for (const el of $('grid').children) el.onclick = () => {
     fx.audioInit(); fx.sfx.click();
     const k = el.dataset.k, i = S.sel.indexOf(k);
