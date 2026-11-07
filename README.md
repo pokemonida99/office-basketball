@@ -22,6 +22,8 @@
 
 ![比賽](design/v0.1_比賽_電腦.jpg)
 
+**v0.8.1**：角色模型減面（每人約 2.5 萬 → 約 1 萬個三角形，臉不減），拿掉卡通材質用不到的切線、法線和金屬粗糙度貼圖；外觀和動作數值不變。
+
 **v0.8.0**：每個人有自己的上籃和胸前傳球（邊跑邊傳腳不會停）；動作檔瘦身（4.4MB → 1.8MB）；藏起來的角色不載入；觀眾不畫描邊和陰影，每格少畫約 37% 的三角形。
 
 **v0.7.0**：每個人有自己的跑姿；投籃改成完整跳投（舉到頭上停住等放手，出手後才接著播）；運球時右手彎著在腰旁邊拍，球不再跟著跑步左右甩。
@@ -161,6 +163,7 @@
 - **香香籃球隊三人**：使用者的照片只裁「沒有臉的服裝」那半邊當造型參考（`tools/gen_sheets.sh`），GPT 畫原創公仔三視圖 → Tripo 轉 3D → 綁走路、小跑步、招牌動作。
 - **共用細部動作**（`models/moves/`）：閃身、轉身、後撤步、推人（卡位／強力突破）、踉蹌（被晃倒、被撞停）、搶板、火鍋、灌籃，在小米身上各綁一次，拿掉 Hips 位移（`strip_anim.cjs … flat`）後套給所有人，跳多高由遊戲物理決定。
 - **每個人的跑步、持球衝刺、跳投**（`models/moves/run/`）：跑姿的個性寫在 `runs.py` 的 `STYLE`。跳投的 0.30 秒要和 `main.js` 的 `SHOT_SET` 對齊。`tools/blender/runs.py` 照每個人的腿長算步幅產生。跑和走的差別是兩腳同時離地，所以踩地時間只佔一圈的兩成多。遊戲跑速約每秒 3 個身高、Q 版腿短，踩地要很快腳才不會滑。原本的 `models/*_jog.glb` 遊戲已經不載入。重新匯出：`/Applications/Blender.app/Contents/MacOS/Blender -b -P tools/blender/runs.py -- $PWD/models $PWD/models/moves/run`。
+- **模型減面**（`tools/blender/decimate.py`）：只換 GLB 的網格資料，骨架和走路動作原封不動；臉（頭的前半）鎖住不減，因為五官是貼圖畫的，網格一動就歪。已減過的檔案會被擋下來，要重做請先從 git 拿回原檔（`git show 7d4404d:models/mi_walk.glb`）。藏起來的角色和舊的 `*_jog.glb` 遊戲不載入，沒有處理。
 - **動作檔瘦身**（`tools/slim_clips.py`）：只留轉動和臀部位移、轉動存 16 位元，`models/moves/` 再裁掉 `MOVE_WIN` 以外的時間。Blender 重新匯出後要再跑：`python3 tools/slim_clips.py models/moves/jie models/moves/run`（已瘦身過的檔案會擋下來，不會重複處理）。
 - **共用動作和招牌動作只取骨頭轉動**（`loadOwnClip`）：動作檔裡有綁骨時的骨頭位置，連小米自己都會被拉長到 1.87 倍。拿掉後腿彎了腳會離地，所以共用動作播放時由 `dropOf` 把人放低，讓腳回到站立高度。
 - **阿傑的全部動作**（`models/moves/jie/`，跑步和衝刺在 `models/moves/run/`，共 15 段：走路、急停、防守滑步、後退步、背身強打、抄截、蓋帽、搶籃板、投籃舉手、上籃、灌籃、踉蹌、被蓋倒、撞倒、歡呼）：`tools/blender/jie_moves.py` 用 Blender 產生，另存可以手改的 `tools/blender/jie_moves.blend`（每段動作都在裡面）和側面預覽圖 `jie_moves_poses.png`。起因：共用動作（`models/moves/*.glb`）綁在小米身上，檔案裡有小米的骨頭位置，套到阿傑身上腿最多變 2.06 倍長；阿傑改用自己的動作後都是 1 倍，載入時也只留骨頭轉動和臀部位移（`loadOwnClip`）。共用動作後來也改成只取骨頭轉動，其他角色不再被拉長（見上一條）。 招牌動作 `models/sig/jie.glb` 是綁在阿傑自己身上的，沒有重做。腳本寫姿勢的方式：每節骨頭要指向哪裡、腳用 IK 寫腳踝位置（Tripo 綁的骨頭軸向不統一，不寫骨頭角度）。走路、慢跑的步幅不能太小，遊戲照腳掌速度換算播放速度，步幅小腳就會抽得很快。Q 版頭大手短，手都從頭髮外側伸，比賽鏡頭才看得到；投籃和上籃時球放在右手掌（`handsPos`）。灌籃時間要和 `main.js` 的 `JIE_DUNK` 對齊。`JIE` 取代同名共用動作（`moveOf`），`OVER_JIE` 取代上半身疊加。重新匯出：`/Applications/Blender.app/Contents/MacOS/Blender -b -P tools/blender/jie_moves.py -- $PWD/models/jie_walk.glb $PWD/models/moves/jie $PWD/tools/blender/jie_moves.blend`。
