@@ -1,13 +1,14 @@
 // 上班啟示錄：下班先鬥牛 2v2 —— 頂樓半場籃球。玩家挑兩個同事，電腦控制隊友和對手；每個人都有自己的大招
 import * as THREE from 'three';
-import { scene, render, updateCamera, cam, camera, CAMS, camMode, labelSprite, V, quality, setQuality, setQualityPref, canvasTex, FONT, sphere, mat, rbox } from './world.js?v=0.9.1';
-import { loadOwnClip, loadRun, loadKind, loadClip, makeActor, addJog, updateActor, turnTo } from './assets.js?v=0.9.1';
-import * as fx from './fx.js?v=0.9.1';
-import { buildCourt, setCourt, animateCourt, swishNet, C, COURT, HOOP, ARC_R, CORNER_X, TOP, WALL, isThree, hoopDist } from './court.js?v=0.9.1';
-import { music, musicStart, musicStop, musicTick, musicTheme, musicPause } from './music.js?v=0.9.1';
-import { openOP, replayOP, seekOP } from './op.js?v=0.9.1';
+import { scene, render, updateCamera, cam, camera, CAMS, camMode, labelSprite, V, quality, setQuality, setQualityPref, canvasTex, FONT, sphere, mat, rbox } from './world.js?v=0.9.2';
+import { loadOwnClip, loadRun, loadKind, loadClip, makeActor, addJog, updateActor, turnTo } from './assets.js?v=0.9.2';
+import * as fx from './fx.js?v=0.9.2';
+import { openCinema, playClip, clipOf, clipName, cineTest } from './cinema.js?v=0.9.2';
+import { buildCourt, setCourt, animateCourt, swishNet, C, COURT, HOOP, ARC_R, CORNER_X, TOP, WALL, isThree, hoopDist } from './court.js?v=0.9.2';
+import { music, musicStart, musicStop, musicTick, musicTheme, musicPause } from './music.js?v=0.9.2';
+import { openOP, replayOP, seekOP } from './op.js?v=0.9.2';
 
-const VERSION = '0.9.1';
+const VERSION = '0.9.2';
 document.querySelectorAll('#ver, .verTag').forEach(el => { el.textContent = 'v' + VERSION; });
 
 // ---------- 數值（調手感只改這裡） ----------
@@ -153,7 +154,7 @@ const st = (p, k, d = 1) => p.def[k] ?? d;   // 角色數值（沒寫就用預�
 const ART_ACTS = ['dunk', 'three', 'fade', 'steal'];
 const SP_ART = { kui: 'coffee', jie: 'dunk', mi: 'phone', vivi: 'boss', kevin: 'ai', lin: 'cross', yuan: 'block', hu: 'fade', tu: 'egg', zhang: 'hero', bian: 'sprint' };
 const hasArt = (k) => k in SP_ART;
-const artUrl = (k, a) => `art/${k}_${a}.webp?v=0.9.1`;
+const artUrl = (k, a) => `art/${k}_${a}.webp?v=0.9.2`;
 function preloadArt(keys) { for (const k of keys) if (hasArt(k)) for (const a of [...ART_ACTS, SP_ART[k]]) { const im = new Image(); im.src = artUrl(k, a); } }
 let flashUntil = 0, flashTimer = 0;
 // 動作立繪從旁邊滑進來一下（我方在左、對手在右），2 秒內只跳一次
@@ -2227,6 +2228,9 @@ function showOver() {
     const b = Math.max(S.cont.best, S.score[0]);
     $('oMvpN').textContent = `${mvp.def.name}　${S.score[0]} 分${S.cont.newBest ? '（新紀錄！）' : `（最高 ${b} 分）`}`;
   }
+  // 用阿傑、Kevin、小米打完，可以看他們的短劇彩蛋
+  const ck = clipOf(S.ctrl?.key); $('bClip').hidden = !ck;
+  if (ck) { $('bClip').dataset.k = ck; $('bClip').textContent = `🎬 短劇彩蛋：${clipName(ck)}`; }
   show('over');
   countUp($('oA'), S.score[0]); countUp($('oB'), S.score[1]);
 }
@@ -2381,6 +2385,9 @@ $('kShoot').querySelector('span').id = 'kShootT'; $('kPass').querySelector('span
 $('kSkill').querySelector('span').id = 'kSkillT'; $('kSkill').querySelector('small').id = 'kSkillS'; $('kSteal').querySelector('span').id = 'kStealT';
 $('bStart').onclick = () => { fx.audioInit(); fx.sfx.click(); toSelect(); };
 const OP_SFX = { init: fx.audioInit, whoosh: () => fx.sfx.whiff(), boss: () => fx.sfx.dunk() };
+const CINE_HOOKS = { onOpen: () => musicPause(), onClose: () => musicTheme() };
+$('bCine').onclick = () => { fx.audioInit(); fx.sfx.click(); openCinema(CINE_HOOKS); };
+$('bClip').onclick = () => { fx.sfx.click(); playClip($('bClip').dataset.k, CINE_HOOKS); };
 $('bOP').onclick = () => { fx.audioInit(); replayOP(null, { sounds: OP_SFX }); };
 $('bResume').onclick = () => togglePause();
 $('bQuit').onclick = () => toSelect();
@@ -2423,7 +2430,7 @@ soundIcon();
 
 function buildSelect() {
   // 選角卡：真人風全身照（art/<人>_card.webp，tools/gen_real.sh 的 card_* 姿勢，每個人不一樣）＋位置標籤
-  $('grid').innerHTML = ROSTER.map(k => { const c = CHARS[k], [job, pos] = c.role.split('・'); return `<div class="ch" data-k="${k}" style="--cc:${c.color}"><span class="badge"></span><div class="pic"><span class="pos">${pos || job}</span><img src="art/${k}_card.webp?v=0.9.1" alt="${c.name}" onerror="this.src='${FACE[k]}'"></div><div class="info"><div class="nm">${c.name}<small>${pos ? job : ''}</small></div><span class="spn">${c.sp.name}</span><span class="skn">${c.skill.name}</span><div class="d">${c.sp.desc}</div><div class="st">${c.stat}</div></div></div>`; }).join('');
+  $('grid').innerHTML = ROSTER.map(k => { const c = CHARS[k], [job, pos] = c.role.split('・'); return `<div class="ch" data-k="${k}" style="--cc:${c.color}"><span class="badge"></span><div class="pic"><span class="pos">${pos || job}</span><img src="art/${k}_card.webp?v=0.9.2" alt="${c.name}" onerror="this.src='${FACE[k]}'"></div><div class="info"><div class="nm">${c.name}<small>${pos ? job : ''}</small></div><span class="spn">${c.sp.name}</span><span class="skn">${c.skill.name}</span><div class="d">${c.sp.desc}</div><div class="st">${c.stat}</div></div></div>`; }).join('');
   for (const el of $('grid').children) el.onclick = () => {
     fx.audioInit(); fx.sfx.click();
     const k = el.dataset.k, i = S.sel.indexOf(k);
@@ -2552,7 +2559,7 @@ function idle(dt) {
 
 // ---------- 測試用 ----------
 const G = window.G = {
-  S, B, CFG, CHARS, LOG, music, CAMS, FOCUS, OVER, JIE, MOVES, OWN, CONT, overTarget, get players() { return players; }, auto: /[?&]auto/.test(location.search), hold: false,
+  S, B, CFG, CHARS, LOG, music, CAMS, FOCUS, OVER, JIE, MOVES, OWN, CONT, cineTest, overTarget, get players() { return players; }, auto: /[?&]auto/.test(location.search), hold: false,
   step(dt = 1 / 60, n = 1) { for (let i = 0; i < n; i++) step(dt); render(); return { phase: S.phase, score: S.score.slice(), clock: +S.clock.toFixed(1), ball: B.mode }; },
   start(pick = ['kui', 'jie'], ...rest) {   // G.start('kui','jie',[對手]) 或 G.start(['kui','jie','mi'], [對手])
     S.contest = false;

@@ -22,6 +22,8 @@
 
 ![比賽](design/v0.1_比賽_電腦.jpg)
 
+**v0.9.2**：新增「🎬 短劇彩蛋」放映室（a4 不想上班 EP9 三段補拍＋字幕特效），用阿傑、Kevin、小米打完，結算畫面也能看。
+
 **v0.9.1**：大橋尾照參考圖重做（白天藍天、藍綠地磚、紅磚地、磚牆、涼亭、玻璃籃板、大樹）；開賽加一段從低處仰望場景的運鏡。
 
 **v0.9.0**：新增三分球大賽（選角的「三分賽」）；頂樓場地改成黃昏（Blender 算的城市窗景、地板窗框光影、光束），大橋尾加榕樹影子；修好兔兔老師舉手時手臂裂開。
@@ -167,6 +169,7 @@
 - **香香籃球隊三人**：使用者的照片只裁「沒有臉的服裝」那半邊當造型參考（`tools/gen_sheets.sh`），GPT 畫原創公仔三視圖 → Tripo 轉 3D → 綁走路、小跑步、招牌動作。
 - **共用細部動作**（`models/moves/`）：閃身、轉身、後撤步、推人（卡位／強力突破）、踉蹌（被晃倒、被撞停）、搶板、火鍋、灌籃，在小米身上各綁一次，拿掉 Hips 位移（`strip_anim.cjs … flat`）後套給所有人，跳多高由遊戲物理決定。
 - **每個人的跑步、持球衝刺、跳投**（`models/moves/run/`）：跑姿的個性寫在 `runs.py` 的 `STYLE`。跳投的 0.30 秒要和 `main.js` 的 `SHOT_SET` 對齊。`tools/blender/runs.py` 照每個人的腿長算步幅產生。跑和走的差別是兩腳同時離地，所以踩地時間只佔一圈的兩成多。遊戲跑速約每秒 3 個身高、Q 版腿短，踩地要很快腳才不會滑。原本的 `models/*_jog.glb` 遊戲已經不載入。重新匯出：`/Applications/Blender.app/Contents/MacOS/Blender -b -P tools/blender/runs.py -- $PWD/models $PWD/models/moves/run`。
+- **短劇彩蛋**（`js/cinema.js`、`video/`）：影片按了才下載，遊戲開啟時只載封面圖。字幕用網頁疊上去，改 `CLIPS` 的 `cues` 就好，不用重新轉檔；`hits` 是震動白閃的秒數。台詞來自 `a4-shortdrama/提示詞/EP9_鬥牛.md`，`note`、`voice` 是另外加的字。影片用 macOS 內建的 `avconvert -p Preset640x480` 壓（這台沒有 ffmpeg）。
 - **球場美術**（`tools/blender/court_art.py` → `tools/court_art_webp.py` → `art/court/`）：窗外城市和地板光影圖都是 Cycles 算的。遊戲把地板顏色乘上光影圖的兩倍（`js/court.js` 的 `onBeforeCompile`），128＝不變，角色的即時影子照常疊上去。頂樓的太陽方向（`SUN`）和光束要和光影圖同方向。
 - **三分球大賽**（`js/main.js` 的 `CONT`、`startContest`、`updateContest`）：5 點各 5 球，每點最後一顆金球 2 分，最後一點全金球，滿分 34；對手分數照難度抽（`CONT.rival`），一開始就顯示當目標；最高分存 localStorage。
 - **手臂撕裂**（`tools/blender/fix_arm_weights.py`）：只用在 tu_walk，其他人舉手本來就正常，套用反而會在腰邊多出碎片。
