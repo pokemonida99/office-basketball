@@ -22,6 +22,8 @@
 
 ![比賽](design/v0.1_比賽_電腦.jpg)
 
+**v0.9.0**：新增三分球大賽（選角的「三分賽」）；頂樓場地改成黃昏（Blender 算的城市窗景、地板窗框光影、光束），大橋尾加榕樹影子；修好兔兔老師舉手時手臂裂開。
+
 **v0.8.1**：角色模型減面（每人約 2.5 萬 → 約 1 萬個三角形，臉不減），拿掉卡通材質用不到的切線、法線和金屬粗糙度貼圖；外觀和動作數值不變。
 
 **v0.8.0**：每個人有自己的上籃和胸前傳球（邊跑邊傳腳不會停）；動作檔瘦身（4.4MB → 1.8MB）；藏起來的角色不載入；觀眾不畫描邊和陰影，每格少畫約 37% 的三角形。
@@ -163,6 +165,9 @@
 - **香香籃球隊三人**：使用者的照片只裁「沒有臉的服裝」那半邊當造型參考（`tools/gen_sheets.sh`），GPT 畫原創公仔三視圖 → Tripo 轉 3D → 綁走路、小跑步、招牌動作。
 - **共用細部動作**（`models/moves/`）：閃身、轉身、後撤步、推人（卡位／強力突破）、踉蹌（被晃倒、被撞停）、搶板、火鍋、灌籃，在小米身上各綁一次，拿掉 Hips 位移（`strip_anim.cjs … flat`）後套給所有人，跳多高由遊戲物理決定。
 - **每個人的跑步、持球衝刺、跳投**（`models/moves/run/`）：跑姿的個性寫在 `runs.py` 的 `STYLE`。跳投的 0.30 秒要和 `main.js` 的 `SHOT_SET` 對齊。`tools/blender/runs.py` 照每個人的腿長算步幅產生。跑和走的差別是兩腳同時離地，所以踩地時間只佔一圈的兩成多。遊戲跑速約每秒 3 個身高、Q 版腿短，踩地要很快腳才不會滑。原本的 `models/*_jog.glb` 遊戲已經不載入。重新匯出：`/Applications/Blender.app/Contents/MacOS/Blender -b -P tools/blender/runs.py -- $PWD/models $PWD/models/moves/run`。
+- **球場美術**（`tools/blender/court_art.py` → `tools/court_art_webp.py` → `art/court/`）：窗外城市和地板光影圖都是 Cycles 算的。遊戲把地板顏色乘上光影圖的兩倍（`js/court.js` 的 `onBeforeCompile`），128＝不變，角色的即時影子照常疊上去。頂樓的太陽方向（`SUN`）和光束要和光影圖同方向。
+- **三分球大賽**（`js/main.js` 的 `CONT`、`startContest`、`updateContest`）：5 點各 5 球，每點最後一顆金球 2 分，最後一點全金球，滿分 34；對手分數照難度抽（`CONT.rival`），一開始就顯示當目標；最高分存 localStorage。
+- **手臂撕裂**（`tools/blender/fix_arm_weights.py`）：只用在 tu_walk，其他人舉手本來就正常，套用反而會在腰邊多出碎片。
 - **模型減面**（`tools/blender/decimate.py`）：只換 GLB 的網格資料，骨架和走路動作原封不動；臉（頭的前半）鎖住不減，因為五官是貼圖畫的，網格一動就歪。已減過的檔案會被擋下來，要重做請先從 git 拿回原檔（`git show 7d4404d:models/mi_walk.glb`）。藏起來的角色和舊的 `*_jog.glb` 遊戲不載入，沒有處理。
 - **動作檔瘦身**（`tools/slim_clips.py`）：只留轉動和臀部位移、轉動存 16 位元，`models/moves/` 再裁掉 `MOVE_WIN` 以外的時間。Blender 重新匯出後要再跑：`python3 tools/slim_clips.py models/moves/jie models/moves/run`（已瘦身過的檔案會擋下來，不會重複處理）。
 - **共用動作和招牌動作只取骨頭轉動**（`loadOwnClip`）：動作檔裡有綁骨時的骨頭位置，連小米自己都會被拉長到 1.87 倍。拿掉後腿彎了腳會離地，所以共用動作播放時由 `dropOf` 把人放低，讓腳回到站立高度。

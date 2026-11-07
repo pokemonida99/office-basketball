@@ -1,7 +1,7 @@
 // 球場：可以選「辦公室頂樓」（木地板＋白板籃板＋落地窗城市）或「大橋尾球場」（廟口球場：綠色水泥地、後面是廟）
 // 籃框、籃網兩邊共用；地板、籃板圖案、周圍場景各一組，setCourt() 切換
 import * as THREE from 'three';
-import { scene, rbox, box, cyl, sphere, mat, canvasTex, roundRect, FONT, labelSprite } from './world.js?v=0.8.1';
+import { scene, sun, rbox, box, cyl, sphere, mat, canvasTex, roundRect, FONT, labelSprite } from './world.js?v=0.9.0';
 
 // 尺寸（1 單位 ≈ 角色身高的 0.8）
 export const COURT = { x: 6, z0: 0, z1: 10.5 };            // x 從 -6 到 6，底線 z=0，半場線 z=10.5
@@ -79,6 +79,15 @@ export function buildCourt() {
   const M = 1.2, W = (COURT.x * 2 + M * 2), H = (COURT.z1 - COURT.z0 + M * 2);
   C.floorTex = { roof: floorTex(FLOOR.roof), temple: floorTex(FLOOR.temple) };
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(W, H), new THREE.MeshStandardMaterial({ map: C.floorTex.roof, roughness: 0.55 }));
+  // 地板光影（Blender 烘的，見 tools/blender/court_art.py）：地板顏色乘上圖的兩倍，128＝不變。角色的即時影子照常疊在上面
+  const lightU = { value: new THREE.DataTexture(new Uint8Array([128, 128, 128, 255]), 1, 1) }; lightU.value.needsUpdate = true;
+  C.floorLight = lightU; C.lightTex = {};
+  floor.material.onBeforeCompile = (sh) => {
+    sh.uniforms.uFloorLight = lightU;
+    sh.fragmentShader = 'uniform sampler2D uFloorLight;\n' + sh.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>\n  diffuseColor.rgb *= texture2D(uFloorLight, vMapUv).rgb * 2.0;');
+  };
+  const loader = new THREE.TextureLoader();
+  for (const k of ['roof', 'temple']) loader.load(`art/court/${k}_light.webp?v=0.9.0`, (t) => { t.anisotropy = 4; C.lightTex[k] = t; if (C.court === k) lightU.value = t; });
   floor.rotation.x = -Math.PI / 2; floor.position.set(0, 0, (COURT.z0 + COURT.z1) / 2); floor.receiveShadow = true; scene.add(floor);
   C.floor = floor;
   C.env = { roof: new THREE.Group(), temple: new THREE.Group() };
@@ -105,6 +114,17 @@ export function buildCourt() {
   box(28, 0.6, 0.4, 0xfff3e0, 0, 0.3, 0, wall);
   const glass = new THREE.Mesh(new THREE.PlaneGeometry(28, 6.2), new THREE.MeshBasicMaterial({ map: city, toneMapped: false }));
   glass.position.set(0, 3.7, -0.1); wall.add(glass);
+  // 窗外是 Blender 算的黃昏城市；圖還沒載到前先用上面畫的
+  loader.load('art/court/roof_city.webp?v=0.9.0', (t) => { t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; glass.material.map = t; glass.material.needsUpdate = true; });
+  // 從窗戶斜射進來的光束：幾片很淡的發光面，方向和地板上的窗框影子一樣
+  const beam = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false });
+  for (let x = -12.25; x <= 12.25; x += 3.5) {
+    const g = new THREE.BufferGeometry(), hw = 1.55, top = 6.6, dx = 3.9, dz = 11.6;
+    g.setAttribute('position', new THREE.Float32BufferAttribute([x - hw, top, -1.6, x + hw, top, -1.6, x + hw + dx, 0.02, dz - 1.6, x - hw + dx, 0.02, dz - 1.6], 3));
+    g.setAttribute('color', new THREE.Float32BufferAttribute([1, 0.78, 0.5, 1, 0.78, 0.5, 0, 0, 0, 0, 0, 0], 3));
+    g.setIndex([0, 1, 2, 0, 2, 3]);
+    const m = new THREE.Mesh(g, beam); m.renderOrder = 5; R.add(m);
+  }
   for (let x = -14; x <= 14; x += 3.5) rbox(0.22, 6.8, 0.3, 0xfff3e0, x, 3.4, 0.05, wall);
   box(28, 0.4, 0.4, 0xfff3e0, 0, 6.9, 0, wall);
   // 牆上的時鐘與標語
@@ -174,13 +194,17 @@ export function buildCourt() {
 }
 
 // 切換球場：周圍場景、地板花色、籃板圖案、天空顏色
-const SKY = { roof: 0xbfe6ff, temple: 0xf6b98a };
+const SKY = { roof: 0xf4c9a4, temple: 0xf6b98a };
+// 太陽：頂樓從窗外斜射（角色的影子和地板的窗框影子同方向），廟口從左邊
+const SUN = { roof: { color: 0xffdcb4, pos: [-3.5, 15, -7] }, temple: { color: 0xfff0d8, pos: [-5, 14, 12] } };
 export function setCourt(name) {
   if (!C.env || !C.env[name]) name = 'roof';
   for (const k in C.env) C.env[k].visible = k === name;
   C.floor.material.map = C.floorTex[name]; C.floor.material.needsUpdate = true;
   C.boardFace.map = C.boardTex[name]; C.boardFace.needsUpdate = true;
   scene.background.setHex(SKY[name]); scene.fog.color.setHex(SKY[name]);
+  sun.color.setHex(SUN[name].color); sun.position.set(...SUN[name].pos);
+  C.floorLight.value = C.lightTex[name] || C.floorLight.value;
   C.court = name;
 }
 
