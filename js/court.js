@@ -2,7 +2,7 @@
 // 籃框、籃網兩邊共用；地板、籃板圖案、周圍場景各一組，setCourt() 切換
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { scene, sun, rbox, box, cyl, sphere, mat, canvasTex, roundRect, FONT, labelSprite } from './world.js?v=0.9.2';
+import { scene, sun, rbox, box, cyl, sphere, mat, canvasTex, roundRect, FONT, labelSprite } from './world.js?v=0.9.3';
 
 // 尺寸（1 單位 ≈ 角色身高的 0.8）
 export const COURT = { x: 6, z0: 0, z1: 10.5 };            // x 從 -6 到 6，底線 z=0，半場線 z=10.5
@@ -105,7 +105,7 @@ export function buildCourt() {
     sh.fragmentShader = 'uniform sampler2D uFloorLight;\n' + sh.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>\n  diffuseColor.rgb *= texture2D(uFloorLight, vMapUv).rgb * 2.0;');
   };
   const loader = new THREE.TextureLoader();
-  for (const k of ['roof', 'temple']) loader.load(`art/court/${k}_light.webp?v=0.9.2`, (t) => { t.anisotropy = 4; C.lightTex[k] = t; if (C.court === k) lightU.value = t; });
+  for (const k of ['roof', 'temple']) loader.load(`art/court/${k}_light.webp?v=0.9.3`, (t) => { t.anisotropy = 4; C.lightTex[k] = t; if (C.court === k) lightU.value = t; });
   floor.rotation.x = -Math.PI / 2; floor.position.set(0, 0, (COURT.z0 + COURT.z1) / 2); floor.receiveShadow = true; scene.add(floor);
   C.floor = floor;
   C.env = { roof: new THREE.Group(), temple: new THREE.Group() };
@@ -133,7 +133,7 @@ export function buildCourt() {
   const glass = new THREE.Mesh(new THREE.PlaneGeometry(28, 6.2), new THREE.MeshBasicMaterial({ map: city, toneMapped: false }));
   glass.position.set(0, 3.7, -0.1); wall.add(glass);
   // 窗外是 Blender 算的黃昏城市；圖還沒載到前先用上面畫的
-  loader.load('art/court/roof_city.webp?v=0.9.2', (t) => { t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; glass.material.map = t; glass.material.needsUpdate = true; });
+  loader.load('art/court/roof_city.webp?v=0.9.3', (t) => { t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; glass.material.map = t; glass.material.needsUpdate = true; });
   // 從窗戶斜射進來的光束：幾片很淡的發光面，方向和地板上的窗框影子一樣
   const beam = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false });
   for (let x = -12.25; x <= 12.25; x += 3.5) {
@@ -242,7 +242,7 @@ function buildTemple(T) {
 
   // 遠景：Blender 算的藍天白雲和遠方樹林（tools/blender/court_art.py）
   const back = new THREE.Mesh(new THREE.PlaneGeometry(90, 30), new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false }));
-  new THREE.TextureLoader().load('art/court/temple_sky.webp?v=0.9.2', (t) => { t.colorSpace = THREE.SRGBColorSpace; back.material.map = t; back.material.needsUpdate = true; });
+  new THREE.TextureLoader().load('art/court/temple_sky.webp?v=0.9.3', (t) => { t.colorSpace = THREE.SRGBColorSpace; back.material.map = t; back.material.needsUpdate = true; });
   back.position.set(0, 12, -24); add(back);
   for (const s of [-1, 1]) { const side = back.clone(); side.position.set(s * 30, 12, -4); side.rotation.y = -s * Math.PI / 2; add(side); }
 

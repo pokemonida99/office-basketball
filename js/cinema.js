@@ -38,7 +38,7 @@ const LABEL = { jie: 'dunk', kevin: 'miss', mi: 'end' };
 export const clipOf = (key) => LABEL[key] || null;
 export const clipName = (k) => CLIPS[k]?.title;
 
-let box, video, subs, flash, active = null, shown = new Set(), hitDone = new Set(), raf = 0, hooks = {};
+let box, video, subs, active = null, hitDone = new Set(), timer = 0, hooks = {};
 const ch = (s) => [...s].map((c, i) => `<i style="--i:${i}">${c === ' ' ? '&nbsp;' : c}</i>`).join('');
 function cueEl(c) {
   const el = document.createElement('div');
@@ -61,7 +61,9 @@ function render(t) {
   }
   const bar = box.querySelector('.cineBar i'); if (video.duration) bar.style.width = (video.currentTime / video.duration * 100) + '%';
 }
-function loop() { if (!active) return; render(video.currentTime); raf = requestAnimationFrame(loop); }
+// 字幕用自己的計時器更新，不跟著畫面重繪：重繪卡一下，字幕也不會晚出來
+function startSubs() { clearInterval(timer); timer = setInterval(() => { if (active) render(video.currentTime); }, 40); }
+function stopSubs() { clearInterval(timer); timer = 0; }
 function build() {
   box = document.createElement('div'); box.id = 'cine';
   box.innerHTML = `<div class="cineList"><h2>🎬 短劇彩蛋</h2><p>a4 不想上班 EP9《要打去籃球場》</p><div class="cards"></div><button class="big sec" id="cineBack">回遊戲</button></div>
@@ -81,8 +83,8 @@ function build() {
   video.onplaying = () => box.classList.remove('buffer');
 }
 function clearSubs() { subs.innerHTML = ''; for (const c of Object.values(CLIPS)) for (const q of c.cues) q.el = null; hitDone.clear(); }
-function stop() { cancelAnimationFrame(raf); active = null; video.pause(); clearSubs(); box.classList.remove('hit', 'buffer', 'fail'); box.querySelector('.cineEnd').classList.remove('on'); }
-function finish() { cancelAnimationFrame(raf); video.pause(); box.dataset.last = active; clearSubs(); box.querySelector('.cineEnd').classList.add('on'); }
+function stop() { stopSubs(); active = null; video.pause(); clearSubs(); box.classList.remove('hit', 'buffer', 'fail'); box.querySelector('.cineEnd').classList.remove('on'); }
+function finish() { stopSubs(); video.pause(); box.dataset.last = active; clearSubs(); box.querySelector('.cineEnd').classList.add('on'); }
 function showList() { box.className = 'on list'; box.dataset.from = 'list'; }
 function play(k) {
   if (!box) build();
@@ -90,9 +92,11 @@ function play(k) {
   active = k; box.className = 'on playing'; box.dataset.last = k;
   video.src = CLIPS[k].src + '.mp4'; video.muted = false; video.load();
   const p = video.play(); if (p) p.catch(() => { video.muted = true; video.play().catch(() => {}); });
-  raf = requestAnimationFrame(loop);
+  startSubs();
 }
 function close() { if (box) { stop(); box.className = ''; video.removeAttribute('src'); video.load(); } hooks.onClose?.(); }
+// 放映室開著的時候遊戲不用畫背景（js/main.js 的 frame），比較順也省電
+export const cineOpen = () => !!box && box.classList.contains('on');
 // 放映室
 export function openCinema(h = {}) { hooks = h; if (!box) build(); hooks.onOpen?.(); showList(); }
 // 直接播一段（結算畫面的按鈕），播完回原來的畫面
