@@ -22,6 +22,10 @@
 
 ![比賽](design/v0.1_比賽_電腦.jpg)
 
+**v0.10.0**：每個人補上防守滑步、後退步、踉蹌、被蓋倒、撞倒；動作打包成每人一個檔，開賽才下載上場的人，開遊戲少下載約 2.5MB。
+
+**v0.9.4**：每個人都有自己的全身灌籃（照手長算跳多高、站哪裡，手會搭在框上）、蓋帽、搶籃板、抄截、急停。
+
 **v0.9.3**：修字幕偶爾慢半拍：放短劇時遊戲停止繪圖，字幕改用獨立計時器更新。
 
 **v0.9.2**：新增「🎬 短劇彩蛋」放映室（a4 不想上班 EP9 三段補拍＋字幕特效），用阿傑、Kevin、小米打完，結算畫面也能看。
@@ -170,6 +174,7 @@
 - **山頂國小隊三人＋針筒超人**：使用者給的照片只當造型參考，GPT 畫原創公仔三視圖（`tools/gen_sheets.sh`）→ Tripo 轉 3D → 綁走路、小跑步、招牌動作（`work/3d/proc_rig.sh` 把綁好的檔案壓成 `models/<人>_walk/jog.glb` 和 `models/sig/<人>.glb`）。針筒超人前兩次 Tripo 轉出來背面也長了臉、披風只剩兩側，左右側面圖對調再轉一次才對（背面是紅披風）。
 - **香香籃球隊三人**：使用者的照片只裁「沒有臉的服裝」那半邊當造型參考（`tools/gen_sheets.sh`），GPT 畫原創公仔三視圖 → Tripo 轉 3D → 綁走路、小跑步、招牌動作。
 - **共用細部動作**（`models/moves/`）：閃身、轉身、後撤步、推人（卡位／強力突破）、踉蹌（被晃倒、被撞停）、搶板、火鍋、灌籃，在小米身上各綁一次，拿掉 Hips 位移（`strip_anim.cjs … flat`）後套給所有人，跳多高由遊戲物理決定。
+- **動作包**（`models/moves/pack/角色.glb`）：`tools/blender/runs.py`（輸出到 `work/run`）和 `jie_moves.py`（輸出到 `work/jie`）→ `python3 tools/slim_clips.py work/run work/jie` → `python3 tools/pack_clips.py work/run work/jie models/sig models/moves/pack`。`work/` 不進版控，要改動作就重跑這條流程。遊戲開賽才用 `ensureChar` 下載上場的人。
 - **每個人的跑步、持球衝刺、跳投**（`models/moves/run/`）：跑姿的個性寫在 `runs.py` 的 `STYLE`。跳投的 0.30 秒要和 `main.js` 的 `SHOT_SET` 對齊。`tools/blender/runs.py` 照每個人的腿長算步幅產生。跑和走的差別是兩腳同時離地，所以踩地時間只佔一圈的兩成多。遊戲跑速約每秒 3 個身高、Q 版腿短，踩地要很快腳才不會滑。原本的 `models/*_jog.glb` 遊戲已經不載入。重新匯出：`/Applications/Blender.app/Contents/MacOS/Blender -b -P tools/blender/runs.py -- $PWD/models $PWD/models/moves/run`。
 - **短劇彩蛋**（`js/cinema.js`、`video/`）：影片按了才下載，遊戲開啟時只載封面圖。字幕用網頁疊上去，改 `CLIPS` 的 `cues` 就好，不用重新轉檔；`hits` 是震動白閃的秒數。台詞來自 `a4-shortdrama/提示詞/EP9_鬥牛.md`，`note`、`voice` 是另外加的字。影片用 macOS 內建的 `avconvert -p Preset640x480` 壓（這台沒有 ffmpeg）。
 - **球場美術**（`tools/blender/court_art.py` → `tools/court_art_webp.py` → `art/court/`）：窗外城市和地板光影圖都是 Cycles 算的。遊戲把地板顏色乘上光影圖的兩倍（`js/court.js` 的 `onBeforeCompile`），128＝不變，角色的即時影子照常疊上去。頂樓的太陽方向（`SUN`）和光束要和光影圖同方向。

@@ -74,11 +74,27 @@ export async function loadOwnClip(url) {
   if (clip) clip.tracks = clip.tracks.filter(t => t.name.endsWith('.quaternion') || t.name === 'Hips.position');
   return clip;
 }
-// 角色自己的跑步：只載動畫，再用他的身體量不滑步的速度
-export async function loadRun(kind, url) {
-  const clip = await loadOwnClip(url), natural = measureNatural(kind.base, clip);
+// 一個角色的整包動作（models/moves/pack/角色.glb，tools/pack_clips.py 打包）：回傳 { 動作名: clip }，只留骨頭轉動和臀部位移
+export async function loadPack(url) {
+  const g = await loader.loadAsync(url), out = {};
+  for (const c of g.animations) { c.tracks = c.tracks.filter(t => t.name.endsWith('.quaternion') || t.name === 'Hips.position'); out[c.name] = c; }
+  return out;
+}
+// 角色自己的跑步：用他的身體量不滑步的速度
+export function runOf(kind, clip) {
+  const natural = measureNatural(kind.base, clip);
   for (const [b, p, q, sc] of kind.rest) { b.position.copy(p); b.quaternion.copy(q); b.scale.copy(sc); }
   return { clip, natural };
+}
+// 灌籃掛框那一格，右手在身體的哪裡（身高 1、臉朝 +z）。每個人手長不同，遊戲用這個算要跳多高、站哪裡，手才碰得到籃框
+export function dunkFit(kind, clip, t) {
+  const mixer = new THREE.AnimationMixer(kind.base), a = mixer.clipAction(clip).play();
+  a.time = t; mixer.update(0); kind.base.updateMatrixWorld(true);
+  let hand; kind.base.traverse(o => { if (o.isBone && o.name === 'RightHand') hand = o; });
+  const p = hand.getWorldPosition(new THREE.Vector3());
+  a.stop(); mixer.uncacheRoot(kind.base);
+  for (const [b, q, r, sc] of kind.rest) { b.position.copy(q); b.quaternion.copy(r); b.scale.copy(sc); }
+  return p;
 }
 // 掛上跑步動作，之後依速度跟走路混合
 export function addJog(a, jogKind) {

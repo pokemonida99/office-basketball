@@ -1,12 +1,13 @@
 # 每個角色自己的跑步和持球衝刺：照他的腿長算步幅，輸出成只有動畫的 GLB（models/moves/run/角色_run.glb、角色_sprint.glb）
-# 用法：/Applications/Blender.app/Contents/MacOS/Blender -b -P tools/blender/runs.py -- models models/moves/run [預覽圖資料夾]
+# 用法：/Applications/Blender.app/Contents/MacOS/Blender -b -P tools/blender/runs.py -- models work/run [預覽圖資料夾]
 #
 # 跑和走的差別是「兩腳同時離地」：踩地時間只佔一圈的兩成多，中間整個人騰空；踢腿時腳跟帶到屁股、膝蓋往前帶，上身前傾、手肘彎著擺。
 # Q 版腿短，遊戲每秒要跑 3 個身高，所以踩地要很快：踩地時間＝步幅 ÷ 速度，一圈時間照腿長調，腿短的人步頻高一點。
 # 有背身強打、強力突破技能的人另外輸出 角色_push.glb：共用的 push 蹲得太低，只取骨頭轉動後整個人會縮成一團（阿傑的在 jie_moves.py）。
 # 每個人都有 角色_shot.glb：完整的跳投，遊戲在 0.30 秒（舉到頭上）停住等出手，出手後才接著播（時間在 js/main.js 的 SHOT_SET）。
 # 每個人也有 角色_lay.glb（上籃，阿傑的在 jie_moves.py）和 角色_pass.glb（傳球，遊戲只取上半身，邊跑邊傳腳不會停）。
-# 匯出後要跑 python3 tools/slim_clips.py models/moves/run 瘦身。
+# 還有 角色_dunk／block／rebound／reach／stop／guard／back／stumble／knock／flop.glb：姿勢和 jie_moves.py 的阿傑一樣，長度照腿長換算（阿傑的在 models/moves/jie/）。
+# 匯出後要瘦身、打包：python3 tools/slim_clips.py work/run work/jie；python3 tools/pack_clips.py work/run work/jie models/sig models/moves/pack
 # 寫法和 jie_moves.py 一樣：手臂寫方向、腳用 IK 寫腳踝位置，不寫骨頭角度（Tripo 綁的骨頭軸向不統一）。
 import bpy, sys, math, os
 from mathutils import Matrix, Vector, Quaternion
@@ -233,6 +234,136 @@ def build(key, file):
             (0.09, 18, -6, 0, 0, 0, ((0.25, 0.95, 0.1), (0.2, 0.95, 0.15), (-0.25, 0.95, 0.1), (-0.2, 0.95, 0.15)), None),
             (0.26, 10, -3, 0, 0, 0, ((0.42, 0.55, -0.7), (0.3, 0.8, -0.35), (-0.42, 0.55, -0.7), (-0.3, 0.8, -0.35)), None)])
 
+    # ---------- 全身動作：寫法和 jie_moves.py 的 pose() 一樣，長度單位是阿傑的腿長比例（k） ----------
+    K_ = L / 25.2
+    reset()
+    REST_LOW = min(PB[n].matrix.translation.z for n in ('LeftFoot', 'RightFoot', 'LeftToeBase', 'RightToeBase'))
+    def full(keys, floor=False):
+        for t, p in keys:
+            reset()
+            if p.get('hipPitch'): rotate_world('Hips', Quaternion((1, 0, 0), math.radians(p['hipPitch'])))
+            if p.get('hipYaw'): rotate_world('Hips', Quaternion((0, 0, 1), math.radians(p['hipYaw'])))
+            if p.get('hipRoll'): rotate_world('Hips', Quaternion((0, 1, 0), math.radians(p['hipRoll'])))
+            for b, share in zip(SPINE, (0.3, 0.3, 0.25, 0.1, 0.05)):
+                if p.get('lean'): rotate_world(b, Quaternion((1, 0, 0), math.radians(p['lean'] * share)))
+            if p.get('twist'):
+                for b in ('Spine01', 'Spine'): rotate_world(b, Quaternion((0, 0, 1), math.radians(p['twist'] * 0.5)))
+            if p.get('headPitch'): rotate_world('Head', Quaternion((1, 0, 0), math.radians(p['headPitch'])))
+            for side, sign, k_ in (('Left', 1, 'shrugL'), ('Right', -1, 'shrugR')):
+                if p.get(k_): rotate_world(side + 'Shoulder', Quaternion((0, 1, 0), math.radians(-sign * p[k_])))
+            for name, d in zip(ARMS, p['arms']): aimv(name, D(*d))
+            if p.get('hipUp') or p.get('hipFwd') or p.get('hipLeft'):
+                m = PB['Hips'].matrix.copy(); m.translation += Vector((p.get('hipLeft', 0) * K_, -p.get('hipFwd', 0) * K_, p.get('hipUp', 0) * K_)); PB['Hips'].matrix = m
+                bpy.context.view_layer.update()
+            if 'ikL' in p:
+                il, ir = p['ikL'], p['ikR']
+                leg_ik('Left', (il[0] * K_, il[1] * K_, ANK + (il[3] if len(il) > 3 else 0) * K_), il[2] if len(il) > 2 else 0); leg_ik('Right', (ir[0] * K_, ir[1] * K_, ANK + (ir[3] if len(ir) > 3 else 0) * K_), ir[2] if len(ir) > 2 else 0)
+            if 'legs' in p:
+                for name, d in zip(LEGS, p['legs']): aimv(name, D(*d))
+            if p.get('plant'):
+                low = min(PB[n].matrix.translation.z for n in ('LeftFoot', 'RightFoot', 'LeftToeBase', 'RightToeBase'))
+                m = PB['Hips'].matrix.copy(); m.translation.z += REST_LOW - low; PB['Hips'].matrix = m
+                bpy.context.view_layer.update()
+            if floor:   # 倒地：腿長的人臀部換算後放太低，身體最低的骨頭不能穿過地板
+                low = min(PB[n].matrix.translation.z for n in ('Hips', 'Head', 'LeftFoot', 'RightFoot', 'LeftToeBase', 'RightToeBase', 'LeftHand', 'RightHand'))
+                need = REST_LOW + 0.03 * H - low
+                if need > 0:
+                    m = PB['Hips'].matrix.copy(); m.translation.z += need; PB['Hips'].matrix = m
+                    bpy.context.view_layer.update()
+            frame = round(t * FPS)
+            for b in ALL: PB[b].keyframe_insert('rotation_quaternion', frame=frame, group=b)
+            PB['Hips'].keyframe_insert('location', frame=frame, group='Hips')
+        return round(keys[-1][0] * FPS), 0
+    vl = foot_dir('Left'); vr = foot_dir('Right')
+    FL, FR = (vl.x, -vl.y, vl.z), (vr.x, -vr.y, vr.z)
+    AIR_L, AIR_R = (0.05, 0.55, -0.85), (-0.05, 0.55, -0.85)
+    def legs(lu, ll, ru, rl, lf=AIR_L, rf=AIR_R): return (lu, ll, lf, ru, rl, rf)
+    def stand(w=7.5, fl=0, fr=0, low=0): return dict(ikL=(w, fl), ikR=(-w, fr), hipUp=-1.5 - low)
+    RELAX = ((0.42, 0.1, -0.9), (0.28, 0.42, -0.86), (-0.42, 0.1, -0.9), (-0.28, 0.42, -0.86))
+    HOLD_WAIST = ((0.35, 0.55, -0.75), (-0.55, 0.8, 0.1), (-0.35, 0.55, -0.75), (0.55, 0.8, 0.1))
+    HOLD_CHEST_ = ((0.45, 0.8, -0.2), (-0.5, 0.65, 0.55), (-0.45, 0.8, -0.2), (0.5, 0.65, 0.55))
+    ARMS_UP = ((0.6, 0.2, 0.77), (0.42, 0.2, 0.88), (-0.6, 0.2, 0.77), (-0.42, 0.2, 0.88))
+    LAND = ((0.8, 0.45, -0.4), (0.7, 0.65, -0.3), (-0.8, 0.45, -0.4), (-0.7, 0.65, -0.3))
+    LOWER = ((0.55, 0.15, -0.8), (0.3, 0.45, -0.85), (-0.55, 0.15, -0.8), (-0.3, 0.45, -0.85))
+    HANG = ((0.85, 0.2, -0.45), (0.6, 0.5, -0.6), (-0.72, 0.42, 0.55), (-0.6, 0.45, 0.66))
+    def dunk(): return full([   # 時間要跟 js/main.js 的 DUNK 對齊：0.40 球進框、掛框到 0.70、0.97 落地
+        (0.00, dict(lean=12, arms=HOLD_CHEST_, legs=legs((0.1, 0.25, -0.95), (0.06, -0.2, -1), (-0.1, 0.25, -0.95), (-0.06, -0.2, -1), FL, FR), plant=True)),
+        (0.10, dict(lean=32, arms=HOLD_WAIST, legs=legs((0.2, 0.8, -0.6), (0.05, -0.55, -0.85), (-0.2, 0.8, -0.6), (-0.05, -0.55, -0.85), FL, FR), plant=True)),
+        (0.20, dict(lean=2, twist=-10, shrugR=15, arms=((0.5, 0.75, 0.3), (-0.15, 0.8, 0.55), (-0.75, 0.35, 0.55), (-0.55, 0.1, 0.83)), legs=legs((0.08, -0.1, -1), (0.03, -0.35, -0.95), (-0.1, 0.97, -0.2), (-0.05, -0.55, -0.85)))),
+        (0.33, dict(lean=-16, hipPitch=-8, twist=-26, shrugR=28, arms=((0.7, 0.55, 0.45), (0.35, 0.8, 0.5), (-0.8, -0.1, 0.6), (-0.4, -0.35, 0.85)), legs=legs((0.1, -0.05, -1), (0.03, -0.95, -0.3), (-0.14, 0.35, -0.93), (-0.05, -0.95, -0.3)))),
+        (0.40, dict(lean=30, hipPitch=10, twist=22, arms=((0.75, 0.2, -0.6), (0.5, 0.5, -0.7), (-0.3, 0.9, 0.3), (-0.1, 0.97, -0.2)), legs=legs((0.14, 0.8, -0.6), (0.06, 0.1, -1), (-0.14, 0.9, -0.45), (-0.06, 0.1, -1)))),
+        (0.47, dict(lean=-4, twist=8, shrugR=25, arms=HANG, legs=legs((0.12, 0.7, -0.7), (0.05, 0.45, -0.9), (-0.12, 0.78, -0.62), (-0.05, 0.5, -0.87)))),
+        (0.58, dict(lean=-12, twist=4, shrugR=28, arms=HANG, legs=legs((0.1, -0.3, -0.95), (0.04, -0.75, -0.65), (-0.1, -0.25, -0.97), (-0.04, -0.7, -0.7)))),
+        (0.68, dict(lean=-6, twist=4, shrugR=25, arms=HANG, legs=legs((0.1, 0.3, -0.95), (0.04, 0.08, -1), (-0.1, 0.35, -0.93), (-0.04, 0.1, -1)))),
+        (0.84, dict(lean=4, arms=LOWER, legs=legs((0.14, 0.12, -1), (0.06, -0.08, -1), (-0.14, 0.12, -1), (-0.06, -0.08, -1)))),
+        (0.97, dict(lean=30, arms=LAND, legs=legs((0.22, 0.75, -0.65), (0.06, -0.5, -0.87), (-0.22, 0.75, -0.65), (-0.06, -0.5, -0.87), FL, FR), plant=True)),
+        (1.07, dict(lean=16, arms=LOWER, legs=legs((0.17, 0.5, -0.85), (0.05, -0.32, -0.95), (-0.17, 0.5, -0.85), (-0.05, -0.32, -0.95), FL, FR), plant=True)),
+        (1.20, dict(lean=4, arms=LOWER, legs=legs((0.12, 0.12, -1), (0.05, -0.08, -1), (-0.12, 0.12, -1), (-0.05, -0.08, -1), FL, FR), plant=True))])
+    def block(): return full([   # 蓋帽：起跳高度交給遊戲物理
+        (0.00, dict(lean=18, arms=LOWER, **stand(9, 0, 0, 6))),
+        (0.14, dict(lean=2, shrugL=22, shrugR=22, arms=ARMS_UP, legs=legs((0.08, 0.02, -1), (0.03, -0.1, -1), (-0.08, 0.02, -1), (-0.03, -0.1, -1)))),
+        (0.30, dict(lean=-8, headPitch=-6, shrugL=28, shrugR=28, arms=ARMS_UP, legs=legs((0.14, 0.35, -0.93), (0.05, -0.45, -0.9), (-0.14, 0.2, -1), (-0.05, -0.6, -0.8)))),
+        (0.48, dict(lean=-2, shrugL=24, shrugR=24, arms=ARMS_UP, legs=legs((0.12, 0.2, -1), (0.05, -0.15, -1), (-0.12, 0.2, -1), (-0.05, -0.2, -1)))),
+        (0.70, dict(lean=16, arms=LAND, **stand(9, 0, 0, 5)))])
+    def rebound(): return full([   # 搶籃板：雙手張開搆球，抓到拉回胸前
+        (0.00, dict(lean=16, arms=LOWER, **stand(9, 0, 0, 6))),
+        (0.20, dict(lean=-6, headPitch=-8, shrugL=26, shrugR=26, arms=((0.75, 0.2, 0.6), (0.6, 0.35, 0.72), (-0.75, 0.2, 0.6), (-0.6, 0.35, 0.72)), legs=legs((0.14, 0.7, -0.7), (0.05, -0.45, -0.9), (-0.1, 0.05, -1), (-0.04, -0.5, -0.87)))),
+        (0.36, dict(lean=4, shrugL=20, shrugR=20, arms=((0.65, 0.55, 0.5), (-0.1, 0.7, 0.7), (-0.65, 0.55, 0.5), (0.1, 0.7, 0.7)), legs=legs((0.14, 0.55, -0.83), (0.05, -0.4, -0.9), (-0.12, 0.25, -0.97), (-0.04, -0.45, -0.9)))),
+        (0.65, dict(lean=14, arms=HOLD_CHEST_, **stand(9, 0, 0, 5)))])
+    def reach(): return full([   # 抄截：右腳跨出去、上身壓低、右手往前掏
+        (0.00, dict(lean=12, arms=RELAX, **stand(8, 0, 0, 2))),
+        (0.12, dict(lean=38, headPitch=-22, twist=18, arms=((0.65, -0.55, -0.5), (0.45, -0.1, -0.88), (-0.22, 0.96, -0.1), (-0.05, 0.93, -0.35)), ikL=(9, -11, 24), ikR=(-9, 16), hipUp=-9, hipFwd=4)),
+        (0.30, dict(lean=34, headPitch=-20, twist=10, arms=((0.65, -0.5, -0.55), (0.45, -0.05, -0.9), (-0.25, 0.93, -0.25), (0.15, 0.9, -0.4)), ikL=(9, -10, 22), ikR=(-9, 15), hipUp=-8, hipFwd=4)),
+        (0.50, dict(lean=10, arms=RELAX, **stand(8, 0, 1, 2)))])
+    def stop_(): return full([   # 急停：身體往後仰煞車，腳往前踩，再站穩
+        (0.00, dict(lean=16, arms=RELAX, **stand(7, 7, -7, 3))),
+        (0.12, dict(lean=-12, headPitch=8, arms=LAND, ikL=(9, 13, -18), ikR=(-9, -8, 16), hipUp=-7)),
+        (0.30, dict(lean=6, arms=LOWER, **stand(9, 7, -6, 4))),
+        (0.50, dict(lean=3, arms=RELAX, **stand(7.5, 2, -2, 1)))])
+    GUARD_UP = ((0.85, 0.3, 0.3), (0.72, 0.55, 0.42), (-0.85, 0.3, 0.3), (-0.72, 0.55, 0.42))
+    FLAIL = ((0.9, -0.1, 0.4), (0.7, 0.3, 0.65), (-0.9, 0.1, 0.1), (-0.75, 0.45, -0.3))
+    def guard():   # 防守滑步：壓低重心張手，兩腳輪流墊一下，往哪邊移都看得通（循環）
+        keys = []
+        for i in range(31):
+            ph = i / 30; s1 = math.sin(2 * math.pi * ph); la, ra = max(0, s1), max(0, -s1)
+            keys.append((i / 30, dict(lean=20, headPitch=-14, hipUp=-8 - 0.7 * abs(s1), hipLeft=1.8 * s1, arms=GUARD_UP, ikL=(13 + 1.5 * s1, 2, 10 * la, 2.5 * la), ikR=(-13 + 1.5 * s1, 2, 10 * ra, 2.5 * ra))))
+        return full(keys)
+    def back():   # 後退步：張手往後踩（循環）
+        a_, stance_, lift_ = 6.0, 0.6, 3.0
+        def ft(ph):
+            if ph < stance_:
+                u = ph / stance_
+                return a_ * (1 - 2 * u), -14 * (1 - u / 0.15) if u < 0.15 else (32 * (u - 0.72) / 0.28 if u > 0.72 else 0), 0
+            u = (ph - stance_) / (1 - stance_)
+            return -a_ + 2 * a_ * smooth(u), 32 * (1 - u) - 14 * u, lift_ * math.sin(math.pi * u)
+        keys = []
+        for i in range(25):
+            ph = i / 24; c = math.cos(2 * math.pi * ph)
+            lf_, lp, lz = ft((-ph) % 1); rf_, rp, rz = ft((-ph + 0.5) % 1)
+            keys.append((i / 30, dict(lean=9, headPitch=-4.5, twist=-5 * c, hipYaw=4 * c, hipUp=-3 + 0.6 * math.cos(4 * math.pi * ph - 0.6), hipLeft=0.6 * math.cos(2 * math.pi * ph + 0.6), arms=GUARD_UP, ikL=(8.5, lf_, lp, lz), ikR=(-8.5, rf_, rp, rz))))
+        return full(keys)
+    def stumble(): return full([   # 被撞到踉蹌
+        (0.00, dict(lean=4, arms=RELAX, **stand(8, 0, 0, 1))),
+        (0.10, dict(lean=-20, headPitch=8, arms=FLAIL, ikL=(10, 4, -14), ikR=(-9, -8), hipUp=-3, hipFwd=-3)),
+        (0.30, dict(lean=-8, twist=12, hipRoll=6, arms=((0.9, 0.1, 0.1), (0.75, 0.45, -0.3), (-0.9, -0.1, 0.4), (-0.7, 0.3, 0.65)), ikL=(10, -7, 20, 2), ikR=(-9, -10), hipUp=-5, hipFwd=-6)),
+        (0.50, dict(lean=14, arms=LAND, ikL=(10, -3), ikR=(-10, -4), hipUp=-7, hipFwd=-3)),
+        (0.70, dict(lean=5, arms=RELAX, **stand(8, 0, 0, 1)))])
+    SIT = ((0.8, -0.45, -0.4), (0.55, -0.45, -0.7), (-0.8, -0.45, -0.4), (-0.55, -0.45, -0.7))
+    def knock(): return full([   # 被蓋倒：屁股著地，再撐起來
+        (0.00, dict(lean=-20, arms=FLAIL, **stand(9, 2, -3, 3))),
+        (0.25, dict(hipPitch=-22, lean=-14, headPitch=10, arms=FLAIL, legs=legs((0.2, 0.85, -0.5), (0.1, 0.6, -0.8), (-0.2, 0.9, -0.45), (-0.1, 0.65, -0.75)), hipUp=-5, hipFwd=-6)),
+        (0.50, dict(hipPitch=-40, lean=-8, headPitch=18, arms=SIT, legs=legs((0.22, 0.95, -0.25), (0.12, 0.85, -0.5), (-0.22, 0.95, -0.2), (-0.12, 0.8, -0.6), (0.05, 0.25, 0.9), (-0.05, 0.25, 0.9)), hipUp=-20, hipFwd=-9)),
+        (0.95, dict(hipPitch=-34, lean=-6, headPitch=14, arms=SIT, legs=legs((0.22, 0.9, -0.35), (0.12, 0.6, -0.8), (-0.22, 0.9, -0.3), (-0.12, 0.55, -0.83), (0.05, 0.6, 0.6), (-0.05, 0.6, 0.6)), hipUp=-19, hipFwd=-8)),
+        (1.25, dict(lean=34, headPitch=-14, arms=LOWER, ikL=(11, 4), ikR=(-11, 1), hipUp=-9, hipFwd=-4)),
+        (1.50, dict(lean=4, arms=RELAX, **stand(8, 0, 0, 1)))], floor=True)
+    def flop(): return full([   # 撞人倒地：往後翻倒、腳翹起來，再爬起來
+        (0.00, dict(lean=-22, headPitch=10, arms=FLAIL, **stand(8, 3, -2, 2))),
+        (0.20, dict(hipPitch=-38, lean=-12, headPitch=10, arms=FLAIL, legs=legs((0.2, 0.85, -0.5), (0.12, 0.7, -0.7), (-0.2, 0.9, -0.4), (-0.12, 0.7, -0.7)), hipUp=-4, hipFwd=-10)),
+        (0.45, dict(hipPitch=-62, lean=-6, headPitch=18, arms=((0.92, -0.25, 0.3), (0.85, 0.1, 0.5), (-0.92, -0.25, 0.3), (-0.85, 0.1, 0.5)), legs=legs((0.2, 0.75, 0.6), (0.14, 0.95, 0.1), (-0.2, 0.8, 0.5), (-0.14, 0.95, -0.05), (0.05, 0.35, 0.9), (-0.05, 0.35, 0.9)), hipUp=-20, hipFwd=-14)),
+        (0.90, dict(hipPitch=-58, lean=-6, headPitch=16, arms=((0.92, -0.25, 0.25), (0.85, 0.1, 0.45), (-0.92, -0.25, 0.25), (-0.85, 0.1, 0.45)), legs=legs((0.2, 0.92, 0.15), (0.14, 0.75, -0.65), (-0.2, 0.92, 0.1), (-0.14, 0.7, -0.7), (0.05, 0.7, 0.5), (-0.05, 0.7, 0.5)), hipUp=-20, hipFwd=-13)),
+        (1.20, dict(lean=36, headPitch=-14, arms=LOWER, ikL=(11, 4), ikR=(-11, 0), hipUp=-9, hipFwd=-5)),
+        (1.50, dict(lean=4, arms=RELAX, **stand(8, 0, 0, 1)))], floor=True)
+
     arm.animation_data_create()
     os.makedirs(OUT_DIR, exist_ok=True)
     style = STYLE.get(key, {})
@@ -243,12 +374,12 @@ def build(key, file):
         return o
     plan = {n: styled(g) for n, g in GAITS.items()}
     if key != 'needle': plan['shot'] = plan['pass'] = None
-    if key not in ('needle', 'jie'): plan['lay'] = None
+    if key not in ('needle', 'jie'): plan.update(lay=None, dunk=None, block=None, rebound=None, reach=None, stop=None, guard=None, back=None, stumble=None, knock=None, flop=None)
     if key in POWER: plan['push'] = None
     for name, g in plan.items():
         act = bpy.data.actions.new(f'{key}_{name}')
         arm.animation_data.action = act
-        n, stance = gait(g) if g else {'shot': shot, 'push': push, 'lay': lay, 'pass': pass_}[name]()
+        n, stance = gait(g) if g else {'shot': shot, 'push': push, 'lay': lay, 'pass': pass_, 'dunk': dunk, 'block': block, 'rebound': rebound, 'reach': reach, 'stop': stop_, 'guard': guard, 'back': back, 'stumble': stumble, 'knock': knock, 'flop': flop}[name]()
         scene.frame_start, scene.frame_end = 0, n
         bpy.ops.object.mode_set(mode='OBJECT')
         bpy.ops.object.select_all(action='DESELECT'); arm.select_set(True); bpy.context.view_layer.objects.active = arm
