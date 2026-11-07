@@ -6,7 +6,8 @@ import sys, os
 from PIL import Image
 src, out = sys.argv[1:3]
 os.makedirs(out, exist_ok=True)
-Image.open(os.path.join(src, 'roof_city.png')).convert('RGB').save(os.path.join(out, 'roof_city.webp'), quality=82, method=6)
+for n in ('roof_city', 'temple_sky'):
+    Image.open(os.path.join(src, n + '.png')).convert('RGB').save(os.path.join(out, n + '.webp'), quality=82, method=6)
 for n in ('roof_light', 'temple_light'):
     im = Image.open(os.path.join(src, n + '.png')).convert('RGB').point(lambda v: int(70 + 0.42 * v))
     im.save(os.path.join(out, n + '.webp'), quality=80, method=6)

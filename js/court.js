@@ -1,7 +1,8 @@
 // 球場：可以選「辦公室頂樓」（木地板＋白板籃板＋落地窗城市）或「大橋尾球場」（廟口球場：綠色水泥地、後面是廟）
 // 籃框、籃網兩邊共用；地板、籃板圖案、周圍場景各一組，setCourt() 切換
 import * as THREE from 'three';
-import { scene, sun, rbox, box, cyl, sphere, mat, canvasTex, roundRect, FONT, labelSprite } from './world.js?v=0.9.0';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { scene, sun, rbox, box, cyl, sphere, mat, canvasTex, roundRect, FONT, labelSprite } from './world.js?v=0.9.1';
 
 // 尺寸（1 單位 ≈ 角色身高的 0.8）
 export const COURT = { x: 6, z0: 0, z1: 10.5 };            // x 從 -6 到 6，底線 z=0，半場線 z=10.5
@@ -22,7 +23,7 @@ export const COURTS = { roof: '辦公室頂樓', temple: '大橋尾球場' };
 // 地板：P 是配色（頂樓木地板、廟口綠色水泥地）
 const FLOOR = {
   roof: { out: '#e8794a', wood: true, key: '#ff7a45', circle: '#3fa7ff', mid: '上班啟示錄', base: 'OFFICE BALL 2v2' },
-  temple: { out: '#b65a3c', wood: false, court: '#3f8f62', key: '#c9483c', circle: '#d9a63a', mid: '大橋尾', base: '廟口鬥牛' },
+  temple: { out: '#a64a30', wood: false, paver: true, court: '#47746f', key: '#2a4f7d', circle: '#2a4f7d', mid: '大橋尾', base: '廟口鬥牛' },
 };
 function floorTex(P) {
   const PX = 80, M = 1.2;   // 每單位幾像素、外圍留邊
@@ -31,10 +32,26 @@ function floorTex(P) {
     const X = (x) => (x + COURT.x + M) * PX, Z = (z) => (z - COURT.z0 + M) * PX;
     // 外圍
     g.fillStyle = P.out; g.fillRect(0, 0, w, h);
+    if (P.paver) {   // 廟埕地面：紅磚，球場邊一圈淺色石條
+      const bw = 0.42 * PX, bh = 0.21 * PX;
+      for (let r = 0; r * bh < h; r++) for (let c = -1; c * bw < w; c++) {
+        g.fillStyle = ['#a64a30', '#b5563a', '#9a432b', '#ad5035'][(r * 7 + c * 3) & 3];
+        g.fillRect(c * bw + (r % 2) * bw / 2 + 1, r * bh + 1, bw - 2, bh - 2);
+      }
+      g.fillStyle = '#d8cfbd'; g.fillRect(X(-COURT.x) - 0.2 * PX, Z(COURT.z0) - 0.2 * PX, (COURT.x * 2 + 0.4) * PX, (COURT.z1 - COURT.z0 + 0.4) * PX);
+    }
     if (!P.wood) {   // 水泥地：底色＋斑駁
       g.fillStyle = P.court; g.fillRect(X(-COURT.x), Z(COURT.z0), COURT.x * 2 * PX, (COURT.z1 - COURT.z0) * PX);
       for (let i = 0; i < 2600; i++) { g.fillStyle = Math.random() < 0.5 ? '#ffffff10' : '#00000012'; g.fillRect(Math.random() * w, Math.random() * h, 2 + Math.random() * 6, 2 + Math.random() * 6); }
-      for (let i = 0; i < 6; i++) { g.strokeStyle = '#00000018'; g.lineWidth = 2; g.beginPath(); let x = Math.random() * w, y = Math.random() * h; g.moveTo(x, y); for (let k = 0; k < 6; k++) { x += (Math.random() - 0.5) * 90; y += Math.random() * 60; g.lineTo(x, y); } g.stroke(); }   // 裂縫
+      if (P.paver) {   // 互鎖地磚：一格一格的細縫
+        g.strokeStyle = '#00000020'; g.lineWidth = 1.5; const t = 0.3 * PX;
+        for (let r = 0; r * t < (COURT.z1 - COURT.z0) * PX; r++) for (let c = 0; c * t < COURT.x * 2 * PX; c++) {
+          g.fillStyle = ((r * 5 + c * 3) % 7) < 2 ? '#ffffff0c' : '#00000008';
+          const px = X(-COURT.x) + c * t + (r % 2) * t / 2, py = Z(COURT.z0) + r * t;
+          g.fillRect(px, py, t, t); g.strokeRect(px, py, t, t);
+        }
+      }
+      for (let i = 0; !P.paver && i < 6; i++) { g.strokeStyle = '#00000018'; g.lineWidth = 2; g.beginPath(); let x = Math.random() * w, y = Math.random() * h; g.moveTo(x, y); for (let k = 0; k < 6; k++) { x += (Math.random() - 0.5) * 90; y += Math.random() * 60; g.lineTo(x, y); } g.stroke(); }   // 裂縫
     }
     for (let i = 0; P.wood && i * 0.32 * PX < w; i++) {
       const x = i * 0.32 * PX;
@@ -51,6 +68,7 @@ function floorTex(P) {
     g.lineTo(X(CORNER_X), Z(0)); g.closePath(); g.fill();
     // 禁區
     g.fillStyle = P.key; g.fillRect(X(-1.6), Z(0), 3.2 * PX, 4.6 * PX);
+    if (P.paver) { g.beginPath(); g.arc(X(0), Z(4.6), 1.6 * PX, 0, Math.PI); g.fill(); }   // 深藍色延伸到罰球圈
     if (P.wood) { g.fillStyle = '#ffffff30'; for (let i = 0; i < 6; i++) g.fillRect(X(-1.6), Z(0) + i * 0.8 * PX, 3.2 * PX, 0.4 * PX); }
     // 中圈
     g.fillStyle = P.circle; g.beginPath(); g.arc(X(0), Z(COURT.z1), 1.6 * PX, 0, Math.PI * 2); g.fill();
@@ -87,7 +105,7 @@ export function buildCourt() {
     sh.fragmentShader = 'uniform sampler2D uFloorLight;\n' + sh.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>\n  diffuseColor.rgb *= texture2D(uFloorLight, vMapUv).rgb * 2.0;');
   };
   const loader = new THREE.TextureLoader();
-  for (const k of ['roof', 'temple']) loader.load(`art/court/${k}_light.webp?v=0.9.0`, (t) => { t.anisotropy = 4; C.lightTex[k] = t; if (C.court === k) lightU.value = t; });
+  for (const k of ['roof', 'temple']) loader.load(`art/court/${k}_light.webp?v=0.9.1`, (t) => { t.anisotropy = 4; C.lightTex[k] = t; if (C.court === k) lightU.value = t; });
   floor.rotation.x = -Math.PI / 2; floor.position.set(0, 0, (COURT.z0 + COURT.z1) / 2); floor.receiveShadow = true; scene.add(floor);
   C.floor = floor;
   C.env = { roof: new THREE.Group(), temple: new THREE.Group() };
@@ -115,7 +133,7 @@ export function buildCourt() {
   const glass = new THREE.Mesh(new THREE.PlaneGeometry(28, 6.2), new THREE.MeshBasicMaterial({ map: city, toneMapped: false }));
   glass.position.set(0, 3.7, -0.1); wall.add(glass);
   // 窗外是 Blender 算的黃昏城市；圖還沒載到前先用上面畫的
-  loader.load('art/court/roof_city.webp?v=0.9.0', (t) => { t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; glass.material.map = t; glass.material.needsUpdate = true; });
+  loader.load('art/court/roof_city.webp?v=0.9.1', (t) => { t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; glass.material.map = t; glass.material.needsUpdate = true; });
   // 從窗戶斜射進來的光束：幾片很淡的發光面，方向和地板上的窗框影子一樣
   const beam = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false });
   for (let x = -12.25; x <= 12.25; x += 3.5) {
@@ -149,12 +167,10 @@ export function buildCourt() {
   });
   // 廟口的籃板：一般白色籃板，上面漆「大橋尾」
   const board2 = canvasTex(512, 300, (g, w, h) => {
-    g.fillStyle = '#f6f4ee'; g.fillRect(0, 0, w, h);
-    for (let i = 0; i < 300; i++) { g.fillStyle = '#00000008'; g.fillRect(Math.random() * w, Math.random() * h, 3, 3); }
-    g.strokeStyle = '#1d1d1f'; g.lineWidth = 16; g.strokeRect(8, 8, w - 16, h - 16);
-    g.strokeStyle = '#c9483c'; g.lineWidth = 10; g.strokeRect(w / 2 - 70, h - 130, 140, 100);
-    g.fillStyle = '#c9483c'; g.font = `900 46px ${FONT}`; g.textAlign = 'center'; g.fillText('大橋尾', w / 2, 74);
-    g.fillStyle = '#1d1d1f'; g.font = `800 20px ${FONT}`; g.fillText('里民活動中心 敬贈', w / 2, 106);
+    g.clearRect(0, 0, w, h); g.fillStyle = '#dcebf566'; g.fillRect(0, 0, w, h);
+    const sh = g.createLinearGradient(0, 0, w, h); sh.addColorStop(0.3, '#ffffff00'); sh.addColorStop(0.45, '#ffffff55'); sh.addColorStop(0.55, '#ffffff00'); g.fillStyle = sh; g.fillRect(0, 0, w, h);
+    g.strokeStyle = '#f4f7fa'; g.lineWidth = 14; g.strokeRect(7, 7, w - 14, h - 14);
+    g.lineWidth = 9; g.strokeRect(w / 2 - 70, h - 130, 140, 100);
   });
   C.boardTex = { roof: board, temple: board2 };
   C.boardFace = new THREE.MeshStandardMaterial({ map: board, roughness: 0.3 });
@@ -194,14 +210,18 @@ export function buildCourt() {
 }
 
 // 切換球場：周圍場景、地板花色、籃板圖案、天空顏色
-const SKY = { roof: 0xf4c9a4, temple: 0xf6b98a };
-// 太陽：頂樓從窗外斜射（角色的影子和地板的窗框影子同方向），廟口從左邊
-const SUN = { roof: { color: 0xffdcb4, pos: [-3.5, 15, -7] }, temple: { color: 0xfff0d8, pos: [-5, 14, 12] } };
+const SKY = { roof: 0xf4c9a4, temple: 0xa4d2f6 };
+// 太陽：頂樓從窗外斜射（角色的影子和地板的窗框影子同方向），大橋尾是白天，太陽高、偏左前方
+const SUN = { roof: { color: 0xffdcb4, pos: [-3.5, 15, -7] }, temple: { color: 0xfff4e2, pos: [-5.5, 16, 9] } };
 export function setCourt(name) {
   if (!C.env || !C.env[name]) name = 'roof';
   for (const k in C.env) C.env[k].visible = k === name;
   C.floor.material.map = C.floorTex[name]; C.floor.material.needsUpdate = true;
   C.boardFace.map = C.boardTex[name]; C.boardFace.needsUpdate = true;
+  // 大橋尾是玻璃籃板：看得到後面的廟
+  const glassy = name === 'temple';
+  C.boardFace.transparent = glassy; C.boardFace.depthWrite = !glassy;
+  C.board.material.forEach((m, i) => { if (m === C.boardFace) return; m.color.setHex(glassy ? 0x2a3b52 : 0x3fa7ff); if (i === 5) { m.transparent = glassy; m.opacity = glassy ? 0.12 : 1; m.depthWrite = !glassy; m.needsUpdate = true; } });
   scene.background.setHex(SKY[name]); scene.fog.color.setHex(SKY[name]);
   sun.color.setHex(SUN[name].color); sun.position.set(...SUN[name].pos);
   C.floorLight.value = C.lightTex[name] || C.floorLight.value;
@@ -212,31 +232,19 @@ export function setCourt(name) {
 // 籃框後面是一間廟（紅柱、彩繪樑、燕尾脊、雙龍搶珠），廟埕有香爐和石獅；兩旁長椅、紅燈籠、大榕樹、機車、小吃攤；天空是傍晚
 function buildTemple(T) {
   const add = (m) => (T.add(m), m);
-  // 廟埕水泥地
+  // 廟埕：紅磚地
   const plaza = new THREE.Mesh(new THREE.PlaneGeometry(70, 60), new THREE.MeshStandardMaterial({ map: canvasTex(512, 512, (g, w, h) => {
-    g.fillStyle = '#b8b0a3'; g.fillRect(0, 0, w, h);
-    for (let i = 0; i < 4000; i++) { g.fillStyle = Math.random() < 0.5 ? '#ffffff14' : '#00000014'; g.fillRect(Math.random() * w, Math.random() * h, 2, 2); }
-    g.strokeStyle = '#00000022'; g.lineWidth = 2; for (let x = 0; x < w; x += 64) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.stroke(); } for (let y = 0; y < h; y += 64) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); }
-  }), roughness: 0.95 }));
-  plaza.material.map.wrapS = plaza.material.map.wrapT = THREE.RepeatWrapping; plaza.material.map.repeat.set(8, 7);
+    const bw = 64, bh = 32;
+    for (let r = 0; r * bh < h; r++) for (let c = -1; c * bw < w; c++) { g.fillStyle = ['#a64a30', '#b5563a', '#9a432b', '#ad5035'][(r * 7 + c * 3) & 3]; g.fillRect(c * bw + (r % 2) * bw / 2 + 1, r * bh + 1, bw - 2, bh - 2); }
+  }), roughness: 0.9 }));
+  plaza.material.map.wrapS = plaza.material.map.wrapT = THREE.RepeatWrapping; plaza.material.map.repeat.set(26, 22);
   plaza.rotation.x = -Math.PI / 2; plaza.position.set(0, -0.01, 6); plaza.receiveShadow = true; add(plaza);
 
-  // 遠景：傍晚天空、低矮透天厝、遠山、電線杆
-  const back = new THREE.Mesh(new THREE.PlaneGeometry(90, 30), new THREE.MeshBasicMaterial({ toneMapped: false, map: canvasTex(1024, 340, (g, w, h) => {
-    const sky = g.createLinearGradient(0, 0, 0, h); sky.addColorStop(0, '#6f8fd6'); sky.addColorStop(0.45, '#f4a98a'); sky.addColorStop(1, '#ffd9a0'); g.fillStyle = sky; g.fillRect(0, 0, w, h);
-    g.fillStyle = '#fff2c8'; g.beginPath(); g.arc(w * 0.78, h * 0.62, 26, 0, 7); g.fill();   // 夕陽
-    g.fillStyle = '#9a7fa8'; g.beginPath(); g.moveTo(0, h * 0.7); for (let x = 0; x <= w; x += 32) g.lineTo(x, h * 0.62 - Math.sin(x * 0.006) * 34 - Math.sin(x * 0.019) * 10); g.lineTo(w, h); g.lineTo(0, h); g.fill();   // 遠山
-    let x = 0, i = 0; while (x < w) {   // 透天厝
-      const bw = 40 + (i * 29) % 46, bh = 50 + (i * 53) % 70; g.fillStyle = ['#8a6f7c', '#7d6a80', '#94788a', '#6f6378'][i % 4]; g.fillRect(x, h - bh, bw, bh);
-      g.fillStyle = '#ffd98a'; for (let yy = h - bh + 10; yy < h - 8; yy += 16) for (let xx = x + 6; xx < x + bw - 8; xx += 13) if ((xx * 7 + yy * 3 + i) % 5 < 2) g.fillRect(xx, yy, 6, 7);
-      g.fillStyle = '#5d5068'; g.fillRect(x + bw - 10, h - bh - 12, 8, 12);   // 頂樓水塔
-      x += bw + 2; i++;
-    }
-    g.strokeStyle = '#3d3445'; g.lineWidth = 2; for (const px of [140, 520, 880]) { g.fillStyle = '#3d3445'; g.fillRect(px, h * 0.35, 5, h); }
-    g.beginPath(); g.moveTo(0, h * 0.42); g.quadraticCurveTo(330, h * 0.5, 520, h * 0.38); g.quadraticCurveTo(700, h * 0.47, w, h * 0.4); g.stroke();   // 電線
-  }) }));
-  back.position.set(0, 9, -24); add(back);
-  for (const s of [-1, 1]) { const side = back.clone(); side.position.set(s * 30, 9, -4); side.rotation.y = -s * Math.PI / 2; add(side); }
+  // 遠景：Blender 算的藍天白雲和遠方樹林（tools/blender/court_art.py）
+  const back = new THREE.Mesh(new THREE.PlaneGeometry(90, 30), new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false }));
+  new THREE.TextureLoader().load('art/court/temple_sky.webp?v=0.9.1', (t) => { t.colorSpace = THREE.SRGBColorSpace; back.material.map = t; back.material.needsUpdate = true; });
+  back.position.set(0, 12, -24); add(back);
+  for (const s of [-1, 1]) { const side = back.clone(); side.position.set(s * 30, 12, -4); side.rotation.y = -s * Math.PI / 2; add(side); }
 
   // ---------- 廟 ----------
   const RED = 0xb3261e, GOLD = 0xd9a63a, STONE = 0xc9c2b4, ZF = -6.2;   // ZF：廟的正面
@@ -245,7 +253,7 @@ function buildTemple(T) {
   for (let i = 0; i < 3; i++) box(5.2 - i * 0.4, 0.2, 0.5, STONE, 0, 0.1 + i * 0.2, ZF + 0.9 - i * 0.45, temple);   // 台階
   // 正面牆：三川門、門神、龍虎窗
   const facade = canvasTex(1024, 300, (g, w, h) => {
-    g.fillStyle = '#8f2a1f'; g.fillRect(0, 0, w, h);
+    for (let r = 0; r * 12 < h; r++) for (let c = -1; c * 28 < w; c++) { g.fillStyle = ['#a84a32', '#b5553a', '#9c432c'][(r * 5 + c * 2) % 3 & 3] || '#a84a32'; g.fillRect(c * 28 + (r % 2) * 14 + 1, r * 12 + 1, 26, 10); }
     const door = (cx, dw, gods) => {
       g.fillStyle = '#c0392b'; g.fillRect(cx - dw / 2, 40, dw, h - 40);
       g.strokeStyle = '#e8b84a'; g.lineWidth = 6; g.strokeRect(cx - dw / 2, 40, dw, h - 40); g.beginPath(); g.moveTo(cx, 40); g.lineTo(cx, h); g.stroke();
@@ -281,7 +289,7 @@ function buildTemple(T) {
   }) }));
   plaque.position.set(0, 3.55, ZF - 1.2); temple.add(plaque);
   // 屋頂：兩層（重簷），屋簷兩端微微翹起；橘色琉璃瓦
-  const tileTex = canvasTex(256, 128, (g, w, h) => { g.fillStyle = '#d9772e'; g.fillRect(0, 0, w, h); for (let x = 0; x < w; x += 16) { g.fillStyle = '#b85f20'; g.fillRect(x, 0, 5, h); g.fillStyle = '#f0a050'; g.fillRect(x + 7, 0, 3, h); } });
+  const tileTex = canvasTex(256, 128, (g, w, h) => { g.fillStyle = '#c9592f'; g.fillRect(0, 0, w, h); for (let x = 0; x < w; x += 16) { g.fillStyle = '#a84522'; g.fillRect(x, 0, 5, h); g.fillStyle = '#f0a050'; g.fillRect(x + 7, 0, 3, h); } });
   tileTex.wrapS = THREE.RepeatWrapping; tileTex.repeat.set(10, 1);
   const tileMat = new THREE.MeshStandardMaterial({ map: tileTex, roughness: 0.55, side: THREE.DoubleSide });
   const roof = (y, wid, dep, rise, zc) => {
@@ -296,7 +304,7 @@ function buildTemple(T) {
     }
   };
   roof(4.55, 15.6, 5.4, 1.3, ZF - 1.6);
-  box(9.5, 0.8, 3.0, 0x8f2a1f, 0, 6.2, ZF - 1.9, temple);   // 上層的牆
+  box(9.5, 0.8, 3.0, 0xa84a32, 0, 6.2, ZF - 1.9, temple);   // 上層的牆
   roof(6.55, 11.2, 4.4, 1.2, ZF - 1.9);
   // 燕尾脊：正脊兩端往上翹、分叉；脊上剪黏（彩色小塊）、中間雙龍搶珠
   const ridge = (y, half, zc) => {
@@ -335,39 +343,100 @@ function buildTemple(T) {
   C.smoke = []; const smokeMat = new THREE.MeshBasicMaterial({ color: 0xeeeeee, transparent: true, opacity: 0.35, depthWrite: false });
   for (let k = 0; k < 10; k++) { const p = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 6), smokeMat.clone()); p.userData.ph = k / 10; urn.add(p); C.smoke.push(p); }
 
-  // ---------- 球場兩旁：石長椅（觀眾站這）、燈籠、大榕樹、機車、小吃攤 ----------
+  // ---------- 球場四周：石長椅（觀眾站這）、磚牆、涼亭、石欄杆、路燈、盆栽、大樹 ----------
   for (const s of [-1, 1]) rbox(0.9, 0.42, 5.8, 0xa9a39a, s * 6.75, 0.21, 6.0, T);
-  // 紅燈籠：沿著兩邊的竹竿掛一排，廟前再橫掛一排
+  // 屋簷下的紅燈籠
   const lantern = (x, y, z) => {
-    const l = sphere(0.24, 0xe0312b, x, y, z, T, { emissive: 0xff3b1f, emissiveIntensity: 0.55, roughness: 0.5 }); l.scale.y = 0.85;
+    const l = sphere(0.24, 0xe0312b, x, y, z, T, { emissive: 0xff3b1f, emissiveIntensity: 0.4, roughness: 0.5 }); l.scale.y = 0.85;
     cyl(0.12, 0.12, 0.06, GOLD, x, y + 0.22, z, T); cyl(0.12, 0.12, 0.06, GOLD, x, y - 0.22, z, T);
     C.lanterns.push(l);
   };
   C.lanterns = [];
-  for (const s of [-1, 1]) {
-    for (const z of [-0.6, 5.2, 11]) cyl(0.06, 0.06, 4.6, 0x7a5a3a, s * 7.6, 2.3, z, T);
-    for (let z = -0.4; z <= 10.8; z += 1.15) lantern(s * 7.6, 3.85 - Math.sin((z + 0.6) / 5.8 * Math.PI % Math.PI) * 0.35, z);
-  }
-  for (let x = -6.4; x <= 6.4; x += 1.1) lantern(x, 4.9 - Math.cos(x / 6.4 * Math.PI / 2) * 0.4, ZF + 1.2);
-  // 大榕樹（左後方）
-  const tree = new THREE.Group(); tree.position.set(-9.6, 0, 1.0); add(tree);
-  cyl(0.65, 0.95, 3.6, 0x6b4a2f, 0, 1.8, 0, tree, { roughness: 0.95 });
-  for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2; const r = cyl(0.03, 0.03, 2.6, 0x7a5a3a, Math.cos(a) * 1.6, 2.1, Math.sin(a) * 1.4, tree); }   // 氣根
-  for (const [x, y, z, r] of [[0, 4.6, 0, 2.2], [1.6, 4.2, 0.8, 1.7], [-1.4, 4.3, -0.6, 1.8], [0.6, 5.5, -0.8, 1.6], [-0.4, 5.3, 1.2, 1.5], [2.6, 3.8, -0.6, 1.3]]) { const c = sphere(r, 0x3e7d3a, x, y, z, tree, { roughness: 0.95 }); c.scale.y = 0.75; }
-  // 機車（右邊排一排）
-  const scooter = (x, z, col, rot) => {
-    const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = rot; add(g);
-    rbox(0.42, 0.42, 1.2, col, 0, 0.5, 0, g); rbox(0.36, 0.18, 0.55, 0x1d1d1f, 0, 0.8, -0.15, g);
-    box(0.08, 0.7, 0.08, 0x666666, 0, 0.95, 0.55, g); box(0.6, 0.06, 0.06, 0x333333, 0, 1.3, 0.55, g);
-    for (const zz of [-0.5, 0.55]) { const w = cyl(0.2, 0.2, 0.12, 0x1d1d1f, 0, 0.2, zz, g); w.rotation.z = Math.PI / 2; }
+  for (const x of [-4.9, -2.4, 2.4, 4.9]) lantern(x, 3.55, ZF + 0.05);
+  // 紅磚牆＋瓦頂
+  const brick = canvasTex(256, 128, (g, w, h) => {
+    g.fillStyle = '#d8cfc0'; g.fillRect(0, 0, w, h);
+    for (let r = 0; r * 16 < h; r++) for (let c = -1; c * 32 < w; c++) { g.fillStyle = ['#a84a32', '#b5553a', '#9c432c', '#ae5036'][(r * 3 + c * 5) & 3]; g.fillRect(c * 32 + (r % 2) * 16 + 1, r * 16 + 1, 30, 14); }
+  });
+  brick.wrapS = brick.wrapT = THREE.RepeatWrapping; brick.repeat.set(9, 2);
+  const brickMat = new THREE.MeshStandardMaterial({ map: brick, roughness: 0.9 });
+  const wallSeg = (w, d, x, z) => {
+    const m = box(w, 2.3, d, 0xffffff, x, 1.15, z, T); m.material = brickMat; m.castShadow = true; m.receiveShadow = true;
+    box(w + 0.4, 0.14, d + 0.4, 0x8d8579, x, 2.36, z, T);
+    const cap = rbox(w + 0.5, 0.2, d + 0.5, 0xc9592f, x, 2.52, z, T); cap.castShadow = true;
+    box(w, 0.3, d + 0.06, 0xb8b0a2, x, 0.15, z, T);
   };
-  [[8.6, 1.5, 0xe0e4ea], [8.7, 2.7, 0x3f7fd9], [8.6, 3.9, 0xe0413b], [8.8, 5.1, 0xf0f0f0], [8.6, 9.4, 0x36b37e]].forEach(([x, z, c], i) => scooter(x, z, c, Math.PI / 2 + (i % 2 ? 0.15 : -0.1)));
-  // 小吃攤（右後方）：紅色遮陽棚＋招牌
-  const stall = new THREE.Group(); stall.position.set(7.4, 0, -3.4); stall.rotation.y = -0.5; add(stall);
-  rbox(2.4, 0.95, 1.0, 0xd9d2c6, 0, 0.48, 0, stall); box(2.7, 0.08, 1.5, 0xe0413b, 0, 2.2, 0.2, stall);
-  for (const x of [-1.2, 1.2]) box(0.06, 2.2, 0.06, 0x999999, x, 1.1, 0.8, stall);
-  const sign = labelSprite('廟口香腸・烤玉米', { bg: '#e0413b', size: 0.38 }); sign.position.set(0, 2.55, 0.4); stall.add(sign);
-  const courtSign = labelSprite('🏀 大橋尾球場', { bg: '#2c3e57', size: 0.5 }); courtSign.position.set(-6.0, 5.6, ZF + 1.2); add(courtSign);
+  for (const s of [-1, 1]) { wallSeg(0.35, 16.5, s * 10, 3.6); wallSeg(4.4, 0.35, s * 12, -4.6); }
+  // 涼亭（左後方）：紅柱＋重簷＋寶頂
+  const pav = new THREE.Group(); pav.position.set(-8.3, 0, -3.2); add(pav);
+  box(2.6, 0.25, 2.6, STONE, 0, 0.12, 0, pav);
+  for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) cyl(0.09, 0.1, 2.2, RED, x, 1.3, z, pav);
+  box(2.5, 0.18, 2.5, 0x1f5e7a, 0, 2.45, 0, pav); box(2.54, 0.06, 2.54, GOLD, 0, 2.35, 0, pav);
+  const pavRoof = (y, r, h) => { const c = new THREE.Mesh(new THREE.ConeGeometry(r, h, 4), new THREE.MeshStandardMaterial({ color: 0xc9592f, roughness: 0.6, flatShading: true })); c.position.set(0, y, 0); c.rotation.y = Math.PI / 4; c.castShadow = true; pav.add(c); };
+  pavRoof(2.95, 2.45, 0.9); box(1.2, 0.5, 1.2, RED, 0, 3.45, 0, pav); pavRoof(3.95, 1.5, 0.75);
+  sphere(0.16, GOLD, 0, 4.42, 0, pav, { metalness: 0.5, roughness: 0.35 });
+  // 廟前的石欄杆
+  for (const s of [-1, 1]) {
+    for (let x = 3.7; x <= 7.5; x += 0.76) { box(0.16, 0.8, 0.16, STONE, s * x, 0.4, ZF + 1.1, T); sphere(0.1, STONE, s * x, 0.88, ZF + 1.1, T); }
+    box(3.9, 0.08, 0.1, 0xb8b0a2, s * 5.6, 0.62, ZF + 1.1, T); box(3.9, 0.08, 0.1, 0xb8b0a2, s * 5.6, 0.3, ZF + 1.1, T);
+  }
+  // 路燈：黑色燈桿＋兩盞燈
+  const lamp = (x, z) => {
+    cyl(0.16, 0.2, 0.4, 0x24272c, x, 0.2, z, T); const pole = cyl(0.05, 0.07, 3.3, 0x24272c, x, 1.85, z, T); pole.castShadow = true;
+    box(0.8, 0.05, 0.05, 0x24272c, x, 3.2, z, T);
+    for (const d of [-0.38, 0.38]) { sphere(0.13, 0xfff2cf, x + d, 3.02, z, T, { emissive: 0xffd98a, emissiveIntensity: 0.45 }); cyl(0.15, 0.1, 0.07, 0x24272c, x + d, 3.18, z, T); }
+  };
+  lamp(-6.9, -1.0); lamp(6.9, -1.0); lamp(-8.6, 10.6); lamp(8.6, 10.6);
+  // 盆栽：灰盆＋圓灌木
+  const pot = (x, z, r = 0.42) => {
+    cyl(r * 0.75, r * 0.55, r * 0.9, 0x9d958a, x, r * 0.45, z, T);
+    for (let k = 0; k < 6; k++) { const a = k / 6 * 6.28; const b = sphere(r * 0.72, k % 2 ? 0x2f6e35 : 0x3a8040, x + Math.cos(a) * r * 0.5, r * (1.5 + (k % 3) * 0.2), z + Math.sin(a) * r * 0.5, T); b.castShadow = true; }
+    sphere(r * 0.85, 0x37793c, x, r * 1.85, z, T);
+  };
+  for (const s of [-1, 1]) { pot(s * 4.4, -4.1); pot(s * 7.8, -3.0, 0.5); pot(s * 8.9, 1.0); pot(s * 8.9, 9.6); }
+  // 樹：一片一片的葉子（一次畫完，不增加繪圖次數）。葉子不投影，地上的樹影是烘好的
+  const leafTex = canvasTex(64, 40, (g, w, h) => { g.clearRect(0, 0, w, h); g.fillStyle = '#ffffff'; g.beginPath(); g.ellipse(w / 2, h / 2, w / 2 - 2, h / 2 - 4, 0, 0, 7); g.fill(); g.strokeStyle = '#00000044'; g.lineWidth = 2; g.beginPath(); g.moveTo(3, h / 2); g.lineTo(w - 3, h / 2); g.stroke(); });
+  const leafMat = new THREE.MeshStandardMaterial({ map: leafTex, alphaTest: 0.45, side: THREE.DoubleSide, roughness: 0.75 });
+  const LEAF = [0x2f7d32, 0x3f9a3a, 0x276b2c, 0x5aa83d, 0x357f3f].map(c => new THREE.Color(c));
+  const canopy = (x, y, z, rx, ry, rz, n) => {
+    const core = sphere(1, 0x1e5a24, x, y, z, T, { roughness: 1 }); core.scale.set(rx * 0.82, ry * 0.82, rz * 0.82);
+    const im = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.5, 0.32), leafMat, n), d = new THREE.Object3D();
+    for (let i = 0; i < n; i++) {
+      const u = Math.random() * 6.283, v = Math.acos(2 * Math.random() - 1), r = 0.82 + Math.random() * 0.26;
+      d.position.set(x + Math.sin(v) * Math.cos(u) * rx * r, y + Math.cos(v) * ry * r, z + Math.sin(v) * Math.sin(u) * rz * r);
+      d.rotation.set(Math.random() * 6.28, Math.random() * 6.28, Math.random() * 6.28); d.scale.setScalar(0.8 + Math.random() * 0.7); d.updateMatrix();
+      im.setMatrixAt(i, d.matrix); im.setColorAt(i, LEAF[i % LEAF.length]);
+    }
+    im.frustumCulled = false; T.add(im);
+  };
+  const trunk = (x0, z0, x1, y1, z1, r) => { const t = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([V3(x0, 0, z0), V3(x0 + (x1 - x0) * 0.25, y1 * 0.5, z0 + (z1 - z0) * 0.25), V3(x1, y1, z1)]), 12, r, 7), mat(0x5a4230, { roughness: 0.95 })); t.castShadow = true; T.add(t); };
+  // 左前方的大樹枝葉伸進畫面；後面一排樹在磚牆後面
+  trunk(-11.6, 3.6, -9.5, 6.2, 2.6, 0.32); trunk(-10.6, 3.2, -8.4, 5.6, 5.6, 0.14);
+  canopy(-10.5, 7.0, 2.8, 3.8, 2.2, 3.6, 1500); canopy(-8.8, 6.1, 6.2, 2.0, 1.3, 2.2, 620);
+  trunk(-12.6, -6.4, -12.4, 5, -6.4, 0.3); canopy(-12.4, 6.6, -6.4, 3.6, 2.9, 2.8, 1100);
+  trunk(12.6, -6.4, 12.4, 5, -6.4, 0.3); canopy(12.4, 6.8, -6.4, 3.8, 3, 2.8, 1100);
+  trunk(12.4, 3.5, 12.2, 5, 3.5, 0.28); canopy(12.2, 6.6, 3.5, 2.9, 2.5, 3.2, 900);
+  mergeStatic(T, new Set([...C.lanterns, ...C.smoke]));
+}
+// 不會動的小物件（欄杆、盆栽、路燈…）同材質合併成一個：畫面不變，繪圖次數少很多
+function mergeStatic(root, skip) {
+  root.updateMatrixWorld(true);
+  const inv = root.matrixWorld.clone().invert(), groups = new Map(), hit = [];
+  root.traverse(o => {
+    if (!o.isMesh || o.isInstancedMesh || skip.has(o) || Array.isArray(o.material) || o.material.transparent) return;
+    let p = o.parent, moving = false; while (p && p !== root) { if (skip.has(p)) moving = true; p = p.parent; }
+    if (moving) return;
+    const k = o.material.uuid + (o.castShadow ? 's' : '') + (o.receiveShadow ? 'r' : '');
+    if (!groups.has(k)) groups.set(k, { mat: o.material, cast: o.castShadow, recv: o.receiveShadow, geos: [] });
+    const g = (o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone()).applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld));
+    for (const n of Object.keys(g.attributes)) if (!['position', 'normal', 'uv'].includes(n)) g.deleteAttribute(n);
+    groups.get(k).geos.push(g); hit.push(o);
+  });
+  for (const o of hit) o.parent.remove(o);
+  for (const { mat: m, cast, recv, geos } of groups.values()) {
+    const g = mergeGeometries(geos); if (!g) continue;
+    const mesh = new THREE.Mesh(g, m); mesh.castShadow = cast; mesh.receiveShadow = recv; root.add(mesh);
+  }
 }
 const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
 

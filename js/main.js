@@ -1,13 +1,13 @@
 // 上班啟示錄：下班先鬥牛 2v2 —— 頂樓半場籃球。玩家挑兩個同事，電腦控制隊友和對手；每個人都有自己的大招
 import * as THREE from 'three';
-import { scene, render, updateCamera, cam, camera, CAMS, camMode, labelSprite, V, quality, setQuality, setQualityPref, canvasTex, FONT, sphere, mat, rbox } from './world.js?v=0.9.0';
-import { loadOwnClip, loadRun, loadKind, loadClip, makeActor, addJog, updateActor, turnTo } from './assets.js?v=0.9.0';
-import * as fx from './fx.js?v=0.9.0';
-import { buildCourt, setCourt, animateCourt, swishNet, C, COURT, HOOP, ARC_R, CORNER_X, TOP, WALL, isThree, hoopDist } from './court.js?v=0.9.0';
-import { music, musicStart, musicStop, musicTick, musicTheme, musicPause } from './music.js?v=0.9.0';
-import { openOP, replayOP, seekOP } from './op.js?v=0.9.0';
+import { scene, render, updateCamera, cam, camera, CAMS, camMode, labelSprite, V, quality, setQuality, setQualityPref, canvasTex, FONT, sphere, mat, rbox } from './world.js?v=0.9.1';
+import { loadOwnClip, loadRun, loadKind, loadClip, makeActor, addJog, updateActor, turnTo } from './assets.js?v=0.9.1';
+import * as fx from './fx.js?v=0.9.1';
+import { buildCourt, setCourt, animateCourt, swishNet, C, COURT, HOOP, ARC_R, CORNER_X, TOP, WALL, isThree, hoopDist } from './court.js?v=0.9.1';
+import { music, musicStart, musicStop, musicTick, musicTheme, musicPause } from './music.js?v=0.9.1';
+import { openOP, replayOP, seekOP } from './op.js?v=0.9.1';
 
-const VERSION = '0.9.0';
+const VERSION = '0.9.1';
 document.querySelectorAll('#ver, .verTag').forEach(el => { el.textContent = 'v' + VERSION; });
 
 // ---------- 數值（調手感只改這裡） ----------
@@ -153,7 +153,7 @@ const st = (p, k, d = 1) => p.def[k] ?? d;   // 角色數值（沒寫就用預�
 const ART_ACTS = ['dunk', 'three', 'fade', 'steal'];
 const SP_ART = { kui: 'coffee', jie: 'dunk', mi: 'phone', vivi: 'boss', kevin: 'ai', lin: 'cross', yuan: 'block', hu: 'fade', tu: 'egg', zhang: 'hero', bian: 'sprint' };
 const hasArt = (k) => k in SP_ART;
-const artUrl = (k, a) => `art/${k}_${a}.webp?v=0.9.0`;
+const artUrl = (k, a) => `art/${k}_${a}.webp?v=0.9.1`;
 function preloadArt(keys) { for (const k of keys) if (hasArt(k)) for (const a of [...ART_ACTS, SP_ART[k]]) { const im = new Image(); im.src = artUrl(k, a); } }
 let flashUntil = 0, flashTimer = 0;
 // 動作立繪從旁邊滑進來一下（我方在左、對手在右），2 秒內只跳一次
@@ -1868,8 +1868,8 @@ function updatePlayers(dt, t) {
     p.ring.scale.setScalar(me ? 1.45 + Math.sin(t * 6) * 0.1 : 1);
     p.ring.material.opacity = me ? 1 : 0.7;
     p.label.position.set(p.x, p.y + 1.66, p.z);
-    p.label.material.opacity = me ? 1 : 0.55; p.label.visible = SC.t <= 0 && !me && !p.bench;   // 你的名字由「▼ 你」取代；特寫時名牌、圖示先藏起來
-    if (me) { const ya = youArrow(); ya.visible = SC.t <= 0 && S.mode === 'play'; ya.position.set(p.x, p.y + 1.85 + Math.abs(Math.sin(t * 4)) * 0.1, p.z); }
+    p.label.material.opacity = me ? 1 : 0.55; p.label.visible = SC.t <= 0 && !me && !p.bench && !(S.introT > 0);   // 你的名字由「▼ 你」取代；特寫時名牌、圖示先藏起來
+    if (me) { const ya = youArrow(); ya.visible = SC.t <= 0 && S.mode === 'play' && !(S.introT > 0); ya.position.set(p.x, p.y + 1.85 + Math.abs(Math.sin(t * 4)) * 0.1, p.z); }
     for (let i = p.icons.length - 1; i >= 0; i--) {
       const ic = p.icons[i]; ic.life -= dt;
       ic.s.position.set(p.x + (ic.shake ? Math.sin(t * 50) * 0.04 : 0), p.y + ic.y + Math.sin(t * 4) * 0.05, p.z); ic.s.visible = SC.t <= 0;
@@ -1948,6 +1948,16 @@ function updateCrowd(dt, t) {
 }
 
 // ---------- 比賽流程 ----------
+// 開賽運鏡：比賽鏡頭往下拍，看不到天空和屋頂，所以先從低處仰望場景，再拉到比賽視角。球員還不能動時就播完
+const INTRO_T = 2.1, INTRO = { roof: { p: [2.5, 1.5, 11.5], l: [-1, 3.6, -2] }, temple: { p: [5, 1.3, 11.5], l: [-1.2, 4.6, -4] } };
+const _ip = new THREE.Vector3(), _il = new THREE.Vector3();
+function introCam(dt) {
+  if (!(S.introT > 0)) return;
+  S.introT = Math.max(0, S.introT - dt);
+  const u = Math.max(0, 1 - S.introT / (INTRO_T * 0.72)), e = u * u * (3 - 2 * u), v = INTRO[S.court] || INTRO.roof;
+  _ip.set(...v.p).lerp(camera.position, e); _il.set(...v.l).lerp(cam.target, e);
+  camera.position.copy(_ip); camera.lookAt(_il);
+}
 function newMatch() {
   clearPlayers();
   // 對手從選角名單裡抽。藏起來的人遊戲不載入，要開放時把他們加回 ROSTER（名單有 11 人，3v3 也夠用）
@@ -1974,6 +1984,7 @@ function newMatch() {
   else if (S.contest) startContest();
   else fx.banner(nm(S.pick), `VS　${nm(S.opp)}`, 0, '#ff7a45');
   updateCamera(camFocus(), 0, true);
+  S.introT = S.prac ? 0 : INTRO_T;
 }
 // ---------- 三分球大賽 ----------
 // 5 個投籃點、每點 5 顆球，限時 50 秒。普通球 1 分，每點最後一顆金球 2 分，最後一點全部是金球（滿分 34）。對手的分數一開始就看得到，要超過它
@@ -2412,7 +2423,7 @@ soundIcon();
 
 function buildSelect() {
   // 選角卡：真人風全身照（art/<人>_card.webp，tools/gen_real.sh 的 card_* 姿勢，每個人不一樣）＋位置標籤
-  $('grid').innerHTML = ROSTER.map(k => { const c = CHARS[k], [job, pos] = c.role.split('・'); return `<div class="ch" data-k="${k}" style="--cc:${c.color}"><span class="badge"></span><div class="pic"><span class="pos">${pos || job}</span><img src="art/${k}_card.webp?v=0.9.0" alt="${c.name}" onerror="this.src='${FACE[k]}'"></div><div class="info"><div class="nm">${c.name}<small>${pos ? job : ''}</small></div><span class="spn">${c.sp.name}</span><span class="skn">${c.skill.name}</span><div class="d">${c.sp.desc}</div><div class="st">${c.stat}</div></div></div>`; }).join('');
+  $('grid').innerHTML = ROSTER.map(k => { const c = CHARS[k], [job, pos] = c.role.split('・'); return `<div class="ch" data-k="${k}" style="--cc:${c.color}"><span class="badge"></span><div class="pic"><span class="pos">${pos || job}</span><img src="art/${k}_card.webp?v=0.9.1" alt="${c.name}" onerror="this.src='${FACE[k]}'"></div><div class="info"><div class="nm">${c.name}<small>${pos ? job : ''}</small></div><span class="spn">${c.sp.name}</span><span class="skn">${c.skill.name}</span><div class="d">${c.sp.desc}</div><div class="st">${c.stat}</div></div></div>`; }).join('');
   for (const el of $('grid').children) el.onclick = () => {
     fx.audioInit(); fx.sfx.click();
     const k = el.dataset.k, i = S.sel.indexOf(k);
@@ -2500,7 +2511,7 @@ function step(dtReal) {
     } else { camera.position.copy(SC.pos).lerp(SC.look, k * 0.12); camera.lookAt(SC.look); }
     if (SC.t <= 0) updateCamera(camFocus(), 0, true);
     hideBlockers(SC.t > 0 ? SC.p : null);
-  } else updateCamera(camFocus(), dtReal);
+  } else { updateCamera(camFocus(), dtReal); introCam(dtReal); }
   hud(); updateMeter();
   musicTick(S.buff[0].coffee > 0 || S.buff[1].coffee > 0 ? 1.15 : 1);
 }

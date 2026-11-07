@@ -1,5 +1,6 @@
 # 球場的美術：用 Cycles 算圖做兩種東西，輸出 PNG（再用 tools/court_art_webp.py 轉成 art/court/*.webp）
 #   roof_city：頂樓落地窗外的黃昏城市（真的有遠近、大樓窗戶亮燈、地平線霧氣）
+#   temple_sky：大橋尾的藍天白雲和遠方樹林
 #   roof_light／temple_light：地板光影圖（窗框投影、光束、牆角陰影、燈籠光暈），遊戲把地板顏色乘上它的兩倍，所以 50% 灰＝不變
 # 用法：/Applications/Blender.app/Contents/MacOS/Blender -b -P tools/blender/court_art.py -- 輸出資料夾
 # 座標和遊戲一樣換算：遊戲 x → x、遊戲 z → -y、遊戲高度 → z；地板範圍要和 js/court.js 的 floor 對齊（M = 1.2）
@@ -162,34 +163,58 @@ def roof_light():
     only_shadows(); top_camera(); render('roof_light')
 
 def temple_light():
+    # 白天：太陽高、偏左前方，樹影只灑在球場四周，中間保持明亮看得清楚
     fresh(128, 1152, 1032)
     random.seed(11)
     floor_plane()
     leaf = plain((0.05, 0.05, 0.05), rough=1)
     white = plain((0.7, 0.7, 0.7), rough=1)
-    # 廟（遊戲 z<-1）擋住背後的光、榕樹在左後方灑下斑駁樹影
-    cube(-9, 9, 2.3, 7, 0, 5.2, white)
-    for i in range(110):
-        a, r = random.uniform(0, 6.28), random.random() ** 0.6 * 6.5
-        bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=1, radius=random.uniform(0.25, 0.8), location=(-15.5 + math.cos(a) * r * 0.8, -2.5 + math.sin(a) * r * 0.75, random.uniform(6.2, 9.5)))
-        bpy.context.object.data.materials.append(leaf)
-    for s in (-1, 1):
-        cube(s * 6.9, s * 7.5, -9, -3, 0, 0.5, white)
-    world((0.42, 0.40, 0.58), (0.56, 0.44, 0.44), (0.56, 0.44, 0.44))
-    bpy.context.scene.world.node_tree.nodes['Background'].inputs[1].default_value = 0.5
-    sun((-0.8, 0.3, 0.75), 4.2, (1.0, 0.62, 0.36), angle=2.5)
-    # 紅燈籠的光暈：位置和 court.js 的 lantern 一樣
-    def glow(x, y, z, e):
-        bpy.ops.object.light_add(type='POINT', location=(x, y, z)); o = bpy.context.object; o.data.energy = e; o.data.color = (1.0, 0.36, 0.18); o.data.shadow_soft_size = 0.2
-    for s in (-1, 1):
-        z = -0.4
-        while z <= 10.8:
-            glow(s * 7.0, -z, 3.2, 11); z += 1.15
-    x = -6.4
-    while x <= 6.4:
-        glow(x, 0.6, 4.2, 9); x += 1.1
+    cube(-9, 9, 2.3, 7, 0, 5.2, white)      # 廟
+    for s_ in (-1, 1):
+        cube(s_ * 6.3, s_ * 7.2, -8.9, -3.1, 0, 0.42, white)    # 石長椅
+        cube(s_ * 8.6, s_ * 8.9, -12, 3, 0, 2.3, white)         # 磚牆
+    def clump(cx, cy, cz, n, rx, ry, rz):
+        for i in range(n):
+            a, r = random.uniform(0, 6.28), random.random() ** 0.5
+            bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=1, radius=random.uniform(0.1, 0.34), location=(cx + math.cos(a) * r * rx, cy + math.sin(a) * r * ry, cz + random.uniform(-rz, rz)))
+            bpy.context.object.data.materials.append(leaf)
+    sun_dir = Vector((-0.45, -0.35, 1.0))
+    def shade_at(fx, fy, n, rx, ry):      # 讓樹影落在地板 (fx, fy)
+        h = 8.0
+        clump(fx + sun_dir.x / sun_dir.z * h, fy + sun_dir.y / sun_dir.z * h, h, n, rx, ry, 1.4)
+    shade_at(-6.8, -0.8, 420, 3.2, 2.6)     # 左後角
+    shade_at(6.6, -9.5, 520, 3.6, 3.4)      # 右前角（參考圖的前景樹影）
+    shade_at(-6.5, -10.5, 300, 2.6, 2.2)    # 左前角
+    world((0.55, 0.68, 0.95), (0.8, 0.8, 0.85), (0.8, 0.8, 0.85))
+    bpy.context.scene.world.node_tree.nodes['Background'].inputs[1].default_value = 0.55
+    sun((sun_dir.x, sun_dir.y, sun_dir.z), 3.4, (1.0, 0.95, 0.84), angle=1.5)
     only_shadows(); top_camera(); render('temple_light')
 
-for job in (roof_light, temple_light, city):
+def temple_sky():
+    # 大橋尾的天空和遠方樹林：藍天白雲
+    fresh(64, 2048, 680)
+    w = bpy.data.worlds.new('w'); bpy.context.scene.world = w; w.use_nodes = True
+    n = w.node_tree.nodes; l = w.node_tree.links
+    tc = n.new('ShaderNodeTexCoord'); sep = n.new('ShaderNodeSeparateXYZ'); l.new(tc.outputs['Generated'], sep.inputs[0])
+    ramp = n.new('ShaderNodeValToRGB'); c = ramp.color_ramp
+    c.elements[0].position = 0.0; c.elements[0].color = (0.62, 0.80, 0.98, 1); c.elements[1].position = 0.34; c.elements[1].color = (0.06, 0.25, 0.72, 1)
+    l.new(sep.outputs['Z'], ramp.inputs[0])
+    mp = n.new('ShaderNodeMapping'); mp.inputs['Scale'].default_value = (1.2, 1.2, 5.0); l.new(tc.outputs['Generated'], mp.inputs[0])
+    noise = n.new('ShaderNodeTexNoise'); noise.inputs['Scale'].default_value = 5.0; noise.inputs['Detail'].default_value = 9; noise.inputs['Roughness'].default_value = 0.58; l.new(mp.outputs[0], noise.inputs['Vector'])
+    cr = n.new('ShaderNodeValToRGB'); cr.color_ramp.elements[0].position = 0.54; cr.color_ramp.elements[1].position = 0.66; l.new(noise.outputs[0], cr.inputs[0])
+    mix = n.new('ShaderNodeMix'); mix.data_type = 'RGBA'; l.new(cr.outputs[0], mix.inputs['Factor']); l.new(ramp.outputs[0], mix.inputs['A']); mix.inputs['B'].default_value = (1, 1, 1, 1)
+    l.new(mix.outputs['Result'], n['Background'].inputs[0])
+    random.seed(5)
+    greens = [plain(g, rough=0.9) for g in ((0.06, 0.20, 0.05), (0.09, 0.27, 0.07), (0.05, 0.17, 0.07))]
+    for i in range(240):
+        x, y = random.uniform(-150, 150), random.uniform(60, 120)
+        bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=2, radius=random.uniform(5, 13), location=(x, y, random.uniform(2, 15)))
+        o = bpy.context.object; o.scale.z = random.uniform(0.75, 1.1); o.data.materials.append(random.choice(greens)); bpy.ops.object.shade_smooth()
+    sun((-0.5, -0.7, 1.0), 3.2, (1.0, 0.96, 0.88))
+    bpy.ops.object.camera_add(location=(0, -40, 10), rotation=(math.radians(100), 0, 0))
+    c_ = bpy.context.object; c_.data.lens = 18; bpy.context.scene.camera = c_
+    render('temple_sky')
+
+for job in (roof_light, temple_light, city, temple_sky):
     if len(sys.argv) <= sys.argv.index('--') + 2 or job.__name__ in sys.argv: job()
 print('ARTDONE')
