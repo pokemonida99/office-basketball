@@ -1,6 +1,6 @@
 // 特效與音效：飄字、彩帶、光柱、地面衝擊波、彈出放大、合成音效
 import * as THREE from 'three';
-import { scene, canvasTex, FONT, cam, V } from './world.js?v=0.10.0';
+import { scene, canvasTex, FONT, cam, V } from './world.js?v=0.11.0';
 
 const fxList = [];   // 每個特效自己有 update(dt) 回傳 false 就移除
 export function updateFx(dt) { for (let i = fxList.length - 1; i >= 0; i--) if (!fxList[i](dt)) fxList.splice(i, 1); }
@@ -160,6 +160,7 @@ export function audioInit() {
   if (ac) return; try {
     ac = new (window.AudioContext || window.webkitAudioContext)();
     master = ac.createGain(); master.gain.value = 0.16; master.connect(ac.destination);
+    loadSamples();
   } catch { ac = null; }
 }
 export function getAC() { return ac ? { ac, master } : null; }
@@ -216,3 +217,68 @@ export const sfx = {
   lose() { [523, 440, 349, 262].forEach((f, i) => tone(f, 0.25, 'triangle', 0.45, i * 0.18)); },
   click() { tone(660, 0.05, 'triangle', 0.4); },
 };
+
+// ---------- 擬真音效（ElevenLabs，tools/sfx_process.py 處理）：載好前或載入失敗都退回上面的合成音效 ----------
+const SAMPLES = ['dribble1', 'dribble2', 'swish1', 'swish2', 'squeak', 'rim', 'board', 'dunk', 'block', 'catch', 'whistle', 'cheer', 'groan', 'pass', 'amb_crowd', 'amb_roof', 'amb_temple'];
+const bufs = {}, onset = {};
+const SYNTH = { ...sfx };
+const pick = a => a[Math.random() * a.length | 0];
+const jit = (r = 0.04) => 1 + (Math.random() * 2 - 1) * r;   // 音高小幅變化，連續播才不會像同一個聲音
+export const sampleStats = () => ({ total: SAMPLES.length, ready: Object.keys(bufs).length });
+function loadSamples() {
+  for (const n of SAMPLES) fetch(`audio/sfx/${n}.m4a?v=0.11.0`)
+    .then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+    .then(b => new Promise((ok, no) => ac.decodeAudioData(b, ok, no)))
+    .then(buf => {
+      const d = buf.getChannelData(0); let i = 0;   // AAC 解碼後前面會多一小段空白，跳過才不會慢半拍
+      while (i < d.length && Math.abs(d[i]) < 0.005) i++;
+      onset[n] = i < d.length ? i / buf.sampleRate : 0; bufs[n] = buf;
+    })
+    .catch(() => {});   // 這個音效就繼續用合成的
+}
+function samp(n, vol = 1, rate = 1) {
+  const buf = bufs[n]; if (!ac || !buf) return false;
+  const src = ac.createBufferSource(), g = ac.createGain();
+  src.buffer = buf; src.playbackRate.value = rate; g.gain.value = vol;
+  src.connect(g); g.connect(master); src.start(ac.currentTime, onset[n]);
+  return true;
+}
+let groanAt = -9;
+Object.assign(sfx, {
+  dribble(v = 1) { samp(pick(['dribble1', 'dribble2']), 2.4 * v, jit()) || SYNTH.dribble(v); },
+  pass() { samp('pass', 1.6, jit()) || SYNTH.pass(); },
+  catch() { samp('catch', 1.8, jit()) || SYNTH.catch(); },
+  rim() { samp('rim', 2.2, jit(0.03)) || SYNTH.rim(); },
+  block() { samp('block', 3, jit()) || SYNTH.block(); },
+  dunk() { samp('dunk', 4) || SYNTH.dunk(); },
+  whistle() { samp('whistle', 1.5) || SYNTH.whistle(); },
+  cheer(v = 0.35) { samp('cheer', v * 6, jit(0.02)) || SYNTH.cheer(v); },
+  swish() {
+    if (!samp(pick(['swish1', 'swish2']), 3.2, jit(0.03))) return SYNTH.swish();
+    [0.48, 0.82].forEach((w, i) => setTimeout(() => sfx.dribble(0.45 - i * 0.2), w * 1000));
+  },
+  // 新增的：沒有對應的合成音效，退回最接近的
+  squeak() { samp('squeak', 1.3, jit(0.06)) || SYNTH.pass(); },
+  board() { samp('board', 2.2, jit()) || SYNTH.bounce(); },
+  groan() { if (!ac || ac.currentTime - groanAt < 6) return; groanAt = ac.currentTime; samp('groan', 1.5, jit(0.02)); },
+});
+// 環境音：比賽中才放，觀眾低語＋球場環境。每幀呼叫，值有變才動作；還沒載好就下一幀再試
+const LOOP_PAD = 0.25, LOOP_LEN = 9;   // 要和 tools/sfx_process.py 的 PAD、循環長度一致
+let ambKey = null, ambNodes = [];
+export function ambSet(court) {
+  const key = court || null;
+  if (key === ambKey || !ac) return;
+  const parts = key ? [['amb_crowd', 1.4], [`amb_${key}`, 1.9]] : [];
+  if (parts.some(([n]) => !bufs[n])) return;
+  const t = ac.currentTime;
+  for (const { src, g } of ambNodes) { g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(0, t + 0.5); src.stop(t + 0.55); }
+  ambNodes = parts.map(([n, vol]) => {
+    const src = ac.createBufferSource(), g = ac.createGain();
+    src.buffer = bufs[n]; src.loop = true; src.loopStart = LOOP_PAD; src.loopEnd = LOOP_PAD + LOOP_LEN;
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + 1);
+    src.connect(g); g.connect(master); src.start(t, LOOP_PAD + Math.random() * LOOP_LEN);
+    return { src, g };
+  });
+  ambKey = key;
+}
+addEventListener('visibilitychange', () => { if (document.hidden) ambSet(null); });   // 切到背景就停，畫面不動時不會補呼叫

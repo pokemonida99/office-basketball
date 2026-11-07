@@ -1,14 +1,14 @@
 // 上班啟示錄：下班先鬥牛 2v2 —— 頂樓半場籃球。玩家挑兩個同事，電腦控制隊友和對手；每個人都有自己的大招
 import * as THREE from 'three';
-import { scene, render, updateCamera, cam, camera, CAMS, camMode, labelSprite, V, quality, setQuality, setQualityPref, canvasTex, FONT, sphere, mat, rbox } from './world.js?v=0.10.0';
-import { loadOwnClip, loadPack, runOf, dunkFit, loadKind, loadClip, makeActor, addJog, updateActor, turnTo } from './assets.js?v=0.10.0';
-import * as fx from './fx.js?v=0.10.0';
-import { openCinema, playClip, cineOpen, clipOf, clipName, cineTest } from './cinema.js?v=0.10.0';
-import { buildCourt, setCourt, animateCourt, swishNet, C, COURT, HOOP, ARC_R, CORNER_X, TOP, WALL, isThree, hoopDist } from './court.js?v=0.10.0';
-import { music, musicStart, musicStop, musicTick, musicTheme, musicPause } from './music.js?v=0.10.0';
-import { openOP, replayOP, seekOP } from './op.js?v=0.10.0';
+import { scene, render, updateCamera, cam, camera, CAMS, camMode, labelSprite, V, quality, setQuality, setQualityPref, canvasTex, FONT, sphere, mat, rbox } from './world.js?v=0.11.0';
+import { loadOwnClip, loadPack, runOf, dunkFit, loadKind, loadClip, makeActor, addJog, updateActor, turnTo } from './assets.js?v=0.11.0';
+import * as fx from './fx.js?v=0.11.0';
+import { openCinema, playClip, cineOpen, clipOf, clipName, cineTest } from './cinema.js?v=0.11.0';
+import { buildCourt, setCourt, animateCourt, swishNet, C, COURT, HOOP, ARC_R, CORNER_X, TOP, WALL, isThree, hoopDist } from './court.js?v=0.11.0';
+import { music, musicStart, musicStop, musicTick, musicTheme, musicPause } from './music.js?v=0.11.0';
+import { openOP, replayOP, seekOP } from './op.js?v=0.11.0';
 
-const VERSION = '0.10.0';
+const VERSION = '0.11.0';
 document.querySelectorAll('#ver, .verTag').forEach(el => { el.textContent = 'v' + VERSION; });
 
 // ---------- 數值（調手感只改這裡） ----------
@@ -122,7 +122,7 @@ async function loadAll(progress) {
 // 開賽才下載上場的人的動作包。載不到也能玩：退回共用動作和走路
 const packs = {};
 function ensureChar(k) {
-  return packs[k] ??= loadPack(`models/moves/pack/${k}.glb?v=0.10.0`).then(c => {
+  return packs[k] ??= loadPack(`models/moves/pack/${k}.glb?v=0.11.0`).then(c => {
     K[k + 'Jog'] = runOf(K[k], c.run);
     if (!CHARS[k]) return;
     OWN[k] = c; SIG[k] = c.sig;
@@ -152,7 +152,7 @@ const st = (p, k, d = 1) => p.def[k] ?? d;   // 角色數值（沒寫就用預�
 const ART_ACTS = ['dunk', 'three', 'fade', 'steal'];
 const SP_ART = { kui: 'coffee', jie: 'dunk', mi: 'phone', vivi: 'boss', kevin: 'ai', lin: 'cross', yuan: 'block', hu: 'fade', tu: 'egg', zhang: 'hero', bian: 'sprint' };
 const hasArt = (k) => k in SP_ART;
-const artUrl = (k, a) => `art/${k}_${a}.webp?v=0.10.0`;
+const artUrl = (k, a) => `art/${k}_${a}.webp?v=0.11.0`;
 function preloadArt(keys) { for (const k of keys) if (hasArt(k)) for (const a of [...ART_ACTS, SP_ART[k]]) { const im = new Image(); im.src = artUrl(k, a); } }
 let flashUntil = 0, flashTimer = 0;
 // 動作立繪從旁邊滑進來一下（我方在左、對手在右），2 秒內只跳一次
@@ -552,7 +552,7 @@ function actSteal() {
 function burst(p) {
   if ((p.burstCd || 0) > 0) { if (p === S.ctrl) fx.toast('衝刺冷卻中'); return; }
   p.burstCd = 2.2; p.dashT = Math.max(p.dashT || 0, 0.75); log(`burst ${p.key}`);
-  fx.sfx.pass(); fx.puff(V(p.x, 0.1, p.z), 0xffffff); fx.floatText(V(p.x, 2.2, p.z), '衝刺', p.def.color, 0.6);
+  fx.sfx.squeak(); fx.puff(V(p.x, 0.1, p.z), 0xffffff); fx.floatText(V(p.x, 2.2, p.z), '衝刺', p.def.color, 0.6);
 }
 function actSpecial() {
   if (S.cont) return;
@@ -836,7 +836,7 @@ function doSkill(p, as = null) {   // as：指定招式（胡姬的連招用）
   const side = v ? ((v.x - p.x) * fz_ - (v.z - p.z) * fx_ > 0 ? -1 : 1) : (Math.random() < 0.5 ? -1 : 1);   // 往防守者的另一邊閃
   const px_ = fz_ * side, pz_ = -fx_ * side;
   if (kind === 'combo') return huCombo(p, v);
-  if (kind === 'dash') { p.dashT = 1.0; fx.sfx.pass(); fx.floatText(V(p.x, 2.2, p.z), p.def.skill.name, p.def.color, 0.7); return; }
+  if (kind === 'dash') { p.dashT = 1.0; fx.sfx.squeak(); fx.floatText(V(p.x, 2.2, p.z), p.def.skill.name, p.def.color, 0.7); return; }
   const big = p.def.skill.big;
   const M = {
     dodge: { f: 1.0, s: big ? 1.7 : 1.15, dur: big ? 0.4 : 0.45, move: 'dodge' },
@@ -889,7 +889,7 @@ function updateDrive(p, dt) {
     && sp > speedOf(p) / (p.driving ? 1.3 : 1) * 0.6 && (p.vx * hx + p.vz * hz) / (sp * hl || 1) > 0.55;
   p.driveT = ok ? (p.driveT || 0) + dt : 0;
   const was = p.driving; p.driving = p.driveT > 0.3;
-  if (p.driving && !was) { playLoop(p, 'sprint', 1.2); fx.sfx.pass(); }
+  if (p.driving && !was) { playLoop(p, 'sprint', 1.2); fx.sfx.squeak(); }
   else if (!p.driving && was && playingMove(p, 'sprint')) {
     stopSig(p);
     if (holding(p) && !busy(p) && p.stun <= 0) { playMove(p, 'stop', { dur: 0.45 }); p.vx *= 0.35; p.vz *= 0.35; fx.puff(V(p.x, 0.1, p.z), 0xffffff); }   // 急停：衝刺中放開搖桿或轉向
@@ -1731,7 +1731,7 @@ function updateBall(dt) {
       else {
         // 打框彈出來
         const big = C.rimGroup.scale.x;
-        fx.sfx.rim(); C.rimShake = 0.25; log(`miss ${B.shooter.key}`);
+        fx.sfx.rim(); C.rimShake = 0.25; log(`miss ${B.shooter.key}`); if (B.shooter.team === 0 && Math.random() < 0.4) setTimeout(() => fx.sfx.groan(), 250);
         if (B.wall) { fx.sfx.block(); fx.shockwave(V(HOOP.x, HOOP.y, HOOP.z), 0x5fd0ff, 2.5); fx.floatText(V(HOOP.x, HOOP.y + 1, HOOP.z + 0.3), '🛡️ 防火牆擋下！', '#3f7fd9', 1); }
         const ox = Math.sin(B.missAng), oz = Math.cos(B.missAng);
         B.pos.set(HOOP.x + ox * (HOOP.r * big + BR * 0.8), HOOP.y + 0.08, HOOP.z + oz * (HOOP.r * big + BR * 0.8));
@@ -1759,7 +1759,7 @@ function updateBall(dt) {
     if (B.pos.z < WALL.z0) { B.pos.z = WALL.z0; B.vel.z *= -0.6; }
     if (B.pos.z > WALL.z1) { B.pos.z = WALL.z1; B.vel.z *= -0.6; }
     const bz = HOOP.z - 0.47 + 0.04 + BR;
-    if (B.vel.z < 0 && B.pos.z < bz && B.pos.z > bz - 0.3 && Math.abs(B.pos.x) < 0.95 && B.pos.y > HOOP.y - 0.14 && B.pos.y < HOOP.y + 0.98) { B.pos.z = bz; B.vel.z *= -0.7; fx.sfx.bounce(); }
+    if (B.vel.z < 0 && B.pos.z < bz && B.pos.z > bz - 0.3 && Math.abs(B.pos.x) < 0.95 && B.pos.y > HOOP.y - 0.14 && B.pos.y < HOOP.y + 0.98) { B.pos.z = bz; B.vel.z *= -0.7; fx.sfx.board(); }
     B.spin.set(B.vel.z * 6, 0, -B.vel.x * 6);
     if (B.mode === 'loose' && !S.cont) {
       const qn = players.find(q => q.key === 'yuan' && S.buff[q.team].queen > 0 && q.stun <= 0);
@@ -2431,7 +2431,7 @@ soundIcon();
 
 function buildSelect() {
   // 選角卡：真人風全身照（art/<人>_card.webp，tools/gen_real.sh 的 card_* 姿勢，每個人不一樣）＋位置標籤
-  $('grid').innerHTML = ROSTER.map(k => { const c = CHARS[k], [job, pos] = c.role.split('・'); return `<div class="ch" data-k="${k}" style="--cc:${c.color}"><span class="badge"></span><div class="pic"><span class="pos">${pos || job}</span><img src="art/${k}_card.webp?v=0.10.0" alt="${c.name}" onerror="this.src='${FACE[k]}'"></div><div class="info"><div class="nm">${c.name}<small>${pos ? job : ''}</small></div><span class="spn">${c.sp.name}</span><span class="skn">${c.skill.name}</span><div class="d">${c.sp.desc}</div><div class="st">${c.stat}</div></div></div>`; }).join('');
+  $('grid').innerHTML = ROSTER.map(k => { const c = CHARS[k], [job, pos] = c.role.split('・'); return `<div class="ch" data-k="${k}" style="--cc:${c.color}"><span class="badge"></span><div class="pic"><span class="pos">${pos || job}</span><img src="art/${k}_card.webp?v=0.11.0" alt="${c.name}" onerror="this.src='${FACE[k]}'"></div><div class="info"><div class="nm">${c.name}<small>${pos ? job : ''}</small></div><span class="spn">${c.sp.name}</span><span class="skn">${c.skill.name}</span><div class="d">${c.sp.desc}</div><div class="st">${c.stat}</div></div></div>`; }).join('');
   for (const el of $('grid').children) el.onclick = () => {
     fx.audioInit(); fx.sfx.click();
     const k = el.dataset.k, i = S.sel.indexOf(k);
@@ -2552,6 +2552,7 @@ let last = performance.now();
 function frame(now) {
   requestAnimationFrame(frame);
   if (cineOpen()) { last = now; return; }   // 放短劇時整個遊戲停下來，不畫背景
+  fx.ambSet(S.mode === 'play' ? S.court : null);
   watchFps((now - last) / 1000);
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
   if (S.mode === 'load') return;
