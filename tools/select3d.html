@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>選角 3D 展示台（原型）</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
+<style>
+  /* 選角畫面的 3D 展示面板原型：沿用遊戲的街頭傳單風（墨黑、米白紙、火焰橘、訊號黃、硬邊陰影、斜體粗字）
+     左：真人風立繪卡（原本的）　中：遊戲裡的 3D 角色在台子上轉、會呼吸，點一下播招牌動作　右：綜合評分、六角雷達圖、全部數值 */
+  :root { --ink: #121110; --paper: #efe6d2; --paper2: #e4d8bd; --fire: #ff4d1a; --fire2: #ff9a1f; --yolk: #ffd23f; --mute: #8a7f6c;
+    --en: Anton, Impact, "Arial Narrow", sans-serif; --body: -apple-system, "PingFang TC", "Noto Sans TC", sans-serif; }
+  html, body { margin: 0; background: radial-gradient(ellipse at 50% 30%, #2a2420, var(--ink) 75%) fixed, var(--ink); color: var(--paper); font-family: var(--body); min-height: 100%; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 18px max(16px, env(safe-area-inset-left)) 28px max(16px, env(safe-area-inset-right)); display: grid; gap: 16px; }
+  h1 { margin: 0; font-family: var(--en); font-weight: 400; letter-spacing: 3px; font-size: 14px; color: var(--ink); background: var(--yolk); justify-self: start; padding: 2px 10px; transform: rotate(-2deg); }
+  .roster { display: flex; gap: 8px; overflow-x: auto; padding: 4px 2px 10px; }
+  .roster button { flex: none; width: 58px; height: 58px; padding: 0; border: 2px solid #efe6d255; background: #2a2420; cursor: pointer; position: relative; overflow: hidden; }
+  .roster button img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 15%; display: block; }
+  .roster button.on { border-color: var(--fire); box-shadow: 4px 4px 0 var(--fire); transform: translate(-2px, -2px); }
+  .roster button:focus-visible { outline: 2px solid var(--yolk); outline-offset: 2px; }
+  .panel { display: grid; grid-template-columns: minmax(200px, 280px) minmax(260px, 1fr) minmax(280px, 360px); gap: 18px; align-items: start; }
+  @media (max-width: 900px) { .panel { grid-template-columns: 1fr 1fr; } .stats { grid-column: 1 / -1; } }
+  @media (max-width: 560px) { .panel { grid-template-columns: 1fr; } }
+  /* 立繪卡：米白紙、硬邊陰影 */
+  .card { background: var(--paper); color: var(--ink); box-shadow: 6px 6px 0 var(--fire), 0 0 0 3px var(--ink); display: grid; grid-template-rows: auto 1fr; min-width: 0; }
+  .card .pic { aspect-ratio: 3 / 4; background: var(--paper2); overflow: hidden; position: relative; }
+  .card .pic img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 10%; display: block; }
+  .card .pos { position: absolute; left: 8px; top: 8px; background: var(--ink); color: var(--paper); font-weight: 900; font-size: 12px; padding: 2px 8px; letter-spacing: 1px; }
+  .card .txt { padding: 10px 12px 12px; display: grid; gap: 4px; }
+  .card .nm { font-size: 22px; font-weight: 900; font-style: italic; }
+  .card .nm small { font-size: 12px; font-weight: 700; font-style: normal; color: #5a5245; margin-left: 6px; }
+  .card .sp { font-size: 13px; font-weight: 700; color: #8a3a12; }
+  .card .q { font-size: 13px; color: #3a342c; }
+  /* 3D 展示台 */
+  .stage { position: relative; aspect-ratio: 3 / 4; max-height: 620px; width: 100%; background: radial-gradient(ellipse at 50% 72%, #ff4d1a33, transparent 60%), linear-gradient(180deg, #1c1916, #121110); box-shadow: 0 0 0 3px var(--ink), 0 0 0 4px #efe6d233; overflow: hidden; cursor: grab; touch-action: none; }
+  .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .stage .hint { position: absolute; left: 10px; bottom: 10px; font-size: 12px; color: var(--mute); background: #121110cc; padding: 3px 8px; pointer-events: none; }
+  .stage .sigbtn { position: absolute; right: 10px; bottom: 10px; background: var(--fire); color: var(--ink); border: 0; font: 900 italic 14px var(--body); padding: 7px 14px; transform: skewX(-8deg); box-shadow: 4px 4px 0 var(--ink), 4px 4px 0 1.5px var(--paper); cursor: pointer; }
+  .stage .sigbtn:active { transform: skewX(-8deg) translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+  .stage .load { position: absolute; inset: 0; display: grid; place-items: center; color: var(--mute); font-size: 13px; }
+  .stage .load[hidden] { display: none; }
+  /* 數值 */
+  .stats { background: #1c1916; box-shadow: 0 0 0 3px var(--ink), 0 0 0 4px #efe6d233; padding: 14px 16px; display: grid; gap: 12px; min-width: 0; align-content: start; }
+  .ovr { display: flex; align-items: center; gap: 12px; }
+  .ovr b { font-family: var(--en); font-weight: 400; font-size: 54px; line-height: 1; color: var(--yolk); text-shadow: 3px 3px 0 var(--fire); font-variant-numeric: tabular-nums; }
+  .ovr span { font-size: 12px; color: var(--mute); line-height: 1.4; }
+  .ovr span strong { display: block; color: var(--paper); font-size: 15px; }
+  canvas.radar { width: 100%; max-width: 300px; aspect-ratio: 1; justify-self: center; display: block; }
+  .bars { display: grid; grid-template-columns: auto 1fr auto; gap: 5px 8px; align-items: center; font-size: 13px; font-variant-numeric: tabular-nums; }
+  .bars .l { color: var(--paper2); white-space: nowrap; }
+  .bars .t { height: 8px; background: #efe6d21f; position: relative; }
+  .bars .t i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--paper); }
+  .bars .t i.hi { background: var(--fire); }
+  .bars .t i.lo { background: #6d655a; }
+  .bars .v { font-family: var(--en); font-size: 15px; min-width: 2ch; text-align: right; }
+  .bars .v.hi { color: var(--yolk); }
+  .grp { grid-column: 1 / -1; font-size: 11px; letter-spacing: 2px; color: var(--mute); margin-top: 4px; }
+  @media (prefers-reduced-motion: reduce) { .roster button.on { transform: none; } }
+</style>
+</head><body>
+<div class="wrap">
+  <h1>PICK YOUR CREW · 3D 展示台原型</h1>
+  <div class="roster" id="roster" aria-label="選角色"></div>
+  <div class="panel">
+    <div class="card" id="card"></div>
+    <div class="stage" id="stage"><div class="load" id="load">3D 角色載入中…</div><span class="hint">拖曳可以轉角色</span><button class="sigbtn" id="sigbtn">招牌動作</button></div>
+    <div class="stats" id="stats"></div>
+  </div>
+</div>
+<script type="importmap">{"imports":{"three":"../vendor/three/build/three.module.min.js","three/addons/":"../vendor/three/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import { loadKind, makeActor, updateActor, loadPack } from '../js/assets.js';
+
+// 角色資料（立繪、位置、大招名稱來自遊戲；數值來自能力表 artifact，0～100 分）
+const CH = [
+  { k: 'kui', name: '小葵', role: '新人實習生', pos: '後衛', sp: '咖啡衝刺', q: '我會努力的！☕', color: '#ff9f43' },
+  { k: 'jie', name: '阿傑', role: '資深設計師', pos: '中鋒', sp: '設計稿灌籃', q: '這稿我一次就過。', color: '#8e5cf0' },
+  { k: 'mi', name: '小米', role: '總機客服', pos: '射手', sp: '總機干擾', q: '您好，這裡是總機～📞', color: '#b46bff' },
+  { k: 'vivi', name: 'Vivi', role: '老闆', pos: '顏值擔當', sp: '老闆說了算', q: '辛苦了！（沒有加薪）', color: '#ff4fa0' },
+  { k: 'kevin', name: 'Kevin', role: '特助', pos: '干擾', sp: '用 AI 就好', q: '這個用 AI 就好了。', color: '#3f7fd9' },
+  { k: 'lin', name: '林語彤', role: '香香籃球隊', pos: '後衛', sp: '瞬影閃身', q: '跟得上我再說。', color: '#1f8a5b' },
+  { k: 'yuan', name: '元小雨', role: '香香籃球隊', pos: '中鋒', sp: '禁區女王', q: '籃下是我的。', color: '#283d8f' },
+  { k: 'hu', name: '胡姬', role: '香香籃球隊', pos: '射手', sp: '千變萬化', q: '想猜我出什麼招？', color: '#e86aa6' },
+  { k: 'tu', name: '兔兔老師', role: '山頂國小', pos: '後衛', sp: '彩蛋射籃', q: '同學們，看好囉～🐰', color: '#ff8fc0' },
+  { k: 'zhang', name: '校長', role: '山頂國小', pos: '校長', sp: '針筒超人', q: '各位同學，校長說幾句話就好。', color: '#d6283b' },
+  { k: 'bian', name: '小編', role: '山頂國小', pos: '前鋒', sp: '下班衝刺', q: '五點了，我要下班。', color: '#a0703c' },
+];
+const STATS = {"bian":{"blk":60,"contest":70,"dunkMake":68,"dunkPick":15,"handle":78,"inside":82,"jump":74,"reach":62,"reb":65,"sht":85,"spd":84,"stl":70,"str":72,"three":82},"hu":{"blk":48,"contest":66,"dunkMake":58,"dunkPick":5,"handle":86,"inside":72,"jump":68,"reach":55,"reb":55,"sht":87,"spd":78,"stl":70,"str":52,"three":95},"jie":{"blk":95,"contest":85,"dunkMake":95,"dunkPick":85,"handle":55,"inside":96,"jump":85,"reach":92,"reb":94,"sht":72,"spd":60,"stl":55,"str":95,"three":35},"kevin":{"blk":70,"contest":97,"dunkMake":62,"dunkPick":10,"handle":74,"inside":70,"jump":70,"reach":65,"reb":60,"sht":76,"spd":72,"stl":70,"str":68,"three":74},"kui":{"blk":45,"contest":78,"dunkMake":55,"dunkPick":5,"handle":90,"inside":70,"jump":72,"reach":50,"reb":50,"sht":72,"spd":94,"stl":95,"str":45,"three":72},"lin":{"blk":42,"contest":80,"dunkMake":58,"dunkPick":5,"handle":94,"inside":74,"jump":75,"reach":50,"reb":48,"sht":72,"spd":97,"stl":95,"str":42,"three":70},"mi":{"blk":45,"contest":65,"dunkMake":55,"dunkPick":5,"handle":82,"inside":68,"jump":65,"reach":55,"reb":52,"sht":85,"spd":76,"stl":72,"str":50,"three":97},"tu":{"blk":45,"contest":76,"dunkMake":55,"dunkPick":5,"handle":88,"inside":70,"jump":80,"reach":52,"reb":50,"sht":74,"spd":93,"stl":92,"str":45,"three":78},"vivi":{"blk":42,"contest":60,"dunkMake":65,"dunkPick":10,"handle":70,"inside":68,"jump":60,"reach":55,"reb":55,"sht":70,"spd":62,"stl":55,"str":60,"three":72},"yuan":{"blk":97,"contest":88,"dunkMake":95,"dunkPick":85,"handle":55,"inside":96,"jump":88,"reach":97,"reb":98,"sht":70,"spd":60,"stl":58,"str":97,"three":35},"zhang":{"blk":80,"contest":75,"dunkMake":70,"dunkPick":20,"handle":62,"inside":82,"jump":70,"reach":75,"reb":82,"sht":70,"spd":58,"stl":58,"str":90,"three":62}};
+const SIG_WIN = { kui: [0.4, 1.9], jie: [0.8, 1.73], mi: [0.5, 2.0], vivi: [1.0, 2.6], kevin: [2.4, 3.3], lin: [0.3, 1.8], yuan: [0.3, 1.9], hu: [0.3, 1.8], tu: [0.2, 1.8], zhang: [0.3, 2.0], bian: [0.3, 1.9] };
+// 六角雷達圖的六軸（防守＝抄截、蓋帽、干擾的平均；籃板力氣＝兩者平均）
+const AXES = [['速度', s => s.spd], ['投籃', s => s.sht], ['三分', s => s.three], ['籃下', s => s.inside], ['防守', s => (s.stl + s.blk + s.contest) / 3], ['籃板力氣', s => (s.reb + s.str) / 2]];
+const ROWS = [['進攻'], ['投籃', 'sht'], ['三分', 'three'], ['籃下', 'inside'], ['控球', 'handle'], ['灌籃傾向', 'dunkPick'], ['防守'], ['抄截', 'stl'], ['蓋帽', 'blk'], ['蓋帽距離', 'reach'], ['防守干擾', 'contest'], ['籃板', 'reb'], ['身體'], ['速度', 'spd'], ['力氣', 'str'], ['彈跳', 'jump']];
+// 綜合評分：最強的三項佔六成、六軸平均佔四成（專長型角色分數才會高）
+function ovr(s) { const v = AXES.map(([, f]) => f(s)).sort((a, b) => b - a); const top = (v[0] + v[1] + v[2]) / 3, all = v.reduce((a, b) => a + b) / v.length; return Math.round(top * 0.6 + all * 0.4); }
+
+const $ = id => document.getElementById(id);
+let cur = null;
+
+// ---------- 立繪卡 ----------
+function renderCard(c) {
+  $('card').innerHTML = `<div class="pic"><img src="../art/${c.k}_card.webp" alt="${c.name}"><span class="pos">${c.pos}</span></div>
+    <div class="txt"><div class="nm">${c.name}<small>${c.role}</small></div><div class="sp">SP ${c.sp}</div><div class="q">「${c.q}」</div></div>`;
+}
+// ---------- 數值：綜合評分、雷達、條狀 ----------
+function renderStats(c) {
+  const s = STATS[c.k];
+  let h = `<div class="ovr"><b>${ovr(s)}</b><span><strong>${c.name}・${c.pos}</strong>綜合評分（0～100）</span></div><canvas class="radar" id="radar" width="600" height="600" aria-label="能力雷達圖"></canvas><div class="bars">`;
+  for (const [l, k] of ROWS) {
+    if (!k) { h += `<div class="grp">${l}</div>`; continue; }
+    const v = s[k], cls = v >= 90 ? 'hi' : v < 50 ? 'lo' : '';
+    h += `<span class="l">${l}</span><span class="t"><i class="${cls}" style="width:${v}%"></i></span><span class="v ${cls}">${v}</span>`;
+  }
+  $('stats').innerHTML = h + '</div>';
+  drawRadar(s, c.color);
+}
+function drawRadar(s, color) {
+  const cv = $('radar'), g = cv.getContext('2d'), W = cv.width, cx = W / 2, cy = W / 2 + 10, R = W * 0.34, n = AXES.length;
+  const pt = (i, r) => { const a = -Math.PI / 2 + i * 2 * Math.PI / n; return [cx + Math.cos(a) * r, cy + Math.sin(a) * r]; };
+  g.clearRect(0, 0, W, W);
+  for (const lv of [0.25, 0.5, 0.75, 1]) {   // 底網：25、50、75、100 分
+    g.beginPath(); for (let i = 0; i <= n; i++) { const [x, y] = pt(i % n, R * lv); i ? g.lineTo(x, y) : g.moveTo(x, y); }
+    g.strokeStyle = lv === 1 ? '#efe6d266' : '#efe6d222'; g.lineWidth = 2; g.stroke();
+  }
+  for (let i = 0; i < n; i++) { const [x, y] = pt(i, R); g.beginPath(); g.moveTo(cx, cy); g.lineTo(x, y); g.strokeStyle = '#efe6d222'; g.stroke(); }
+  g.beginPath(); AXES.forEach(([, f], i) => { const [x, y] = pt(i, R * f(s) / 100); i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.closePath();
+  g.fillStyle = '#ff4d1a55'; g.fill(); g.strokeStyle = '#ff4d1a'; g.lineWidth = 5; g.stroke();
+  AXES.forEach(([, f], i) => { const [x, y] = pt(i, R * f(s) / 100); g.beginPath(); g.arc(x, y, 8, 0, Math.PI * 2); g.fillStyle = '#ffd23f'; g.fill(); });
+  g.font = '700 30px -apple-system, "PingFang TC", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  AXES.forEach(([l, f], i) => { const [x, y] = pt(i, R + 52); g.fillStyle = '#e4d8bd'; g.fillText(l, x, y - 14); g.fillStyle = '#ffd23f'; g.font = '400 30px Anton, Impact, sans-serif'; g.fillText(Math.round(f(s)), x, y + 18); g.font = '700 30px -apple-system, "PingFang TC", sans-serif'; });
+}
+
+// ---------- 3D 展示台 ----------
+const stage = $('stage');
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(2, devicePixelRatio)); renderer.outputColorSpace = THREE.SRGBColorSpace;
+stage.prepend(renderer.domElement);
+const scene = new THREE.Scene();
+scene.add(new THREE.HemisphereLight(0xffffff, 0xf2c99a, 2.0));
+const dl = new THREE.DirectionalLight(0xfff4e0, 2.2); dl.position.set(1.2, 2.5, 3); scene.add(dl);
+const rim = new THREE.DirectionalLight(0xff8a50, 1.6); rim.position.set(-2, 1.5, -2.5); scene.add(rim);   // 背後橘色輪廓光
+const cam = new THREE.PerspectiveCamera(30, 1, 0.05, 50);
+// 台座：墨黑圓台＋角色顏色的圈
+const ped = new THREE.Group(); scene.add(ped);
+ped.add(new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.68, 0.12, 48), new THREE.MeshToonMaterial({ color: 0x1d1a17 })));
+const ringMat = new THREE.MeshBasicMaterial({ color: 0xff4d1a });
+const ring = new THREE.Mesh(new THREE.TorusGeometry(0.64, 0.018, 8, 64), ringMat); ring.rotation.x = Math.PI / 2; ring.position.y = 0.062; ped.add(ring);
+ped.position.y = -0.06;
+const holder = new THREE.Group(); scene.add(holder);
+let actor = null, kind = null, sigClip = null, spin = 0.5, dragging = false, lastX = 0, sigT = 0;
+const kinds = {}, packs = {};
+function resize() {
+  const r = stage.getBoundingClientRect(); renderer.setSize(r.width, r.height, false); cam.aspect = r.width / r.height;
+  // 取景：角色加台座約 1.25 高、1.4 寬，兩個方向都要放得下
+  const fov = THREE.MathUtils.degToRad(cam.fov), dH = 1.2 / 2 / Math.tan(fov / 2), dW = 1.05 / 2 / Math.tan(fov / 2) / cam.aspect;
+  cam.position.set(0, 0.62, Math.max(dH, dW)); cam.lookAt(0, 0.5, 0); cam.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(stage);
+
+async function show3D(c) {
+  $('load').hidden = false;
+  kinds[c.k] ??= loadKind(`../models/${c.k}_v2.glb`, `../models/moves/${c.k}/walk.glb`);
+  packs[c.k] ??= loadPack(`../models/moves/pack/${c.k}.glb`).catch(() => ({}));
+  const [k, p] = await Promise.all([kinds[c.k], packs[c.k]]);
+  if (cur !== c) return;
+  if (actor) holder.remove(actor.root);
+  kind = k; sigClip = p.sig || null;
+  actor = makeActor(kind, 1); holder.add(actor.root);
+  ringMat.color.set(c.color);
+  $('load').hidden = true;
+  playSig();   // 換人時先擺一下招牌動作
+}
+function playSig() {
+  if (!actor || !sigClip) return;
+  const [w0, w1] = SIG_WIN[cur.k] || [0, sigClip.duration];
+  const act = actor.mixer.clipAction(sigClip); act.reset(); act.setLoop(THREE.LoopOnce); act.clampWhenFinished = true; act.time = w0; act.play();
+  actor.sig = act; actor.sigOn = true; actor.sigW = actor.sigW || 0; sigT = w1 - w0;
+}
+$('sigbtn').onclick = playSig;
+stage.addEventListener('pointerdown', e => { dragging = true; lastX = e.clientX; stage.setPointerCapture(e.pointerId); stage.style.cursor = 'grabbing'; });
+stage.addEventListener('pointermove', e => { if (!dragging) return; holder.rotation.y += (e.clientX - lastX) * 0.012; lastX = e.clientX; spin = 0; });
+stage.addEventListener('pointerup', () => { dragging = false; stage.style.cursor = 'grab'; setTimeout(() => { if (!dragging) spin = 0.5; }, 2500); });
+const clock = new THREE.Clock();
+renderer.setAnimationLoop(() => {
+  const dt = Math.min(0.05, clock.getDelta()), t = clock.elapsedTime;
+  if (!matchMedia('(prefers-reduced-motion: reduce)').matches) holder.rotation.y += spin * dt;
+  if (actor) {
+    if (sigT > 0 && (sigT -= dt) <= 0) actor.sigOn = false;
+    actor.speed = 0; updateActor(actor, dt, t);
+  }
+  renderer.render(scene, cam);
+});
+
+// ---------- 換角色 ----------
+function pick(c) {
+  cur = c;
+  document.querySelectorAll('#roster button').forEach(b => b.classList.toggle('on', b.dataset.k === c.k));
+  renderCard(c); renderStats(c); show3D(c);
+}
+$('roster').innerHTML = CH.map(c => `<button data-k="${c.k}" aria-label="${c.name}"><img src="../art/${c.k}_card.webp" alt=""></button>`).join('');
+$('roster').onclick = e => { const b = e.target.closest('button'); if (b) pick(CH.find(c => c.k === b.dataset.k)); };
+pick(CH[1]);
+</script>
+</body></html>
