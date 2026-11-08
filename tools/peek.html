@@ -20,6 +20,8 @@ const gs = await Promise.all(files.map(f => loader.loadAsync(f)));
 // &clips=a.glb,b.glb：用另外的動畫檔（只有動畫）套到對應的模型上
 const clipFiles = (q.get('clips') || '').split(',').filter(Boolean);
 if (clipFiles.length) { const cs = await Promise.all(clipFiles.map(f => loader.loadAsync(f))); cs.forEach((c, i) => { if (gs[i]) gs[i].animations = c.animations; }); }
+// &game=1：跟遊戲一樣只取骨頭轉動和臀部位移（loadOwnClip／loadPack），看套到別的模型上會不會變形；&name=sig：動作包裡挑這一段
+if (q.get('game')) gs.forEach(g => { if (q.get('name')) g.animations = g.animations.filter(a => a.name === q.get('name')); g.animations.forEach(c => { c.tracks = c.tracks.filter(t => t.name.endsWith('.quaternion') || t.name === 'Hips.position'); }); });
 gs.forEach((g, i) => {
   g.scene.updateMatrixWorld(true);
   const box = new THREE.Box3().setFromObject(g.scene), s = 1 / (box.max.y - box.min.y);

@@ -196,7 +196,8 @@ export function updateActor(a, dt, t) {
   }
   if (a.idle) a.idle.setEffectiveWeight((1 - a.w) * (1 - (a.sigW ?? 0)));
   a.mixer.update(dt);
-  if (!a.idle) a.model.scale.y = 1 + (1 - a.w) * 0.015 * Math.sin(t * 3 + a.phase);   // 沒有等待動作的（觀眾、隱藏角色）才用縮放假裝呼吸
+  // 每一格都要重設高度：遊戲會在這之後乘上蹲下壓扁（阿傑大招），不重設就會一直累積、整個人扁掉（v0.12.0 的錯）
+  a.model.scale.y = a.idle ? 1 : 1 + (1 - a.w) * 0.015 * Math.sin(t * 3 + a.phase);   // 沒有等待動作的（觀眾、隱藏角色）才用縮放假裝呼吸
 }
 
 // 朝目標走一步；到了回傳 true
