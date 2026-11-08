@@ -22,6 +22,8 @@
 
 ![比賽](design/v0.1_比賽_電腦.jpg)
 
+**v0.12.0**：選角 11 人換成新模型（`models/角色_v2.glb`）：GPT 畫手臂張開的 A 字四視圖 → Tripo H3.1 多視角轉 3D → Higgsfield 綁骨（骨架和舊模型同一套，招牌動作照用）→ `tools/v2_models.sh`（`tools/blender/game_model.py` 焊接縫、臉鎖住減面、長髮不跟著手臂）。舊模型袖子和外套黏成一塊，舉手會拉出三角形，新模型手臂和身體分開。每個人都像阿傑一樣有自己的 Blender 走路、歡呼、投籃舉手，新增後仰跳投（`fade`）；參考灌籃高手手遊，停下來改播會呼吸的等待動作（`idle`，和走路一起放在 `models/moves/角色/walk.glb`），站著防守播彎腰前傾、雙手張開放低的防守站姿（`dstance`），防守滑步也壓低前傾。動作流程：`runs.py` → `work/run6`、`jie_moves.py` → `work/own/角色` → `slim_clips.py` → `pack_clips.py work/run6 work/own models/sig models/moves/pack`。
+
 **v0.11.0**：運球、刷網、打框、灌籃、蓋火鍋、接傳球、球鞋、哨聲、觀眾和環境音換成 ElevenLabs 擬真音效（`audio/sfx/`，第一次點畫面才下載，共約 383KB），載入失敗就退回合成音效；蜂鳴器和遊戲化提示音仍用合成。Free 方案要標示來源、限非商業使用，要加廣告或收費前先升級方案。
 
 **v0.10.0**：每個人補上防守滑步、後退步、踉蹌、被蓋倒、撞倒；動作打包成每人一個檔，開賽才下載上場的人，開遊戲少下載約 2.5MB。
