@@ -1,15 +1,15 @@
 // 上班啟示錄：下班先鬥牛 2v2 —— 頂樓半場籃球。玩家挑兩個同事，電腦控制隊友和對手；每個人都有自己的大招
 import * as THREE from 'three';
-import { scene, render, updateCamera, cam, camera, CAMS, camMode, labelSprite, V, quality, setQuality, setQualityPref, canvasTex, FONT, sphere, mat, rbox } from './world.js?v=0.12.2';
-import { loadOwnClip, loadPack, runOf, dunkFit, loadKind, loadClip, makeActor, addJog, updateActor, turnTo } from './assets.js?v=0.12.2';
-import * as fx from './fx.js?v=0.12.2';
-import { openCinema, playClip, cineOpen, clipOf, clipName, cineTest } from './cinema.js?v=0.12.2';
-import { buildCourt, setCourt, animateCourt, swishNet, C, COURT, HOOP, ARC_R, CORNER_X, TOP, WALL, isThree, hoopDist } from './court.js?v=0.12.2';
-import { music, musicStart, musicStop, musicTick, musicTheme, musicPause } from './music.js?v=0.12.2';
-import { openOP, replayOP, seekOP } from './op.js?v=0.12.2';
-import { makeRadar, axesOf } from './radar.js?v=0.12.2';
+import { scene, render, updateCamera, cam, camera, CAMS, camMode, labelSprite, V, quality, setQuality, setQualityPref, canvasTex, FONT, sphere, mat, rbox } from './world.js?v=0.12.3';
+import { loadOwnClip, loadPack, runOf, dunkFit, loadKind, loadClip, makeActor, addJog, updateActor, turnTo } from './assets.js?v=0.12.3';
+import * as fx from './fx.js?v=0.12.3';
+import { openCinema, playClip, cineOpen, clipOf, clipName, cineTest } from './cinema.js?v=0.12.3';
+import { buildCourt, setCourt, animateCourt, swishNet, C, COURT, HOOP, ARC_R, CORNER_X, TOP, WALL, isThree, hoopDist } from './court.js?v=0.12.3';
+import { music, musicStart, musicStop, musicTick, musicTheme, musicPause } from './music.js?v=0.12.3';
+import { openOP, replayOP, seekOP } from './op.js?v=0.12.3';
+import { makeRadar, axesOf, RATINGS } from './radar.js?v=0.12.3';
 
-const VERSION = '0.12.2';
+const VERSION = '0.12.3';
 document.querySelectorAll('#ver, .verTag').forEach(el => { el.textContent = 'v' + VERSION; });
 
 // ---------- 數值（調手感只改這裡） ----------
@@ -86,6 +86,14 @@ const CHARS = {
 };
 // 選角畫面只放這幾個人；其他人先藏起來（不在選角、封面、觀眾席出現，也不載入模型）
 const ROSTER = ['kui', 'jie', 'mi', 'vivi', 'kevin', 'lin', 'yuan', 'hu', 'tu', 'zhang', 'bian'];
+// 能力表（js/radar.js 的 RATINGS，0～100 分）蓋掉上面寫死的倍率：70 分＝一般人＝1.0、100 分＝1.375、40 分＝0.625
+// 灌籃傾向、灌籃成功本來就是百分比：dunk＝籃下出手選灌籃的機率，dunkMake＝灌籃不失手的機率
+const RATE = r => 1 + (r - 70) * 0.0125;
+for (const k of ROSTER) {
+  const r = RATINGS[k], c = CHARS[k]; if (!r) continue;
+  for (const f of ['spd', 'sht', 'inside', 'three', 'handle', 'stl', 'blk', 'reach', 'contest', 'reb', 'str', 'jump']) c[f] = RATE(r[f]);
+  c.dunk = r.dunkPick / 100; c.dunkMake = r.dunkMake / 100;
+}
 const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 // 難度：電腦的命中、跑速、抄截、蓋帽、集氣倍率；green 是玩家投籃時機綠色區的寬度倍率
 const DIFF = [
@@ -123,7 +131,7 @@ async function loadAll(progress) {
 // 開賽才下載上場的人的動作包。載不到也能玩：退回共用動作和走路
 const packs = {};
 function ensureChar(k) {
-  return packs[k] ??= loadPack(`models/moves/pack/${k}.glb?v=0.12.2`).then(c => {
+  return packs[k] ??= loadPack(`models/moves/pack/${k}.glb?v=0.12.3`).then(c => {
     K[k + 'Jog'] = runOf(K[k], c.run);
     if (!CHARS[k]) return;
     OWN[k] = c; SIG[k] = c.sig;
@@ -153,7 +161,7 @@ const st = (p, k, d = 1) => p.def[k] ?? d;   // 角色數值（沒寫就用預�
 const ART_ACTS = ['dunk', 'three', 'fade', 'steal'];
 const SP_ART = { kui: 'coffee', jie: 'dunk', mi: 'phone', vivi: 'boss', kevin: 'ai', lin: 'cross', yuan: 'block', hu: 'fade', tu: 'egg', zhang: 'hero', bian: 'sprint' };
 const hasArt = (k) => k in SP_ART;
-const artUrl = (k, a) => `art/${k}_${a}.webp?v=0.12.2`;
+const artUrl = (k, a) => `art/${k}_${a}.webp?v=0.12.3`;
 function preloadArt(keys) { for (const k of keys) if (hasArt(k)) for (const a of [...ART_ACTS, SP_ART[k]]) { const im = new Image(); im.src = artUrl(k, a); } }
 let flashUntil = 0, flashTimer = 0;
 // 動作立繪從旁邊滑進來一下（我方在左、對手在右），2 秒內只跳一次
@@ -597,7 +605,7 @@ function contest(p, x = p.x, z = p.z) {
     const R = 1.8 * (q.guard ? 1.2 : 1) * st(q, 'reach');
     if (d > R) continue;
     const front = (dx * hx + dz * hz) / (d * hl || 1);   // 1 = 正前方
-    c = Math.max(c, (R - d) / R * (0.55 + 0.45 * Math.max(0, front)) * (q.y > 0.2 ? 1.25 : 1) * (q.guard ? 1.35 : 1));
+    c = Math.max(c, (R - d) / R * (0.55 + 0.45 * Math.max(0, front)) * (q.y > 0.2 ? 1.25 : 1) * (q.guard ? 1.35 : 1) * st(q, 'contest'));   // 防守干擾高的（Kevin）貼上來更難投
   }
   if (p.openT > 0) c *= 0.35;   // 後撤步、後仰拉出空間
   return c;
@@ -773,7 +781,7 @@ function timingBonus(p, t) {
   return bonus;
 }
 function startBlock(p) {
-  p.act = { type: 'block', t: 0 }; p.vy = CFG.blockV * (0.9 + 0.1 * st(p, 'reach')); p.y = 0.01; fx.sfx.jump(); playMove(p, 'block', { dur: 0.6 });
+  p.act = { type: 'block', t: 0 }; p.vy = CFG.blockV * (0.9 + 0.1 * st(p, 'reach')) * (0.9 + 0.1 * st(p, 'jump')); p.y = 0.01; fx.sfx.jump(); playMove(p, 'block', { dur: 0.6 });
   // 針筒超人：跳起來就飛到出手的人面前（一定蓋得到）
   if (p.needle > 0) {
     const sh = oppsOf(p).filter(q => q.act && (q.act.type === 'shoot' || q.act.type === 'lay' || q.act.type === 'egg') && dist2(q, p) < 6).sort((a, b) => dist2(a, p) - dist2(b, p))[0];
@@ -801,7 +809,7 @@ function resolveSteal(p) {
   const h = B.mode === 'held' ? B.owner : null, coffee = S.buff[p.team].coffee > 0;
   if (h && h.team !== p.team && dist2(p, h) < CFG.stealR * (coffee ? 1.35 : 1) && (!busy(h) || h.weak > 0)) {   // 變身完虛弱的校長：一抄就掉
     const low = (B.dribH ?? 1) < 0.45 || h.stopT > 0;   // 球彈在地上、被撞停的時候最好抄
-    const ch = h.weak > 0 ? 1 : CFG.stealP * p.def.stl * (coffee ? 1.8 : 1) * (p.team === 0 ? 1.15 : 1) * (h.stun > 0 ? 3 : 1) * (low ? 1.6 : 0.8) * (h.stopT > 0 ? 1.8 : 1);
+    const ch = h.weak > 0 ? 1 : CFG.stealP * p.def.stl * (coffee ? 1.8 : 1) * (p.team === 0 ? 1.15 : 1) * (h.stun > 0 ? 3 : 1) * (low ? 1.6 : 0.8) * (h.stopT > 0 ? 1.8 : 1) / st(h, 'handle');   // 控球好的比較難抄
     if (Math.random() < ch) {
       gainBall(p, 'steal'); log(`steal ${p.key}`); fx.sfx.steal(); fx.floatText(V(p.x, 2.3, p.z), '抄截！', TEAM_COLOR[p.team], 1); actionArt(p, 'steal');
       addGauge(p, CFG.gSteal); h.pickCd = 0.5; return;
@@ -814,7 +822,7 @@ function resolveSteal(p) {
 // ---------- 細部動作：搶板、突破技、假動作 ----------
 // 搶籃板：往球的方向跳，籃板範圍大的人跳得高、搆得遠
 function startRebound(p) {
-  p.act = { type: 'block', t: 0, reb: true }; p.vy = CFG.blockV * (0.9 + 0.12 * st(p, 'reb')); p.y = 0.01; fx.sfx.jump();
+  p.act = { type: 'block', t: 0, reb: true }; p.vy = CFG.blockV * (0.9 + 0.12 * st(p, 'reb')) * (0.9 + 0.1 * st(p, 'jump')); p.y = 0.01; fx.sfx.jump();
   const dx = B.pos.x - p.x, dz = B.pos.z - p.z, d = Math.hypot(dx, dz) || 1;
   if (d < 3) { p.vx = dx / d * Math.min(3.5, d * 2); p.vz = dz / d * Math.min(3.5, d * 2); p.face = Math.atan2(dx, dz); }
   playMove(p, 'rebound', { dur: 0.65 });
@@ -1547,7 +1555,7 @@ function updateAct(p, dt) {
         a.rel = true;
         if (a.dunk && holding(p)) {
           const prob = shotProb(p, a.sx, a.sz, true);
-          if (Math.random() < prob + 0.05 || st(p, 'dunk', 0.1) > 0.5 && Math.random() < 0.5) { slam(p, 2, false); break; }   // 中鋒灌籃比較不會失手
+          if (Math.random() < st(p, 'dunkMake', prob + 0.05) - contest(p, a.sx, a.sz) * 0.2) { slam(p, 2, false); break; }   // 灌籃成功率看能力表（中鋒 95%），被貼身扣一點；沒灌成就改放上籃
         }
         releaseShot(p, a.sure ? { sure: true } : {});
       }
@@ -1828,7 +1836,7 @@ function updatePlayers(dt, t) {
     const sa = a.act && (a.act.type === 'jdunk' || a.act.type === 'alley' || a.act.type === 'lay'), sb = b.act && (b.act.type === 'jdunk' || b.act.type === 'alley' || b.act.type === 'lay');
     if (sa || sb || a.bench || b.bench || Math.abs(a.y - b.y) > 0.8) continue;
     const dx = b.x - a.x, dz = b.z - a.z, d = Math.hypot(dx, dz), m = 0.62;
-    // 按住防守的人像一道牆：對手撞上來推不動他，整個推回去、往他身上的速度也吃掉，穿不過去（v0.12.2）
+    // 按住防守的人像一道牆：對手撞上來推不動他，整個推回去、往他身上的速度也吃掉，穿不過去（v0.12.3）
     const gw = a.guard ? a : b, gm = gw === a ? b : a;   // 被晃倒、暈眩的防守者不算牆；進攻方用招式（閃身、轉身、衝刺…）時可以穿過去
     const wall = a.team !== b.team && a.guard !== b.guard && gw.y <= 0.2 && gw.stun <= 0 && !busy(gm) ? gw : null;
     if (d < m && d > 1e-4) {
@@ -1908,7 +1916,7 @@ function overTarget(p) {
   }
   if (p.cheer > 0) return 'hop';
   if (holding(p)) return null;
-  // 防守：按住防守鍵（電腦是貼身盯人時，p.guard）才壓低重心、張開雙手（v0.12.2 之前只要靠近就張手，看起來像一直張著）
+  // 防守：按住防守鍵（電腦是貼身盯人時，p.guard）才壓低重心、張開雙手（v0.12.3 之前只要靠近就張手，看起來像一直張著）
   if (p.guard && B.mode === 'held' && B.owner.team !== p.team) return 'guard';
   return null;
 }
@@ -2444,7 +2452,7 @@ soundIcon();
 
 function buildSelect() {
   // 選角卡：真人風全身照（art/<人>_card.webp，tools/gen_real.sh 的 card_* 姿勢，每個人不一樣）＋位置標籤
-  $('grid').innerHTML = ROSTER.map(k => { const c = CHARS[k], [job, pos] = c.role.split('・'); return `<div class="ch" data-k="${k}" style="--cc:${c.color}"><span class="badge"></span><div class="pic"><span class="pos">${pos || job}</span><img src="art/${k}_card.webp?v=0.12.2" alt="${c.name}" onerror="this.src='${FACE[k]}'"></div><div class="info"><div class="nm">${c.name}<small>${pos ? job : ''}</small></div><span class="spn">${c.sp.name}</span><span class="skn">${c.skill.name}</span><div class="d">${c.sp.desc}</div><div class="st">${c.stat}</div></div></div>`; }).join('');
+  $('grid').innerHTML = ROSTER.map(k => { const c = CHARS[k], [job, pos] = c.role.split('・'); return `<div class="ch" data-k="${k}" style="--cc:${c.color}"><span class="badge"></span><div class="pic"><span class="pos">${pos || job}</span><img src="art/${k}_card.webp?v=0.12.3" alt="${c.name}" onerror="this.src='${FACE[k]}'"></div><div class="info"><div class="nm">${c.name}<small>${pos ? job : ''}</small></div><span class="spn">${c.sp.name}</span><span class="skn">${c.skill.name}</span><div class="d">${c.sp.desc}</div><div class="st">${c.stat}</div></div></div>`; }).join('');
   for (const el of $('grid').children) el.onclick = () => {
     fx.audioInit(); fx.sfx.click();
     const k = el.dataset.k, i = S.sel.indexOf(k);
