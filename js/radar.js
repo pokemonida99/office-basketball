@@ -69,9 +69,9 @@ export function makeRadar(cv) {
   function wake() { if (!running) { running = true; requestAnimationFrame(frame); } }
   document.addEventListener('visibilitychange', wake);
   return {
-    // 換成某個角色（同一個人就只確保有在畫）
-    show(k) {
-      if (k !== key && RATINGS[k]) { const now = performance.now(); from = values(now).map(o => o.v); to = AXES.map(([, f]) => f(RATINGS[k])); t0 = now; key = k; }
+    // 換成某個角色（同一個人就只確保有在畫）；grow＝從中心重新長出來
+    show(k, grow) {
+      if ((k !== key || grow) && RATINGS[k]) { const now = performance.now(); from = grow ? new Array(n).fill(0) : values(now).map(o => o.v); to = AXES.map(([, f]) => f(RATINGS[k])); t0 = now; key = k; }
       wake();
     },
     wake,

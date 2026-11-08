@@ -733,7 +733,7 @@
   #sTitle { background: var(--ink); }
   #sTitle::before { content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
     background: linear-gradient(180deg, #121110 0%, #12111000 30%, #12111000 55%, #121110f2 100%), linear-gradient(90deg, #ff4d1a59, #12111000 45%, #ff9a1f40),
-      url(op/op9.webp?v=0.12.3) center 30% / cover; filter: grayscale(1) contrast(1.25) brightness(.62) sepia(.35); }
+      url(op/op9.webp?v=0.12.4) center 30% / cover; filter: grayscale(1) contrast(1.25) brightness(.62) sepia(.35); }
   #sTitle::after { background: var(--dots), var(--grain); opacity: .55; mix-blend-mode: multiply; }
   #sTitle .card h1 small, .logoH small { display: inline-block; font-family: var(--en); font-weight: 400; letter-spacing: 4px; font-size: 13px; color: var(--ink); background: var(--yolk); padding: 2px 10px; transform: rotate(-2deg); margin-bottom: 0; }
   .logoH small::before { content: 'STREETBALL 3ON3 · '; }
@@ -765,7 +765,7 @@
   .seg button { color: var(--paper2); border-radius: 0; font-style: italic; }
   .seg button.on { background: var(--fire); color: var(--ink); }
   #grid .ch { background: var(--paper); color: var(--ink); border: 3px solid var(--ink); border-radius: 0; box-shadow: 6px 6px 0 #000c; }
-  #grid .ch:nth-child(odd) { transform: rotate(-.6deg); } #grid .ch:nth-child(even) { transform: rotate(.6deg); }
+  #grid .ch:nth-of-type(odd) { transform: rotate(-.6deg); } #grid .ch:nth-of-type(even) { transform: rotate(.6deg); }
   #grid .ch .pic { background: radial-gradient(color-mix(in srgb, var(--cc) 75%, #000) 1.3px, transparent 1.9px) 0 0 / 7px 7px, linear-gradient(160deg, color-mix(in srgb, var(--cc) 35%, var(--paper)), color-mix(in srgb, var(--cc) 70%, var(--paper2))); border-bottom: 3px solid var(--ink); }
   #grid .ch .pic::before { background: var(--grain); opacity: .45; mix-blend-mode: multiply; }
   #grid .ch .pic::after { display: none; }
@@ -794,35 +794,26 @@
   #grid .ch .badge { background: var(--yolk); color: var(--ink); border-radius: 0; box-shadow: 2px 2px 0 var(--ink); }
   .selBar { background: linear-gradient(#12111000, #121110 45%); }
 
-  /* --- 選角：六角能力雷達圖（js/radar.js）：點／滑過哪張卡就畫誰 --- */
-  .scout { background: #1c1916; box-shadow: 0 0 0 3px var(--ink), 0 0 0 4px #efe6d233, 6px 6px 0 4px #000a; display: flex; align-items: center; gap: 6px 14px; padding: 8px 14px; margin: 0 auto 16px; width: min(520px, 100%); text-align: left; }
-  .scout canvas { position: static; inset: auto; touch-action: auto; pointer-events: none; width: 190px; height: 190px; flex: none; display: block; z-index: auto; }
-  .scTxt { display: grid; gap: 4px; min-width: 0; }
-  .scTxt b { font-size: 24px; font-weight: 900; font-style: italic; color: var(--paper); text-shadow: 3px 3px 0 var(--fire); }
-  .scTxt span { justify-self: start; background: var(--ink); color: var(--yolk); font-weight: 900; font-size: 12px; padding: 2px 8px; letter-spacing: 1px; box-shadow: 2px 2px 0 var(--fire); transform: rotate(-2deg); }
-  .scTxt em { font-style: normal; font-size: 13px; font-weight: 700; color: var(--paper2); line-height: 1.5; }
+  /* --- 選角：六角能力雷達圖（js/radar.js）：點了哪張卡，就插在那張卡右邊一格，後面的卡往右退 --- */
+  .selWrap > .scout { display: none; }
+  #grid .scout { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-width: 0; padding: 8px 6px 12px; background: #1c1916; border: 3px solid var(--ink); box-shadow: 6px 6px 0 var(--fire), inset 0 0 0 1px #efe6d233; transform-origin: 0 50%; text-align: center; }
+  #grid .scout canvas { position: static; inset: auto; touch-action: auto; pointer-events: none; width: 100%; max-width: 300px; height: auto; aspect-ratio: 1; display: block; z-index: auto; }
+  .scTxt { display: grid; gap: 3px; justify-items: center; min-width: 0; }
+  .scTxt b { font-size: 20px; font-weight: 900; font-style: italic; color: var(--paper); text-shadow: 3px 3px 0 var(--fire); }
+  .scTxt span { background: var(--ink); color: var(--yolk); font-weight: 900; font-size: 11px; padding: 2px 8px; letter-spacing: 1px; box-shadow: 2px 2px 0 var(--fire); transform: rotate(-2deg); }
+  .scTxt em { font-style: normal; font-size: 12px; font-weight: 700; color: var(--paper2); line-height: 1.4; }
   .scTxt em i { font-style: normal; color: var(--yolk); font-weight: 900; }
-  .scTxt b, .scTxt span, .scTxt em { animation: scIn .35s ease-out; }
-  @keyframes scIn { from { opacity: 0; transform: translateX(-10px); } }
-  /* 大螢幕：卡片左邊、雷達圖固定在右邊一欄（捲動時跟著） */
-  @media (min-width: 1180px) and (min-height: 561px) {
-    .selWrap { width: min(1220px, 100%); display: grid; grid-template-columns: 1fr 300px; column-gap: 26px; align-items: start; }
-    .selWrap > h2, .selWrap > .segs, .selWrap > .hint { grid-column: 1 / -1; }
-    .selWrap > .grid { grid-column: 1; grid-row: 4; }
-    .scout { grid-column: 2; grid-row: 4; position: sticky; top: 16px; margin: 0; width: auto; flex-direction: column; padding: 14px 14px 18px; }
-    .scout canvas { width: 272px; height: 272px; }
-    .scTxt { justify-items: center; text-align: center; } .scTxt span { justify-self: center; }
-  }
-  @media (max-width: 420px) { .scout canvas { width: 160px; height: 160px; } .scout { padding: 6px 10px; gap: 4px 10px; } .scTxt b { font-size: 20px; } }
-  /* 橫式手機：放不下常駐面板，點卡片時右下角跳出來，幾秒後收起 */
+  #grid .scout.opening { animation: scOpen .34s cubic-bezier(.2,.8,.2,1); }
+  #grid .scout.closing { animation: scClose .18s ease-in forwards; }
+  @keyframes scOpen { from { opacity: 0; transform: scaleX(.2); } }
+  @keyframes scClose { to { opacity: 0; transform: scaleX(.2); } }
+  /* 橫式手機：卡片排成一條橫的，面板佔兩張卡寬、跟卡一樣高 */
   @media (orientation: landscape) and (max-height: 560px) {
-    .scout { display: none; position: fixed; right: max(12px, env(safe-area-inset-right)); bottom: calc(54px + env(safe-area-inset-bottom)); z-index: 25; width: auto; margin: 0; padding: 6px 10px; gap: 4px 8px; }
-    .scout.pop { display: flex; animation: scPop .25s ease-out; }
-    .scout canvas { width: 150px; height: 150px; }
-    .scTxt b { font-size: 17px; } .scTxt em { font-size: 11px; }
+    #grid .scout { grid-column: span 2; height: calc(100vh - 128px - env(safe-area-inset-bottom)); min-height: 180px; padding: 4px 6px 6px; scroll-snap-align: start; }
+    #grid .scout canvas { width: auto; height: 100%; max-height: calc(100% - 44px); max-width: 100%; }
+    .scTxt { grid-auto-flow: column; align-items: center; gap: 6px; } .scTxt b { font-size: 15px; } .scTxt em { font-size: 10px; }
   }
-  @keyframes scPop { from { opacity: 0; transform: translateY(12px) scale(.94); } }
-  @media (prefers-reduced-motion: reduce) { .scTxt b, .scTxt span, .scTxt em, .scout.pop { animation: none; } }
+  @media (prefers-reduced-motion: reduce) { #grid .scout.opening, #grid .scout.closing { animation: none; } }
 
   /* --- 暫停 --- */
   #sPause .card { background: var(--paper); color: var(--ink); padding: 18px 18px 22px; box-shadow: 8px 8px 0 var(--fire); position: relative; transform: rotate(-1deg); width: min(340px, 100%); }
@@ -923,7 +914,7 @@
 
 <div class="screen" id="sTitle"><div class="verTag"></div><div class="card tTitle">
   <div class="tMain">
-    <h1 class="logoH"><small>上班啟示錄</small><img class="logo" src="art/logo.webp?v=0.12.3" alt="下班先鬥牛"></h1>
+    <h1 class="logoH"><small>上班啟示錄</small><img class="logo" src="art/logo.webp?v=0.12.4" alt="下班先鬥牛"></h1>
     <div class="tTeams"><span class="t1">上班族</span><b>VS</b><span class="t2">香香籃球隊</span><b>VS</b><span class="t3">山頂國小</span></div>
     <div class="collab"><i>a4</i>不想上班 製作<span class="guest">友情參戰　<em>香香籃球隊</em>・<em>山頂國小</em></span></div>
   </div>
@@ -945,16 +936,16 @@
   <div id="opFlash"></div>
   <div id="opCap"><b id="opCapB"></b><span id="opCapS"></span></div>
   <div id="opVs">VS</div>
-  <div id="opTitle"><small>上班啟示錄 番外</small><div id="opTitleMain"><img class="logo" src="art/logo.webp?v=0.12.3" alt="下班先鬥牛"></div><div id="opTitleSub">a4 不想上班 製作<span>友情參戰　香香籃球隊・山頂國小</span></div></div>
+  <div id="opTitle"><small>上班啟示錄 番外</small><div id="opTitleMain"><img class="logo" src="art/logo.webp?v=0.12.4" alt="下班先鬥牛"></div><div id="opTitleSub">a4 不想上班 製作<span>友情參戰　香香籃球隊・山頂國小</span></div></div>
   <div id="opBarWrap"><div id="opBar"></div></div>
   <button id="opSkip">跳過 ›</button>
 </div>
 
-<div class="screen" id="sSelect"><div class="verTag"></div><div class="selWrap">
+<div class="screen" id="sSelect"><div class="verTag"></div><div class="selWrap" id="selWrap">
   <h2 id="selTitle">挑兩個同事組隊</h2>
   <div class="segs"><div class="seg" id="modeSeg"><button data-v="p">練習</button><button data-v="c">三分賽</button><button data-v="1">1v1</button><button data-v="2">2v2</button><button data-v="3">3v3</button></div><div class="seg" id="diffSeg"><button data-v="0">簡單</button><button data-v="1">普通</button><button data-v="2">困難</button></div><div class="seg" id="courtSeg"><button data-v="roof">頂樓</button><button data-v="temple">大橋尾</button></div></div>
   <div class="hint" id="selHint">先點的就是你整場操作的人（頭上有「▼ 你」），對手由電腦隨機挑</div>
-  <div class="scout" id="scout"><canvas id="radar" width="600" height="600" role="img" aria-label="能力雷達圖"></canvas><div class="scTxt"><b id="scName"></b><span id="scPos"></span><em id="scBest"></em></div></div>
+  <aside class="scout" id="scout"><canvas id="radar" width="600" height="600" role="img" aria-label="能力雷達圖"></canvas><div class="scTxt"><b id="scName"></b><span id="scPos"></span><em id="scBest"></em></div></aside>
   <div class="grid" id="grid"></div>
   <div class="selBar"><div class="in"><button class="big sec" id="bRand">隨機</button><button class="big" id="bGo" disabled>開打！</button></div></div>
 </div></div>
@@ -986,6 +977,6 @@
 <script type="importmap">
 {"imports":{"three":"./vendor/three/build/three.module.min.js","three/addons/":"./vendor/three/examples/jsm/"}}
 </script>
-<script type="module" src="js/main.js?v=0.12.3"></script>
+<script type="module" src="js/main.js?v=0.12.4"></script>
 </body>
 </html>
