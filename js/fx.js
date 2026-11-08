@@ -1,6 +1,6 @@
 // 特效與音效：飄字、彩帶、光柱、地面衝擊波、彈出放大、合成音效
 import * as THREE from 'three';
-import { scene, canvasTex, FONT, cam, V } from './world.js?v=0.12.1';
+import { scene, canvasTex, FONT, cam, V } from './world.js?v=0.12.2';
 
 const fxList = [];   // 每個特效自己有 update(dt) 回傳 false 就移除
 export function updateFx(dt) { for (let i = fxList.length - 1; i >= 0; i--) if (!fxList[i](dt)) fxList.splice(i, 1); }
@@ -226,7 +226,7 @@ const pick = a => a[Math.random() * a.length | 0];
 const jit = (r = 0.04) => 1 + (Math.random() * 2 - 1) * r;   // 音高小幅變化，連續播才不會像同一個聲音
 export const sampleStats = () => ({ total: SAMPLES.length, ready: Object.keys(bufs).length });
 function loadSamples() {
-  for (const n of SAMPLES) fetch(`audio/sfx/${n}.m4a?v=0.12.1`)
+  for (const n of SAMPLES) fetch(`audio/sfx/${n}.m4a?v=0.12.2`)
     .then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
     .then(b => new Promise((ok, no) => ac.decodeAudioData(b, ok, no)))
     .then(buf => {

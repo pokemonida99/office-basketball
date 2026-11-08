@@ -1,14 +1,15 @@
 // 上班啟示錄：下班先鬥牛 2v2 —— 頂樓半場籃球。玩家挑兩個同事，電腦控制隊友和對手；每個人都有自己的大招
 import * as THREE from 'three';
-import { scene, render, updateCamera, cam, camera, CAMS, camMode, labelSprite, V, quality, setQuality, setQualityPref, canvasTex, FONT, sphere, mat, rbox } from './world.js?v=0.12.1';
-import { loadOwnClip, loadPack, runOf, dunkFit, loadKind, loadClip, makeActor, addJog, updateActor, turnTo } from './assets.js?v=0.12.1';
-import * as fx from './fx.js?v=0.12.1';
-import { openCinema, playClip, cineOpen, clipOf, clipName, cineTest } from './cinema.js?v=0.12.1';
-import { buildCourt, setCourt, animateCourt, swishNet, C, COURT, HOOP, ARC_R, CORNER_X, TOP, WALL, isThree, hoopDist } from './court.js?v=0.12.1';
-import { music, musicStart, musicStop, musicTick, musicTheme, musicPause } from './music.js?v=0.12.1';
-import { openOP, replayOP, seekOP } from './op.js?v=0.12.1';
+import { scene, render, updateCamera, cam, camera, CAMS, camMode, labelSprite, V, quality, setQuality, setQualityPref, canvasTex, FONT, sphere, mat, rbox } from './world.js?v=0.12.2';
+import { loadOwnClip, loadPack, runOf, dunkFit, loadKind, loadClip, makeActor, addJog, updateActor, turnTo } from './assets.js?v=0.12.2';
+import * as fx from './fx.js?v=0.12.2';
+import { openCinema, playClip, cineOpen, clipOf, clipName, cineTest } from './cinema.js?v=0.12.2';
+import { buildCourt, setCourt, animateCourt, swishNet, C, COURT, HOOP, ARC_R, CORNER_X, TOP, WALL, isThree, hoopDist } from './court.js?v=0.12.2';
+import { music, musicStart, musicStop, musicTick, musicTheme, musicPause } from './music.js?v=0.12.2';
+import { openOP, replayOP, seekOP } from './op.js?v=0.12.2';
+import { makeRadar, axesOf } from './radar.js?v=0.12.2';
 
-const VERSION = '0.12.1';
+const VERSION = '0.12.2';
 document.querySelectorAll('#ver, .verTag').forEach(el => { el.textContent = 'v' + VERSION; });
 
 // ---------- 數值（調手感只改這裡） ----------
@@ -122,7 +123,7 @@ async function loadAll(progress) {
 // 開賽才下載上場的人的動作包。載不到也能玩：退回共用動作和走路
 const packs = {};
 function ensureChar(k) {
-  return packs[k] ??= loadPack(`models/moves/pack/${k}.glb?v=0.12.1`).then(c => {
+  return packs[k] ??= loadPack(`models/moves/pack/${k}.glb?v=0.12.2`).then(c => {
     K[k + 'Jog'] = runOf(K[k], c.run);
     if (!CHARS[k]) return;
     OWN[k] = c; SIG[k] = c.sig;
@@ -152,7 +153,7 @@ const st = (p, k, d = 1) => p.def[k] ?? d;   // 角色數值（沒寫就用預�
 const ART_ACTS = ['dunk', 'three', 'fade', 'steal'];
 const SP_ART = { kui: 'coffee', jie: 'dunk', mi: 'phone', vivi: 'boss', kevin: 'ai', lin: 'cross', yuan: 'block', hu: 'fade', tu: 'egg', zhang: 'hero', bian: 'sprint' };
 const hasArt = (k) => k in SP_ART;
-const artUrl = (k, a) => `art/${k}_${a}.webp?v=0.12.1`;
+const artUrl = (k, a) => `art/${k}_${a}.webp?v=0.12.2`;
 function preloadArt(keys) { for (const k of keys) if (hasArt(k)) for (const a of [...ART_ACTS, SP_ART[k]]) { const im = new Image(); im.src = artUrl(k, a); } }
 let flashUntil = 0, flashTimer = 0;
 // 動作立繪從旁邊滑進來一下（我方在左、對手在右），2 秒內只跳一次
@@ -912,10 +913,10 @@ function updateFootwork(p) {
   if (p.foot && !playingMove(p, p.foot)) p.foot = null;   // 被別的動作（抄截、蓋帽…）蓋掉了
   const sp = Math.hypot(p.vx, p.vz);
   let want = null;
-  if (S.phase === 'play' && !busy(p) && p.y <= 0 && p.stun <= 0 && B.mode === 'held' && B.owner.team !== p.team && dist2(p, B.owner) < 3.2 && sp > (p.foot ? 0.25 : 0.5)) {   // 開始要夠快、停要夠慢才換（不然速度在門檻附近會一直閃）
+  if (p.guard && S.phase === 'play' && !busy(p) && p.y <= 0 && p.stun <= 0 && B.mode === 'held' && B.owner.team !== p.team && dist2(p, B.owner) < 3.2 && sp > (p.foot ? 0.25 : 0.5)) {   // 防守滑步、後退步也只在按住防守時   // 開始要夠快、停要夠慢才換（不然速度在門檻附近會一直閃）
     const along = (p.vx * Math.sin(p.face) + p.vz * Math.cos(p.face)) / sp;   // 1＝往臉的方向走、-1＝往後退、0＝橫移
     want = along < (p.foot === 'back' ? -0.3 : -0.5) ? 'back' : Math.abs(along) < (p.foot === 'guard' ? 0.75 : 0.6) ? 'guard' : null;
-  } else if (S.phase === 'play' && !busy(p) && p.y <= 0 && p.stun <= 0 && B.mode === 'held' && B.owner.team !== p.team && dist2(p, B.owner) < 2.4 && !p.base && OWN[p.key]?.dstance) {
+  } else if (p.guard && S.phase === 'play' && !busy(p) && p.y <= 0 && p.stun <= 0 && B.mode === 'held' && B.owner.team !== p.team && dist2(p, B.owner) < 2.4 && !p.base && OWN[p.key]?.dstance) {
     want = 'dstance';   // 站著防守（v0.12）：彎腰前傾、雙手張開放低、腳下輕彈，不再只有手臂打開
   }
   if (want === p.foot) return;
@@ -1827,7 +1828,16 @@ function updatePlayers(dt, t) {
     const sa = a.act && (a.act.type === 'jdunk' || a.act.type === 'alley' || a.act.type === 'lay'), sb = b.act && (b.act.type === 'jdunk' || b.act.type === 'alley' || b.act.type === 'lay');
     if (sa || sb || a.bench || b.bench || Math.abs(a.y - b.y) > 0.8) continue;
     const dx = b.x - a.x, dz = b.z - a.z, d = Math.hypot(dx, dz), m = 0.62;
-    if (d < m && d > 1e-4) { const push = (m - d) / 2; a.x -= dx / d * push; a.z -= dz / d * push; b.x += dx / d * push; b.z += dz / d * push; }
+    // 按住防守的人像一道牆：對手撞上來推不動他，整個推回去、往他身上的速度也吃掉，穿不過去（v0.12.2）
+    const gw = a.guard ? a : b, gm = gw === a ? b : a;   // 被晃倒、暈眩的防守者不算牆；進攻方用招式（閃身、轉身、衝刺…）時可以穿過去
+    const wall = a.team !== b.team && a.guard !== b.guard && gw.y <= 0.2 && gw.stun <= 0 && !busy(gm) ? gw : null;
+    if (d < m && d > 1e-4) {
+      if (wall) {
+        const mv = wall === a ? b : a, sx = (mv.x - wall.x) / d, sz = (mv.z - wall.z) / d, push = m - d;
+        mv.x += sx * push; mv.z += sz * push;
+        const into = -(mv.vx * sx + mv.vz * sz); if (into > 0) { mv.vx += sx * into; mv.vz += sz * into; }
+      } else { const push = (m - d) / 2; a.x -= dx / d * push; a.z -= dz / d * push; b.x += dx / d * push; b.z += dz / d * push; }
+    }
     if (d < m + 0.1 && a.team !== b.team) for (const h of [a, b]) if (holding(h)) { h.vx *= Math.exp(-dt * 5); h.vz *= Math.exp(-dt * 5); }   // 被防守者擋住：持球切入變慢
     // 卡位：卡位的人把對手往籃框外面推，力氣大的推得動
     if (d < 1.1 && a.team !== b.team) for (const [x, y] of [[a, b], [b, a]]) if (x.boxing && x.y <= 0.2) {
@@ -1898,8 +1908,8 @@ function overTarget(p) {
   }
   if (p.cheer > 0) return 'hop';
   if (holding(p)) return null;
-  // 防守：貼近持球者時壓低重心、張開雙手
-  if (B.mode === 'held' && B.owner.team !== p.team && dist2(p, B.owner) < 2.2) return 'guard';
+  // 防守：按住防守鍵（電腦是貼身盯人時，p.guard）才壓低重心、張開雙手（v0.12.2 之前只要靠近就張手，看起來像一直張著）
+  if (p.guard && B.mode === 'held' && B.owner.team !== p.team) return 'guard';
   return null;
 }
 function armTarget(p, t) {   // 程式擺的手臂只抬到約 90°，再高會把腋下皮膚拉長
@@ -2434,16 +2444,42 @@ soundIcon();
 
 function buildSelect() {
   // 選角卡：真人風全身照（art/<人>_card.webp，tools/gen_real.sh 的 card_* 姿勢，每個人不一樣）＋位置標籤
-  $('grid').innerHTML = ROSTER.map(k => { const c = CHARS[k], [job, pos] = c.role.split('・'); return `<div class="ch" data-k="${k}" style="--cc:${c.color}"><span class="badge"></span><div class="pic"><span class="pos">${pos || job}</span><img src="art/${k}_card.webp?v=0.12.1" alt="${c.name}" onerror="this.src='${FACE[k]}'"></div><div class="info"><div class="nm">${c.name}<small>${pos ? job : ''}</small></div><span class="spn">${c.sp.name}</span><span class="skn">${c.skill.name}</span><div class="d">${c.sp.desc}</div><div class="st">${c.stat}</div></div></div>`; }).join('');
+  $('grid').innerHTML = ROSTER.map(k => { const c = CHARS[k], [job, pos] = c.role.split('・'); return `<div class="ch" data-k="${k}" style="--cc:${c.color}"><span class="badge"></span><div class="pic"><span class="pos">${pos || job}</span><img src="art/${k}_card.webp?v=0.12.2" alt="${c.name}" onerror="this.src='${FACE[k]}'"></div><div class="info"><div class="nm">${c.name}<small>${pos ? job : ''}</small></div><span class="spn">${c.sp.name}</span><span class="skn">${c.skill.name}</span><div class="d">${c.sp.desc}</div><div class="st">${c.stat}</div></div></div>`; }).join('');
   for (const el of $('grid').children) el.onclick = () => {
     fx.audioInit(); fx.sfx.click();
     const k = el.dataset.k, i = S.sel.indexOf(k);
     if (i >= 0) S.sel.splice(i, 1); else { if (S.sel.length >= S.size) S.sel.shift(); S.sel.push(k); }
-    refreshSelect();
+    scoutTo(k, true); refreshSelect();
   };
+  // 滑鼠滑過卡片就先看那個人的能力，離開清單回到最後點的人
+  for (const el of $('grid').children) el.onpointerenter = e => { if (e.pointerType === 'mouse') scoutTo(el.dataset.k); };
+  $('grid').onpointerleave = e => { if (e.pointerType === 'mouse') scoutTo(S.scout); };
   $('titleFaces').innerHTML = ROSTER.map(k => `<img src="${FACE[k]}" alt="">`).join('');
 }
+// 選角的能力雷達圖：顯示最後點的人（還沒點過就是第一個）；橫式手機是點了才跳出來幾秒
+const radar = makeRadar($('radar'));
+let scoutKey = null, scoutTimer = 0;
+function scoutTo(k, tapped) {
+  if (!k) return;
+  if (tapped) {
+    S.scout = k;
+    if (matchMedia('(orientation: landscape) and (max-height: 560px)').matches) {
+      $('scout').classList.add('pop'); clearTimeout(scoutTimer); scoutTimer = setTimeout(() => $('scout').classList.remove('pop'), 3500);
+    }
+  }
+  if (k !== scoutKey) {
+    scoutKey = k; const c = CHARS[k], [job, pos] = c.role.split('・'), ax = axesOf(k);
+    const best = ax.filter(([, v]) => v >= 90).map(([l]) => l);
+    const top = best.length ? best : ax.slice().sort((a, b) => b[1] - a[1]).slice(0, 2).map(([l]) => l);
+    $('scName').textContent = c.name; $('scPos').textContent = pos || job;
+    $('scBest').innerHTML = '強項 ' + top.map(l => `<i>${l}</i>`).join('、');
+    $('radar').setAttribute('aria-label', c.name + '能力：' + ax.map(([l, v]) => l + v).join('、'));
+  }
+  radar.show(k);
+}
+S.scout = ROSTER[0];
 function refreshSelect() {
+  scoutTo(S.scout);
   for (const el of $('grid').children) {
     const i = S.sel.indexOf(el.dataset.k);
     el.classList.toggle('sel', i >= 0); el.querySelector('.badge').textContent = i === 0 ? '▼ 你（整場操作）' : '隊友（電腦）';
