@@ -18,7 +18,10 @@ export async function loadKind(url, clipUrl = null) {
   const base = new THREE.Group(); base.add(g.scene);
   g.scene.scale.multiplyScalar(s);
   g.scene.position.set(-(box.min.x + size.x / 2) * s, -box.min.y * s, -(box.min.z + size.z / 2) * s);
-  const clip = clipUrl ? await loadOwnClip(clipUrl) : g.animations[0] || null;
+  // clipUrl：自己的動作檔，v0.12 起裡面有 walk（走路）和 idle（等待時的呼吸、站姿）兩段
+  const own = clipUrl ? await loadPack(clipUrl) : null;
+  const clip = own ? (own.walk || Object.values(own)[0]) : g.animations[0] || null;
+  const idle = own?.idle || null;
   // 記下站姿（綁骨架時的 A 字站姿），量完步伐要還原；停下來時動畫權重降到 0 就會回到這個站姿
   const rest = [];
   base.traverse(o => { if (o.isBone) rest.push([o, o.position.clone(), o.quaternion.clone(), o.scale.clone()]); });
@@ -26,7 +29,7 @@ export async function loadKind(url, clipUrl = null) {
   const lean = clip ? measureLean(base, clip) : 0;
   const headPitch = clip ? fixHead(base, clip) : 0;
   for (const [b, p, q, sc] of rest) { b.position.copy(p); b.quaternion.copy(q); b.scale.copy(sc); }
-  return { base, clip, natural, lean, headPitch, rest };
+  return { base, clip, idle, natural, lean, headPitch, rest };
 }
 
 // 動畫平均往前傾幾度（臀部→頭）。成人跑步動作套在大頭 Q 版身上會像在鞠躬，要用 leanFix 扶正
@@ -164,7 +167,10 @@ export function makeActor(kind, scale = 1, { lite = false } = {}) {
   const mixer = new THREE.AnimationMixer(model);
   const action = kind.clip ? mixer.clipAction(kind.clip).play() : null;
   if (action) action.setEffectiveWeight(0);
-  return { root, model, mixer, action, natural: kind.natural, speed: 0, w: 0, phase: Math.random() * 6 };
+  // 等待動作（呼吸、膝蓋微彎）：停下來時取代綁骨時的 A 字站姿；每個人從不同時間開始，才不會一起呼吸
+  const idle = kind.idle ? mixer.clipAction(kind.idle).play() : null;
+  if (idle) { idle.time = Math.random() * kind.idle.duration; idle.timeScale = 0.9 + Math.random() * 0.2; }
+  return { root, model, mixer, action, idle, natural: kind.natural, speed: 0, w: 0, phase: Math.random() * 6 };
 }
 
 // 走路權重平滑切換：走＝播放走路，停＝回到站姿並輕輕呼吸
@@ -188,8 +194,9 @@ export function updateActor(a, dt, t) {
     if (a.jog) a.jog.setEffectiveWeight(a.jog.getEffectiveWeight() * (1 - a.sigW));
     if (!a.sigOn && a.sigW < 0.01) { a.sig.stop(); a.sig = null; a.sigW = 0; }
   }
+  if (a.idle) a.idle.setEffectiveWeight((1 - a.w) * (1 - (a.sigW ?? 0)));
   a.mixer.update(dt);
-  a.model.scale.y = 1 + (1 - a.w) * 0.015 * Math.sin(t * 3 + a.phase);
+  if (!a.idle) a.model.scale.y = 1 + (1 - a.w) * 0.015 * Math.sin(t * 3 + a.phase);   // 沒有等待動作的（觀眾、隱藏角色）才用縮放假裝呼吸
 }
 
 // 朝目標走一步；到了回傳 true

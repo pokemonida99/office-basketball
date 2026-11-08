@@ -328,7 +328,23 @@ def build(key, file):
         keys = []
         for i in range(31):
             ph = i / 30; s1 = math.sin(2 * math.pi * ph); la, ra = max(0, s1), max(0, -s1)
-            keys.append((i / 30, dict(lean=20, headPitch=-14, hipUp=-8 - 0.7 * abs(s1), hipLeft=1.8 * s1, arms=GUARD_UP, ikL=(13 + 1.5 * s1, 2, 10 * la, 2.5 * la), ikR=(-13 + 1.5 * s1, 2, 10 * ra, 2.5 * ra))))
+            keys.append((i / 30, dict(hipPitch=18, lean=18, headPitch=-30, hipFwd=-2.5, hipUp=-10.5 - 0.7 * abs(s1), hipLeft=1.8 * s1, arms=GUARD_UP, ikL=(13 + 1.5 * s1, 2, 10 * la, 2.5 * la), ikR=(-13 + 1.5 * s1, 2, 10 * ra, 2.5 * ra))))
+        return full(keys)
+    def idle():   # 等待（v0.12，參考灌籃高手手遊）：膝蓋微彎、身體微前傾，胸口和肩膀隨呼吸起伏、重心左右輕晃（循環 2.4 秒）
+        keys = []
+        for i in range(37):
+            ph = i / 36; b = math.sin(2 * math.pi * ph); sw = math.sin(2 * math.pi * ph + 1.2)
+            arms = ((0.4, 0.22, -0.89), (0.25, 0.55, -0.8), (-0.4, 0.22, -0.89), (-0.25, 0.55, -0.8))
+            keys.append((ph * 2.4, dict(lean=7 - 1.5 * b, headPitch=-4 + 1.2 * b, twist=2.5 * sw, hipYaw=-1.5 * sw, hipUp=-2.6 + 0.45 * b, hipLeft=0.5 * sw,
+                                        shrugL=2.5 + 2.5 * b, shrugR=2.5 + 2.5 * b, arms=arms, ikL=(8.5, 0.8), ikR=(-8.5, -0.8))))
+        return full(keys)
+    def dstance():   # 防守站姿（v0.12）：雙腳張開、膝蓋深蹲、上身前壓、雙手張開放低在身體前側、頭抬起來看人，腳下輕輕彈（循環 0.8 秒）
+        keys = []
+        for i in range(25):
+            ph = i / 24; b = math.sin(4 * math.pi * ph); s1 = math.sin(2 * math.pi * ph)
+            arms = ((0.92, 0.2 + 0.05 * s1, -0.32), (0.75, 0.55, 0.05 + 0.06 * s1), (-0.92, 0.2 - 0.05 * s1, -0.32), (-0.75, 0.55, 0.05 - 0.06 * s1))
+            keys.append((ph * 0.8, dict(hipPitch=26, lean=18, headPitch=-38, hipFwd=-3.5, hipUp=-11 + 0.7 * b, hipLeft=0.6 * s1, shrugL=6, shrugR=6, arms=arms,
+                                        ikL=(15, 1.5, 6, 0.4 + 0.4 * max(0, b)), ikR=(-15, 1.5, 6, 0.4 + 0.4 * max(0, -b)))))
         return full(keys)
     def back():   # 後退步：張手往後踩（循環）
         a_, stance_, lift_ = 6.0, 0.6, 3.0
@@ -400,13 +416,13 @@ def build(key, file):
         if g is GAITS['sprint']: o['lean'] += 7; o['amp'] += 8
         return o
     plan = {n: styled(g) for n, g in GAITS.items()}
-    if key != 'needle': plan['shot'] = plan['pass'] = plan['fade'] = None
+    if key != 'needle': plan['shot'] = plan['pass'] = plan['fade'] = plan['idle'] = plan['dstance'] = None
     if key not in ('needle', 'jie'): plan.update(lay=None, dunk=None, block=None, rebound=None, reach=None, stop=None, guard=None, back=None, stumble=None, knock=None, flop=None)
     if key in POWER: plan['push'] = None
     for name, g in plan.items():
         act = bpy.data.actions.new(f'{key}_{name}')
         arm.animation_data.action = act
-        n, stance = gait(g) if g else {'shot': shot, 'fade': fade, 'push': push, 'lay': lay, 'pass': pass_, 'dunk': dunk, 'block': block, 'rebound': rebound, 'reach': reach, 'stop': stop_, 'guard': guard, 'back': back, 'stumble': stumble, 'knock': knock, 'flop': flop}[name]()
+        n, stance = gait(g) if g else {'shot': shot, 'fade': fade, 'idle': idle, 'dstance': dstance, 'push': push, 'lay': lay, 'pass': pass_, 'dunk': dunk, 'block': block, 'rebound': rebound, 'reach': reach, 'stop': stop_, 'guard': guard, 'back': back, 'stumble': stumble, 'knock': knock, 'flop': flop}[name]()
         scene.frame_start, scene.frame_end = 0, n
         bpy.ops.object.mode_set(mode='OBJECT')
         bpy.ops.object.select_all(action='DESELECT'); arm.select_set(True); bpy.context.view_layer.objects.active = arm

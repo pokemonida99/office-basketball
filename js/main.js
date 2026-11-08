@@ -915,6 +915,8 @@ function updateFootwork(p) {
   if (S.phase === 'play' && !busy(p) && p.y <= 0 && p.stun <= 0 && B.mode === 'held' && B.owner.team !== p.team && dist2(p, B.owner) < 3.2 && sp > (p.foot ? 0.25 : 0.5)) {   // 開始要夠快、停要夠慢才換（不然速度在門檻附近會一直閃）
     const along = (p.vx * Math.sin(p.face) + p.vz * Math.cos(p.face)) / sp;   // 1＝往臉的方向走、-1＝往後退、0＝橫移
     want = along < (p.foot === 'back' ? -0.3 : -0.5) ? 'back' : Math.abs(along) < (p.foot === 'guard' ? 0.75 : 0.6) ? 'guard' : null;
+  } else if (S.phase === 'play' && !busy(p) && p.y <= 0 && p.stun <= 0 && B.mode === 'held' && B.owner.team !== p.team && dist2(p, B.owner) < 2.4 && !p.base && OWN[p.key]?.dstance) {
+    want = 'dstance';   // 站著防守（v0.12）：彎腰前傾、雙手張開放低、腳下輕彈，不再只有手臂打開
   }
   if (want === p.foot) return;
   if (p.foot && playingMove(p, p.foot)) stopSig(p);

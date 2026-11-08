@@ -41,31 +41,32 @@ def pack(sources, out):
         f.write(struct.pack('<III', 0x46546C67, 2, 28 + len(js) + len(buf)) + struct.pack('<I', len(js)) + b'JSON' + js + struct.pack('<I', len(buf)) + b'BIN\0' + bytes(buf))
     return os.path.getsize(out)
 
-run, jie, sig, out = sys.argv[1:5]
-os.makedirs(out, exist_ok=True)
-chars = {}
-for p in glob.glob(os.path.join(run, '*.glb')):
-    k, m = os.path.basename(p)[:-4].split('_', 1)
-    chars.setdefault(k, {})[m] = p
-# 第二個資料夾：舊版是阿傑一個人的動作（work/jie/*.glb）；v0.12 起是每個人一個子資料夾（work/own/角色/*.glb，jie_moves.py 產生）
-# 阿傑用自己的全部動作；其他人只多拿 hop（歡呼）、shoot（投籃舉手），其餘照 runs.py（照腿長換算）。walk 另外放 models/moves/角色/walk.glb
-OWN_EXTRA = ('hop', 'shoot')
-subdirs = [d for d in glob.glob(os.path.join(jie, '*')) if os.path.isdir(d)]
-if subdirs:
-    for d in subdirs:
-        k = os.path.basename(d)
-        if k not in chars: continue
-        for p in glob.glob(os.path.join(d, '*.glb')):
+if __name__ == '__main__':
+    run, jie, sig, out = sys.argv[1:5]
+    os.makedirs(out, exist_ok=True)
+    chars = {}
+    for p in glob.glob(os.path.join(run, '*.glb')):
+        k, m = os.path.basename(p)[:-4].split('_', 1)
+        chars.setdefault(k, {})[m] = p
+    # 第二個資料夾：舊版是阿傑一個人的動作（work/jie/*.glb）；v0.12 起是每個人一個子資料夾（work/own/角色/*.glb，jie_moves.py 產生）
+    # 阿傑用自己的全部動作；其他人只多拿 hop（歡呼）、shoot（投籃舉手），其餘照 runs.py（照腿長換算）。walk 另外放 models/moves/角色/walk.glb
+    OWN_EXTRA = ('hop', 'shoot')
+    subdirs = [d for d in glob.glob(os.path.join(jie, '*')) if os.path.isdir(d)]
+    if subdirs:
+        for d in subdirs:
+            k = os.path.basename(d)
+            if k not in chars: continue
+            for p in glob.glob(os.path.join(d, '*.glb')):
+                m = os.path.basename(p)[:-4]
+                if m != 'walk' and (k == 'jie' or m in OWN_EXTRA): chars[k][m] = p
+    else:
+        for p in glob.glob(os.path.join(jie, '*.glb')):
             m = os.path.basename(p)[:-4]
-            if m != 'walk' and (k == 'jie' or m in OWN_EXTRA): chars[k][m] = p
-else:
-    for p in glob.glob(os.path.join(jie, '*.glb')):
-        m = os.path.basename(p)[:-4]
-        if m != 'walk': chars['jie'][m] = p
-total = 0
-for k, src in sorted(chars.items()):
-    s = os.path.join(sig, k + '.glb')
-    if os.path.exists(s): src['sig'] = s
-    size = pack(src, os.path.join(out, k + '.glb')); total += size
-    print(k, len(src), '段', size // 1024, 'KB')
-print('總共', total // 1024, 'KB')
+            if m != 'walk': chars['jie'][m] = p
+    total = 0
+    for k, src in sorted(chars.items()):
+        s = os.path.join(sig, k + '.glb')
+        if os.path.exists(s): src['sig'] = s
+        size = pack(src, os.path.join(out, k + '.glb')); total += size
+        print(k, len(src), '段', size // 1024, 'KB')
+    print('總共', total // 1024, 'KB')
