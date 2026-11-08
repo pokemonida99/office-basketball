@@ -4,7 +4,7 @@
 # 跑和走的差別是「兩腳同時離地」：踩地時間只佔一圈的兩成多，中間整個人騰空；踢腿時腳跟帶到屁股、膝蓋往前帶，上身前傾、手肘彎著擺。
 # Q 版腿短，遊戲每秒要跑 3 個身高，所以踩地要很快：踩地時間＝步幅 ÷ 速度，一圈時間照腿長調，腿短的人步頻高一點。
 # 有背身強打、強力突破技能的人另外輸出 角色_push.glb：共用的 push 蹲得太低，只取骨頭轉動後整個人會縮成一團（阿傑的在 jie_moves.py）。
-# 每個人都有 角色_shot.glb：完整的跳投，遊戲在 0.30 秒（舉到頭上）停住等出手，出手後才接著播（時間在 js/main.js 的 SHOT_SET）。
+# 每個人都有 角色_fade.glb：後仰跳投（v0.12），和 角色_shot.glb：完整的跳投，遊戲在 0.30 秒（舉到頭上）停住等出手，出手後才接著播（時間在 js/main.js 的 SHOT_SET）。
 # 每個人也有 角色_lay.glb（上籃，阿傑的在 jie_moves.py）和 角色_pass.glb（傳球，遊戲只取上半身，邊跑邊傳腳不會停）。
 # 還有 角色_dunk／block／rebound／reach／stop／guard／back／stumble／knock／flop.glb：姿勢和 jie_moves.py 的阿傑一樣，長度照腿長換算（阿傑的在 models/moves/jie/）。
 # 匯出後要瘦身、打包：python3 tools/slim_clips.py work/run work/jie；python3 tools/pack_clips.py work/run work/jie models/sig models/moves/pack
@@ -14,11 +14,13 @@ from mathutils import Matrix, Vector, Quaternion
 
 argv = sys.argv[sys.argv.index('--') + 1:]
 MODEL_DIR, OUT_DIR = argv[:2]
-PREVIEW = argv[2] if len(argv) > 2 else None
+PREVIEW = argv[2] if len(argv) > 2 and argv[2] != '-' else None
 FPS = 60
 # 只做選角名單上的人和針筒超人；藏起來的角色遊戲不載入，要重新開放時把他們加回來（模型：yan_walk、heilun_walk、glasses_walk、bob_walk、cap_walk、det_walk）
-MODELS = {'kui': 'kui_walk2', 'jie': 'jie_walk', 'mi': 'mi_walk', 'vivi': 'vivi_walk', 'kevin': 'kevin_walk', 'lin': 'lin_walk', 'yuan': 'yuan_walk', 'hu': 'hu_walk',
-          'tu': 'tu_walk', 'zhang': 'zhang_walk', 'bian': 'bian_walk', 'needle': 'needle_walk'}
+# v0.12 起選角名單上的人換成新模型（角色_v2：GPT A 字三視圖 → Tripo → Higgsfield 綁骨 → tools/v2_models.sh，手臂和身體分開）
+MODELS = {k: k + '_v2' for k in ('kui', 'jie', 'mi', 'vivi', 'kevin', 'lin', 'yuan', 'hu', 'tu', 'zhang', 'bian')}
+MODELS['needle'] = 'needle_walk'
+if len(argv) > 3 and argv[3] != '-': MODELS = {k: MODELS[k] for k in argv[3].split(',')}   # 只做指定的人
 # speed 每秒幾個身高（遊戲的基本跑速約 3）、T 腿長 0.33 身高的人跑一圈幾秒、lean 上身前傾、amp 手臂擺幅、bend 手肘彎度
 # bob 上下彈的幅度、out 手臂離身體多開（都可以被 STYLE 蓋掉）
 GAITS = {'run': dict(speed=3.0, T=0.55, lean=11, amp=46, bend=85, lift=0.62, bob=0.05, out=0.35),
@@ -365,6 +367,31 @@ def build(key, file):
         (1.50, dict(lean=4, arms=RELAX, **stand(8, 0, 0, 1)))], floor=True)
 
     arm.animation_data_create()
+    def fade():
+        # 後仰跳投：姿勢跟跳投一樣在 0.30 秒舉到頭上（對齊 main.js 的 SHOT_SET），但上身往後仰、左腳往前抬、頭抬起來看籃框
+        k = L / 25.2
+        CHEST = ((0.45, 0.8, -0.2), (-0.5, 0.65, 0.55), (-0.45, 0.8, -0.2), (0.5, 0.65, 0.55))
+        RISE = ((0.6, 0.65, 0.2), (-0.1, 0.7, 0.7), (-0.6, 0.55, 0.45), (0.1, 0.4, 0.9))
+        SET = ((0.72, 0.55, 0.4), (0.2, 0.65, 0.75), (-0.72, 0.2, 0.68), (-0.4, 0.2, 0.9))
+        FLICK = ((0.72, 0.5, 0.35), (0.5, 0.55, 0.68), (-0.5, 0.3, 0.85), (-0.2, 0.5, 0.85))
+        FOLLOW = ((0.75, 0.35, 0.0), (0.5, 0.6, -0.1), (-0.5, 0.3, 0.82), (-0.2, 0.55, 0.8))
+        # 秒、後仰（負＝往後）、抬頭、右肩抬、手、左腳往前、左腳抬高、右腳往後、腳尖往下
+        KEYS = [(0.00, 6, 0, 0, CHEST, 1, 0, -1, 0), (0.14, -12, 8, 10, RISE, 5, 6, -4, 18), (0.30, -26, 16, 20, SET, 10, 11, -5, 26),
+                (0.38, -28, 17, 24, FLICK, 11, 12, -5, 28), (0.62, -16, 10, 14, FOLLOW, 6, 5, -4, 14)]
+        for t, lean, head, shrug, dirs, lf, ll, rb, pitch in KEYS:
+            frame = round(t * FPS)
+            reset()
+            rotate_world('Hips', Quaternion((1, 0, 0), math.radians(lean * 0.35)))   # 骨盆也一起往後倒，後仰才看得出來
+            for b, share in zip(SPINE, (0.3, 0.25, 0.2, 0.1, 0.05)): rotate_world(b, Quaternion((1, 0, 0), math.radians(lean * share)))
+            rotate_world('Head', Quaternion((1, 0, 0), math.radians(-head)))
+            if shrug: rotate_world('RightShoulder', Quaternion((0, 1, 0), math.radians(shrug)))
+            for name, d in zip(ARMS, dirs): aimv(name, D(*d))
+            bpy.context.view_layer.update()
+            leg_ik('Left', (WIDE, (2.5 + lf) * k, ANK + ll * k), pitch); leg_ik('Right', (-WIDE, (-2 + rb) * k, ANK + 3 * k), pitch)
+            for b in ALL: PB[b].keyframe_insert('rotation_quaternion', frame=frame, group=b)
+            PB['Hips'].keyframe_insert('location', frame=frame, group='Hips')
+        return round(0.65 * FPS), 0
+
     os.makedirs(OUT_DIR, exist_ok=True)
     style = STYLE.get(key, {})
     def styled(g):
@@ -373,13 +400,13 @@ def build(key, file):
         if g is GAITS['sprint']: o['lean'] += 7; o['amp'] += 8
         return o
     plan = {n: styled(g) for n, g in GAITS.items()}
-    if key != 'needle': plan['shot'] = plan['pass'] = None
+    if key != 'needle': plan['shot'] = plan['pass'] = plan['fade'] = None
     if key not in ('needle', 'jie'): plan.update(lay=None, dunk=None, block=None, rebound=None, reach=None, stop=None, guard=None, back=None, stumble=None, knock=None, flop=None)
     if key in POWER: plan['push'] = None
     for name, g in plan.items():
         act = bpy.data.actions.new(f'{key}_{name}')
         arm.animation_data.action = act
-        n, stance = gait(g) if g else {'shot': shot, 'push': push, 'lay': lay, 'pass': pass_, 'dunk': dunk, 'block': block, 'rebound': rebound, 'reach': reach, 'stop': stop_, 'guard': guard, 'back': back, 'stumble': stumble, 'knock': knock, 'flop': flop}[name]()
+        n, stance = gait(g) if g else {'shot': shot, 'fade': fade, 'push': push, 'lay': lay, 'pass': pass_, 'dunk': dunk, 'block': block, 'rebound': rebound, 'reach': reach, 'stop': stop_, 'guard': guard, 'back': back, 'stumble': stumble, 'knock': knock, 'flop': flop}[name]()
         scene.frame_start, scene.frame_end = 0, n
         bpy.ops.object.mode_set(mode='OBJECT')
         bpy.ops.object.select_all(action='DESELECT'); arm.select_set(True); bpy.context.view_layer.objects.active = arm

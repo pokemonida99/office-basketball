@@ -1,14 +1,14 @@
 // 上班啟示錄：下班先鬥牛 2v2 —— 頂樓半場籃球。玩家挑兩個同事，電腦控制隊友和對手；每個人都有自己的大招
 import * as THREE from 'three';
-import { scene, render, updateCamera, cam, camera, CAMS, camMode, labelSprite, V, quality, setQuality, setQualityPref, canvasTex, FONT, sphere, mat, rbox } from './world.js?v=0.11.0';
-import { loadOwnClip, loadPack, runOf, dunkFit, loadKind, loadClip, makeActor, addJog, updateActor, turnTo } from './assets.js?v=0.11.0';
-import * as fx from './fx.js?v=0.11.0';
-import { openCinema, playClip, cineOpen, clipOf, clipName, cineTest } from './cinema.js?v=0.11.0';
-import { buildCourt, setCourt, animateCourt, swishNet, C, COURT, HOOP, ARC_R, CORNER_X, TOP, WALL, isThree, hoopDist } from './court.js?v=0.11.0';
-import { music, musicStart, musicStop, musicTick, musicTheme, musicPause } from './music.js?v=0.11.0';
-import { openOP, replayOP, seekOP } from './op.js?v=0.11.0';
+import { scene, render, updateCamera, cam, camera, CAMS, camMode, labelSprite, V, quality, setQuality, setQualityPref, canvasTex, FONT, sphere, mat, rbox } from './world.js?v=0.12.0';
+import { loadOwnClip, loadPack, runOf, dunkFit, loadKind, loadClip, makeActor, addJog, updateActor, turnTo } from './assets.js?v=0.12.0';
+import * as fx from './fx.js?v=0.12.0';
+import { openCinema, playClip, cineOpen, clipOf, clipName, cineTest } from './cinema.js?v=0.12.0';
+import { buildCourt, setCourt, animateCourt, swishNet, C, COURT, HOOP, ARC_R, CORNER_X, TOP, WALL, isThree, hoopDist } from './court.js?v=0.12.0';
+import { music, musicStart, musicStop, musicTick, musicTheme, musicPause } from './music.js?v=0.12.0';
+import { openOP, replayOP, seekOP } from './op.js?v=0.12.0';
 
-const VERSION = '0.11.0';
+const VERSION = '0.12.0';
 document.querySelectorAll('#ver, .verTag').forEach(el => { el.textContent = 'v' + VERSION; });
 
 // ---------- 數值（調手感只改這裡） ----------
@@ -28,19 +28,19 @@ const CFG = {
 
 // ---------- 角色 ----------
 const CHARS = {
-  kui: { name: '小葵', role: '新人實習生・後衛', skill: { name: '快步切入', kind: 'dash' }, model: 'kui_walk2', color: '#ff9f43', spd: 1.16, sht: 0.98, stl: 1.3, blk: 0.85, str: 0.85,
+  kui: { name: '小葵', role: '新人實習生・後衛', skill: { name: '快步切入', kind: 'dash' }, model: 'kui_v2', color: '#ff9f43', spd: 1.16, sht: 0.98, stl: 1.3, blk: 0.85, str: 0.85,
     stat: '速度 ★★★★★　抄截 ★★★★★', quote: '我會努力的！☕',
     sp: { name: '咖啡衝刺', desc: '全隊 6 秒加速，傳球秒到不會被抄、抄截變強', need: false } },
-  jie: { name: '阿傑', role: '資深設計師・中鋒', skill: { name: '背身強打', kind: 'power' }, model: 'jie_walk', color: '#8e5cf0', spd: 0.95, sht: 1.0, stl: 0.9, blk: 1.35, str: 1.5, reb: 1.45, reach: 1.3, inside: 1.25, three: 0.6, dunk: 0.85,
+  jie: { name: '阿傑', role: '資深設計師・中鋒', skill: { name: '背身強打', kind: 'power' }, model: 'jie_v2', color: '#8e5cf0', spd: 0.95, sht: 1.0, stl: 0.9, blk: 1.35, str: 1.5, reb: 1.45, reach: 1.3, inside: 1.25, three: 0.6, dunk: 0.85,
     stat: '籃下 ★★★★★　籃板 ★★★★★', quote: '這稿我一次就過。',
     sp: { name: '設計稿灌籃', desc: '從哪裡起跳都必進的飛天灌籃，三分線外起跳算 3 分', need: true } },
-  mi: { name: '小米', role: '總機客服・射手', skill: { name: '換手運球', kind: 'dodge' }, model: 'mi_walk', color: '#b46bff', spd: 1.02, sht: 1.0, stl: 1.05, blk: 0.85, three: 1.5,
+  mi: { name: '小米', role: '總機客服・射手', skill: { name: '換手運球', kind: 'dodge' }, model: 'mi_v2', color: '#b46bff', spd: 1.02, sht: 1.0, stl: 1.05, blk: 0.85, three: 1.5,
     stat: '三分 ★★★★★　速度 ★★★★', quote: '您好，這裡是總機～📞',
     sp: { name: '總機干擾', desc: '對手電話狂響暈 3 秒，趁空檔輕鬆出手', need: false } },
-  vivi: { name: 'Vivi', role: '老闆・顏值擔當', skill: { name: '轉身過人', kind: 'spin' }, model: 'vivi_walk', color: '#ff4fa0', spd: 0.92, sht: 0.92, stl: 0.9, blk: 0.8, h: 1.02, pretty: true,
+  vivi: { name: 'Vivi', role: '老闆・顏值擔當', skill: { name: '轉身過人', kind: 'spin' }, model: 'vivi_v2', color: '#ff4fa0', spd: 0.92, sht: 0.92, stl: 0.9, blk: 0.8, h: 1.02, pretty: true,
     stat: '顏值 ★★★★★　大招 ★★★★★', quote: '辛苦了！（沒有加薪）',
     sp: { name: '老闆說了算', desc: '籃框變超大金框 8 秒，下一球不管哪裡投都算 3 分', need: false } },
-  kevin: { name: 'Kevin', role: '特助・干擾', skill: { name: '後撤步', kind: 'stepback' }, model: 'kevin_walk', color: '#3f7fd9', spd: 1.0, sht: 1.0, stl: 0.95, blk: 1.0, nag: true,
+  kevin: { name: 'Kevin', role: '特助・干擾', skill: { name: '後撤步', kind: 'stepback' }, model: 'kevin_v2', color: '#3f7fd9', spd: 1.0, sht: 1.0, stl: 0.95, blk: 1.0, nag: true,
     stat: '碎念干擾 ★★★★★　投籃 ★★★', quote: '這個用 AI 就好了。',
     sp: { name: '用 AI 就好', desc: 'AI 鎖定籃框，站在哪裡投都必進', need: true } },
   yan: { name: '小燕', role: 'PM', skill: { name: '換手運球', kind: 'dodge' }, model: 'yan_walk', color: '#36b37e', spd: 1.04, sht: 1.0, stl: 1.0, blk: 0.9,
@@ -63,23 +63,23 @@ const CHARS = {
     stat: '抄截 ★★★★★　速度 ★★★★', quote: '這張發票有問題。🔍',
     sp: { name: '現場稽核', desc: '衝去盤查守著持球隊友的防守者，對手愣住 2.5 秒', need: false } },
   // 香香籃球隊（使用者給的照片只當服裝參考，GPT 原創三視圖 → Tripo 3D）。str 力量（卡位、撞停）、reb 籃板範圍、reach 蓋帽距離
-  lin: { name: '林語彤', role: '香香籃球隊・後衛', skill: { name: '閃身步', kind: 'dodge', big: true }, model: 'lin_walk', color: '#1f8a5b', spd: 1.2, sht: 0.98, stl: 1.3, blk: 0.8, str: 0.8,
+  lin: { name: '林語彤', role: '香香籃球隊・後衛', skill: { name: '閃身步', kind: 'dodge', big: true }, model: 'lin_v2', color: '#1f8a5b', spd: 1.2, sht: 0.98, stl: 1.3, blk: 0.8, str: 0.8,
     stat: '速度 ★★★★★　抄截 ★★★★★', quote: '跟得上我再說。',
     sp: { name: '瞬影閃身', desc: '連續閃身過掉每一個防守者（對手全被晃倒），直接上籃得分', need: true } },
-  yuan: { name: '元小雨', role: '香香籃球隊・中鋒', skill: { name: '強力突破', kind: 'power' }, model: 'yuan_walk', color: '#283d8f', spd: 0.95, sht: 0.98, stl: 0.95, blk: 1.45, str: 1.6, reb: 1.6, reach: 1.45, inside: 1.25, three: 0.6, dunk: 0.85,
+  yuan: { name: '元小雨', role: '香香籃球隊・中鋒', skill: { name: '強力突破', kind: 'power' }, model: 'yuan_v2', color: '#283d8f', spd: 0.95, sht: 0.98, stl: 0.95, blk: 1.45, str: 1.6, reb: 1.6, reach: 1.45, inside: 1.25, three: 0.6, dunk: 0.85,
     stat: '籃板 ★★★★★　火鍋 ★★★★★', quote: '籃下是我的。',
     sp: { name: '禁區女王', desc: '8 秒內對手的投籃她都飛過去蓋掉，籃板球自動被她吸走', need: false } },
-  hu: { name: '胡姬', role: '香香籃球隊・射手', skill: { name: '多元進攻', kind: 'combo' }, model: 'hu_walk', color: '#e86aa6', spd: 1.04, sht: 1.04, stl: 1.0, blk: 0.9, str: 0.95, three: 1.45,
+  hu: { name: '胡姬', role: '香香籃球隊・射手', skill: { name: '多元進攻', kind: 'combo' }, model: 'hu_v2', color: '#e86aa6', spd: 1.04, sht: 1.04, stl: 1.0, blk: 0.9, str: 0.95, three: 1.45,
     stat: '三分 ★★★★★　招式 ★★★★★', quote: '想猜我出什麼招？',
     sp: { name: '千變萬化', desc: '假動作騙起所有防守者（全部跳起來落空），再來一記必進後仰跳投', need: true } },
   // 山頂國小隊（使用者給的照片只當服裝參考，GPT 原創三視圖 → Tripo 3D）
-  tu: { name: '兔兔老師', role: '山頂國小・後衛', skill: { name: '兔子跳步', kind: 'dodge' }, model: 'tu_walk', color: '#ff8fc0', spd: 1.14, sht: 1.0, stl: 1.25, blk: 0.85, str: 0.85, three: 1.1,
+  tu: { name: '兔兔老師', role: '山頂國小・後衛', skill: { name: '兔子跳步', kind: 'dodge' }, model: 'tu_v2', color: '#ff8fc0', spd: 1.14, sht: 1.0, stl: 1.25, blk: 0.85, str: 0.85, three: 1.1,
     stat: '速度 ★★★★★　抄截 ★★★★', quote: '同學們，看好囉～🐰',
     sp: { name: '彩蛋射籃', desc: '籃球變成彩色大彩蛋，從哪裡投都必進，三分線外算 3 分', need: true } },
-  zhang: { name: '校長', role: '山頂國小・校長', skill: { name: '朝會訓話', kind: 'power' }, model: 'zhang_walk', color: '#d6283b', spd: 0.95, sht: 0.98, stl: 0.95, blk: 1.05, str: 1.2,
+  zhang: { name: '校長', role: '山頂國小・校長', skill: { name: '朝會訓話', kind: 'power' }, model: 'zhang_v2', color: '#d6283b', spd: 0.95, sht: 0.98, stl: 0.95, blk: 1.05, str: 1.2,
     stat: '變身 ★★★★★　體力 ★', quote: '各位同學，校長說幾句話就好。',
     sp: { name: '針筒超人', desc: '變身 20 秒：能力全滿、跳起來必蓋、抄截飛過去、投籃必進；變回來虛弱 20 秒（走很慢、一抄就掉）', need: true } },
-  bian: { name: '小編', role: '山頂國小・前鋒', skill: { name: '後撤步', kind: 'stepback' }, model: 'bian_walk', color: '#a0703c', spd: 1.02, sht: 1.05, stl: 1.0, blk: 0.95, str: 1.0, three: 1.1,
+  bian: { name: '小編', role: '山頂國小・前鋒', skill: { name: '後撤步', kind: 'stepback' }, model: 'bian_v2', color: '#a0703c', spd: 1.02, sht: 1.05, stl: 1.0, blk: 0.95, str: 1.0, three: 1.1,
     stat: '投籃 ★★★★　衝刺 ★★★★★', quote: '五點了，我要下班。',
     sp: { name: '下班衝刺', desc: '打卡下班的速度衝到籃下，路上的人全撞飛，必進上籃', need: true } },
 };
@@ -104,17 +104,17 @@ const MOVE_WIN = { dodge: [0.1, 0.9], spin: [0.1, 1.1], stepback: [0.1, 1.0], pu
   guard: [0, 7.3], back: [0, 1.7], stop: [0.5, 1.2] };   // guard 防守滑步（馬步側跳整段循環）、back 後退步、stop 衝刺急停   // reach 抄截往前撲、sprint 持球衝刺、knock 被蓋倒、flop 撞人倒地
 // OWN：每個人自己的動作（Blender 做的，tools/blender/runs.py、jie_moves.py），開賽才載入上場的人（ensureChar）
 // 共用動作綁在小米身上、只取轉動；現在只有閃身、轉身、後撤步和變身的針筒超人在用
-// OVER_OWN：傳球，只取上半身。OVER_JIE：阿傑舉手、防守、歡呼也用自己的上半身動作
-const OVER_JIE = {}, JIE_OVER = { handsup: 'shoot', guard: 'guard', hop: 'hop' };
+// OVER_OWN：傳球，只取上半身。OVER_SELF：舉手、防守、歡呼也用自己的上半身動作（v0.12 起每個人都有，原本只有阿傑）
+const OVER_SELF = {}, SELF_OVER = { handsup: 'shoot', guard: 'guard', hop: 'hop' };
 const OWN = {}, OVER_OWN = {};
 const moveOf = (p, name) => (!p.base && OWN[p.key]?.[name]) || MOVES[name];
 const SHOT_SET = 0.3, winOf = (p, name) => { const c = moveOf(p, name); return c === MOVES[name] ? MOVE_WIN[name] : [0, c.duration]; };
 async function loadAll(progress) {
-  const JIE_CLIP = { jie: 'models/moves/jie/walk.glb' };
+  const OWN_WALK = Object.fromEntries(ROSTER.map(k => [k, `models/moves/${k}/walk.glb?v=${VERSION}`]));   // 每個人自己的 Blender 走路（jie_moves.py）
   const list = [...ROSTER.map(k => [k, CHARS[k].model]), ['npcM', 'npc_m_walk'], ['npcF', 'npc_f_walk'], ['caishen', 'caishen_sit'], ['needle', 'needle_walk']];
   let n = 0; const all = list.length + Object.keys(MOVE_WIN).length;
   await Promise.all([
-    ...list.map(async ([k, f]) => { K[k] = await loadKind(`models/${f}.glb`, JIE_CLIP[k]); progress(++n / all); }),
+    ...list.map(async ([k, f]) => { K[k] = await loadKind(`models/${f}.glb${OWN_WALK[k] ? '?v=' + VERSION : ''}`, OWN_WALK[k]); progress(++n / all); }),
     ...Object.keys(MOVE_WIN).map(async k => { try { MOVES[k] = await loadOwnClip(`models/moves/${k}.glb`); } catch (e) { console.warn('move', k, e); } progress(++n / all); }),
     ...Object.keys(OVER_WIN).filter(k => k !== 'pass').map(async k => { try { OVER[k] = prepOver(await loadClip(`models/moves/${k}.glb`)); } catch (e) { console.warn('over', k, e); } }),
   ]);
@@ -122,13 +122,13 @@ async function loadAll(progress) {
 // 開賽才下載上場的人的動作包。載不到也能玩：退回共用動作和走路
 const packs = {};
 function ensureChar(k) {
-  return packs[k] ??= loadPack(`models/moves/pack/${k}.glb?v=0.11.0`).then(c => {
+  return packs[k] ??= loadPack(`models/moves/pack/${k}.glb?v=0.12.0`).then(c => {
     K[k + 'Jog'] = runOf(K[k], c.run);
     if (!CHARS[k]) return;
     OWN[k] = c; SIG[k] = c.sig;
     if (c.pass) OVER_OWN[k] = prepOver(c.pass);
     if (c.dunk) K[k].dunkHand = dunkFit(K[k], c.dunk, DUNK.slam + 0.07);
-    if (k === 'jie') for (const o in JIE_OVER) if (c[JIE_OVER[o]]) OVER_JIE[o] = prepOver(c[JIE_OVER[o]]);
+    const own = OVER_SELF[k] = {}; for (const o in SELF_OVER) if (c[SELF_OVER[o]]) own[o] = prepOver(c[SELF_OVER[o]]);
   }).catch(e => { console.warn('pack', k, e); delete packs[k]; });
 }
 // 招牌動作：大招時播一次（Higgsfield 綁的動作，套到同一套骨架上）
@@ -152,7 +152,7 @@ const st = (p, k, d = 1) => p.def[k] ?? d;   // 角色數值（沒寫就用預�
 const ART_ACTS = ['dunk', 'three', 'fade', 'steal'];
 const SP_ART = { kui: 'coffee', jie: 'dunk', mi: 'phone', vivi: 'boss', kevin: 'ai', lin: 'cross', yuan: 'block', hu: 'fade', tu: 'egg', zhang: 'hero', bian: 'sprint' };
 const hasArt = (k) => k in SP_ART;
-const artUrl = (k, a) => `art/${k}_${a}.webp?v=0.11.0`;
+const artUrl = (k, a) => `art/${k}_${a}.webp?v=0.12.0`;
 function preloadArt(keys) { for (const k of keys) if (hasArt(k)) for (const a of [...ART_ACTS, SP_ART[k]]) { const im = new Image(); im.src = artUrl(k, a); } }
 let flashUntil = 0, flashTimer = 0;
 // 動作立繪從旁邊滑進來一下（我方在左、對手在右），2 秒內只跳一次
@@ -280,7 +280,7 @@ function overlay(rig, tg, t, dt) {
   const ow = rig.ow || (rig.ow = {}), k = Math.min(1, dt * 12);
   for (const name in OVER_WIN) {
     const w = ow[name] = (ow[name] || 0) + ((tg === name ? 1 : 0) - (ow[name] || 0)) * k;
-    const tr = name === 'pass' ? OVER_OWN[rig.key] : (rig.key === 'jie' && OVER_JIE[name]) || OVER[name]; if (!tr || w < 0.01) continue;
+    const tr = name === 'pass' ? OVER_OWN[rig.key] : OVER_SELF[rig.key]?.[name] || OVER[name]; if (!tr || w < 0.01) continue;
     const tm = name === 'pass' ? Math.min(rig.act?.t ?? OVER_WIN.pass[1], OVER_WIN.pass[1]) : overTime(name, t + (rig.ph || 0));
     for (const o of tr) { const b = rig.bones[o.bone]; if (b) b.quaternion.slerp(_oq.fromArray(o.it.evaluate(tm)), w); }
   }
@@ -580,7 +580,7 @@ function handsPos(p, out = V()) {
   if (!r || !l) return chestPos(p, out);
   r.getWorldPosition(_hp); l.getWorldPosition(_hp2);
   out.copy(_hp).add(_hp2).multiplyScalar(0.5).add(_a.set(Math.sin(p.face) * 0.12, 0.04, Math.cos(p.face) * 0.12));
-  if ((p.act?.type === 'shoot' && playingMove(p, 'shot')) || (p.act?.type === 'lay' && playingMove(p, 'lay'))) {   // 手短頭大，球放在右手掌上才不會埋進頭髮
+  if ((p.act?.type === 'shoot' && playingMove(p, shotMove(p))) || (p.act?.type === 'lay' && playingMove(p, 'lay'))) {   // 手短頭大，球放在右手掌上才不會埋進頭髮
     p.bones.RightForeArm.getWorldPosition(_hp2);
     _hp.add(_hp2.subVectors(_hp, _hp2).normalize().multiplyScalar(BR + 0.03));
     out.lerp(_hp, THREE.MathUtils.clamp((p.act.t - 0.12) / 0.1, 0, 1));
@@ -961,11 +961,12 @@ function huCombo(p, v) {
   else doSkill(p, 'stepback').then = 'shoot';
 }
 // 後仰跳投：往後跳、干擾大減、自動在最高點出手
+const shotMove = (p) => (p.act?.fade && !p.base && OWN[p.key]?.fade) ? 'fade' : 'shot';
 function startFade(p, sure = false) {
   if (!holding(p)) return;
   const [fx_, fz_] = fwdOf(p);
   p.act = { type: 'shoot', t: 0, sx: p.x, sz: p.z, rel: false, hold: false, relAt: 0.3, fade: true, sure };
-  playMove(p, 'shot', { dur: 1 });
+  playMove(p, shotMove(p), { dur: 1 });   // 有自己的後仰動作（v0.12，runs.py 的 fade）就用它
   p.vy = CFG.jumpV * 1.05; p.y = 0.01; p.vx = -fx_ * 2.2; p.vz = -fz_ * 2.2; p.openT = 0.6;
   p.face = Math.atan2(fx_, fz_); fx.sfx.jump();
   fx.floatText(V(p.x, 2.4, p.z), '後仰跳投', p.def.color, 0.8);
@@ -1485,7 +1486,7 @@ function updateAct(p, dt) {
     case 'shoot':
       if (a.hold && (a.t >= 0.62 || (a.t > 0.3 && p.y <= 0))) { a.hold = false; a.relAt = a.t; a.press = a.t; }   // 按太久：落地前自動出手（算太晚）
       if (!a.rel && !a.hold && a.t >= a.relAt) { a.rel = true; releaseShot(p, a.sure ? { sure: true } : {}); }
-      if (a.rel && a.t > 0.3 && p.y <= 0) { p.act = null; if (playingMove(p, 'shot')) stopSig(p); }
+      if (a.rel && a.t > 0.3 && p.y <= 0) { const mv = shotMove(p); p.act = null; if (playingMove(p, mv)) stopSig(p); }
       break;
     case 'audit': {   // 小偵衝到持球者面前
       const k = Math.min(1, a.t / 0.35);
@@ -1850,7 +1851,7 @@ function updatePlayers(dt, t) {
     p.actor.speed = p.y > 0.05 || p.stun > 0 ? 0 : sp;
     p.actor.animMul = 1;
     resetBones(p);
-    if (a?.type === 'shoot' && playingMove(p, 'shot')) {   // 舉到頭上就停住等放手，手感由玩家決定，出手後才接著播
+    if (a?.type === 'shoot' && playingMove(p, shotMove(p))) {   // 舉到頭上就停住等放手，手感由玩家決定，出手後才接著播
       if (a.rel) a.relT ??= a.t;
       p.actor.sig.timeScale = 0; p.actor.sig.time = a.rel ? SHOT_SET + a.t - a.relT : Math.min(a.t, SHOT_SET);
     }
@@ -2431,7 +2432,7 @@ soundIcon();
 
 function buildSelect() {
   // 選角卡：真人風全身照（art/<人>_card.webp，tools/gen_real.sh 的 card_* 姿勢，每個人不一樣）＋位置標籤
-  $('grid').innerHTML = ROSTER.map(k => { const c = CHARS[k], [job, pos] = c.role.split('・'); return `<div class="ch" data-k="${k}" style="--cc:${c.color}"><span class="badge"></span><div class="pic"><span class="pos">${pos || job}</span><img src="art/${k}_card.webp?v=0.11.0" alt="${c.name}" onerror="this.src='${FACE[k]}'"></div><div class="info"><div class="nm">${c.name}<small>${pos ? job : ''}</small></div><span class="spn">${c.sp.name}</span><span class="skn">${c.skill.name}</span><div class="d">${c.sp.desc}</div><div class="st">${c.stat}</div></div></div>`; }).join('');
+  $('grid').innerHTML = ROSTER.map(k => { const c = CHARS[k], [job, pos] = c.role.split('・'); return `<div class="ch" data-k="${k}" style="--cc:${c.color}"><span class="badge"></span><div class="pic"><span class="pos">${pos || job}</span><img src="art/${k}_card.webp?v=0.12.0" alt="${c.name}" onerror="this.src='${FACE[k]}'"></div><div class="info"><div class="nm">${c.name}<small>${pos ? job : ''}</small></div><span class="spn">${c.sp.name}</span><span class="skn">${c.skill.name}</span><div class="d">${c.sp.desc}</div><div class="st">${c.stat}</div></div></div>`; }).join('');
   for (const el of $('grid').children) el.onclick = () => {
     fx.audioInit(); fx.sfx.click();
     const k = el.dataset.k, i = S.sel.indexOf(k);

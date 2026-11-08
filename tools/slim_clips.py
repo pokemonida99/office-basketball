@@ -50,7 +50,7 @@ def slim(path):
         if traw not in times:
             times[traw] = add(traw, 5126, n_, 'SCALAR', mm=([tv[first]], [tv[last]]))
         if path_ == 'rotation':
-            if oa['componentType'] != 5126: raise SystemExit('已經瘦身過：' + path)
+            if oa['componentType'] != 5126: return print('已經瘦身過，略過：' + path)   # 跳過這個檔案就好，不要整批停下來
             vals = struct.unpack(f'<{cnt * 4}f', bytes(ob[:cnt * 16]))[first * 4:(last + 1) * 4]
             raw = struct.pack(f'<{n_ * 4}h', *[max(-32767, min(32767, round(v * 32767))) for v in vals])
             out = add(raw, 5122, n_, 'VEC4', norm=True)

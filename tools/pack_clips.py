@@ -2,6 +2,7 @@
 # 把一個角色的所有動作併成一個 GLB（models/moves/pack/角色.glb），每段動作用名字區分。遊戲開賽才下載上場的人，不用開遊戲就載一百多個小檔。
 # 流程：Blender 匯出到 work/ → python3 tools/slim_clips.py work/run work/jie → 這支。walk.glb 開遊戲就要用，留在 models/moves/jie/
 # 用法：python3 tools/pack_clips.py work/run work/jie models/sig models/moves/pack
+# v0.12：python3 tools/pack_clips.py work/run2 work/own models/sig models/moves/pack
 import sys, os, glob, json, struct
 
 def read(path):
@@ -46,9 +47,21 @@ chars = {}
 for p in glob.glob(os.path.join(run, '*.glb')):
     k, m = os.path.basename(p)[:-4].split('_', 1)
     chars.setdefault(k, {})[m] = p
-for p in glob.glob(os.path.join(jie, '*.glb')):
-    m = os.path.basename(p)[:-4]
-    if m != 'walk': chars['jie'][m] = p
+# 第二個資料夾：舊版是阿傑一個人的動作（work/jie/*.glb）；v0.12 起是每個人一個子資料夾（work/own/角色/*.glb，jie_moves.py 產生）
+# 阿傑用自己的全部動作；其他人只多拿 hop（歡呼）、shoot（投籃舉手），其餘照 runs.py（照腿長換算）。walk 另外放 models/moves/角色/walk.glb
+OWN_EXTRA = ('hop', 'shoot')
+subdirs = [d for d in glob.glob(os.path.join(jie, '*')) if os.path.isdir(d)]
+if subdirs:
+    for d in subdirs:
+        k = os.path.basename(d)
+        if k not in chars: continue
+        for p in glob.glob(os.path.join(d, '*.glb')):
+            m = os.path.basename(p)[:-4]
+            if m != 'walk' and (k == 'jie' or m in OWN_EXTRA): chars[k][m] = p
+else:
+    for p in glob.glob(os.path.join(jie, '*.glb')):
+        m = os.path.basename(p)[:-4]
+        if m != 'walk': chars['jie'][m] = p
 total = 0
 for k, src in sorted(chars.items()):
     s = os.path.join(sig, k + '.glb')
